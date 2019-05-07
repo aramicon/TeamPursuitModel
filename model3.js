@@ -30,7 +30,7 @@ let race = {
 
 let riders = [
   {name:'Chris',
-  threshold_power:6,
+  threshold_power:300,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -41,6 +41,8 @@ let riders = [
   starting_position_x:0,
   starting_position_y:0,
   current_track_position:'',
+  mass:75,
+  velocity:0,
   color:'#ff0000'}
 ]
 
@@ -70,6 +72,8 @@ function startRace(){
   let theta = 0;
   let straight_distance_travelled = 0;
   let bend_centre_x = 0;
+  let distance_this_step = 0;
+  let acceleration_this_step = 0;
   moveRace();
 
 }
@@ -86,24 +90,36 @@ function moveRace(){
   for(i=0;i<race.riders.length;i++){
     rider = race.riders[i];
     ctx.beginPath();
+
+    //work out how far the rider can go in this time step
+
+    acceleration_this_step = Math.sqrt(rider.threshold_power/(2*rider.mass*race.race_clock));
+    rider.velocity += acceleration_this_step;
+    distance_this_step = rider.velocity;
+
+    console.log("acceleration at time " + race.race_clock + " seconds  =  " + acceleration_this_step + " new velocity is " + rider.velocity);
+
+
+
     //if on a straight just keep going in that direction
+
     if (rider.current_track_position == 'start'){
-      rider.current_position_x -= settings.fixed_test_distance*settings.vis_scale;
-      race.distance_covered+=settings.fixed_test_distance;
+      rider.current_position_x -= distance_this_step*settings.vis_scale;
+      race.distance_covered+=distance_this_step;
         //console.log("On start straight (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
       if ((rider.startPosition_x - rider.current_position_x) >= (settings.track_straight_length/2)*settings.vis_scale){
         rider.current_track_position = 'bend1';
         bend_centre_x = rider.current_position_x
-        console.log("bend_centre_x="+bend_centre_x);
+        //console.log("bend_centre_x="+bend_centre_x);
         theta=90;
       }
     }
     else if (  rider.current_track_position == 'bend1') {
-      theta+=((settings.fixed_test_distance*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
-      race.distance_covered+=settings.fixed_test_distance;
+      theta+=((distance_this_step*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
+      race.distance_covered+=distance_this_step;
       rider.current_position_x = bend_centre_x + Math.cos((theta*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
       rider.current_position_y = settings.track_centre_y - Math.sin((theta*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
-      console.log("On bend 1 theta = "+theta + " (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
+      //console.log("On bend 1 theta = "+theta + " (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
 
       if (theta >= 270){
         theta = 0;
@@ -112,10 +128,10 @@ function moveRace(){
       }
     }
     else if (rider.current_track_position == 'straight2') {
-      straight_distance_travelled += settings.fixed_test_distance;
-      race.distance_covered+=settings.fixed_test_distance;
-      rider.current_position_x += settings.fixed_test_distance*settings.vis_scale;
-      console.log("On straight 2 straight_distance_travelled = "+straight_distance_travelled + " (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
+      straight_distance_travelled += distance_this_step;
+      race.distance_covered+=distance_this_step;
+      rider.current_position_x += distance_this_step*settings.vis_scale;
+      //console.log("On straight 2 straight_distance_travelled = "+straight_distance_travelled + " (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
       if (straight_distance_travelled >= settings.track_straight_length){
          rider.current_track_position = 'bend2';
          bend_centre_x = rider.current_position_x
@@ -123,11 +139,11 @@ function moveRace(){
       }
     }
     else if (rider.current_track_position == 'bend2') {
-      theta+=((settings.fixed_test_distance*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
-      race.distance_covered+=settings.fixed_test_distance;
+      theta+=((distance_this_step*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
+      race.distance_covered+=distance_this_step;
       rider.current_position_x = bend_centre_x + Math.cos((theta*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
       rider.current_position_y = settings.track_centre_y - Math.sin((theta*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
-        console.log("On bend 2 theta = "+theta + " (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
+        //console.log("On bend 2 theta = "+theta + " (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
       if (theta >= 450){
         theta = 0;
         rider.current_track_position = 'straight1';
@@ -135,14 +151,14 @@ function moveRace(){
       }
     }
     else if (rider.current_track_position == 'straight1') {
-      straight_distance_travelled += settings.fixed_test_distance;
-      race.distance_covered+=settings.fixed_test_distance;
-      rider.current_position_x -= settings.fixed_test_distance*settings.vis_scale;
-        console.log("On straight 1 straight_distance_travelled = "+straight_distance_travelled + " (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
+      straight_distance_travelled += distance_this_step;
+      race.distance_covered+=distance_this_step;
+      rider.current_position_x -= distance_this_step*settings.vis_scale;
+        //console.log("On straight 1 straight_distance_travelled = "+straight_distance_travelled + " (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
       if (straight_distance_travelled >= settings.track_straight_length){
         rider.current_track_position = 'bend1';
         bend_centre_x = rider.current_position_x
-        console.log("bend_centre_x="+bend_centre_x);
+        //console.log("bend_centre_x="+bend_centre_x);
         theta=90;
       }
     }
