@@ -1,19 +1,36 @@
 <html>
   <head>
-    <title>Bike Race Model 1</title>
+    <title>Team Pursuit Model</title>
     <link rel="stylesheet" type = "text/css" href = "model3.css">
+    <link rel="stylesheet" type = "text/css" href = "bootstrap.min.css">
+    <script type="text/javascript" src = "jquery-3.4.1.min.js"></script>
+
 
   </head>
   <body>
-    <h1>Bike Race Model 1</h1>
-    <canvas id="bikeCanvas" width="800" height="400" style="border:1px solid #d3d3d3;">
-Your browser does not support the HTML5 canvas tag.</canvas>
-<br />
-<div class="race_info" id = "race_info1"></div>
-<div class="button" onClick = "startRace()">Start Race</div>
-<div class="button buttonRed" onClick = "stopRace()">Stop Race</div>
-<div class="button buttonOrange" onClick = "resetRace()">Reset Race</div>
-<div class="riders_info" id = "riders_info"></div>
-  <script type="text/javascript" src = "model3.js"></script>
-  </body>
+    <div class="container-fluid">
+
+        <h1>Team Pursuit Model 1.4</h1>
+        <canvas id="bikeCanvas" width="800" height="400" style="border:1px solid #d3d3d3;">
+          Your browser does not support the HTML5 canvas tag.</canvas>
+          <div class="race_info">
+            <form>
+    <div class="form-group">
+      <label for="race_length">Race Length</label>
+      <input type="text" class="form-control" id="input_race_length">
+    </div>
+</form>
+        <span class="label1">TIME:</span><span id="race_info_clock"></span>
+        <div class="riders_info" id = "riders_info"></div>
+    </div>
+
+
+    <div class="race_actions" id = "race_actions"></div>
+      <div class="button" onClick = "startRace()">Start</div>
+      <div class="button buttonRed" onClick = "stopRace()">Pause</div>
+      <div class="button buttonOrange" onClick = "resetRace()">Reset</div>
+
+      <script type="text/javascript" src = "model3.js"></script>
+    </div>
+</body>
 </html>

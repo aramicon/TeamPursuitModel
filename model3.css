@@ -9,6 +9,10 @@
   font-size: 16px;
   cursor:pointer;
 }
+.label1{
+  padding:4px;
+  color: #333333;
+}
 
 .buttonRed{
   background-color: red;
@@ -20,14 +24,16 @@
   background-color: #eeeeee;
   padding:10px;
   border: 1px solid #444444;
-  width:50%;
+  width:200px;
   margin: 10px;
+  margin-right:40px;
+  float:right;
 }
 .riders_info{
   background-color: #eeeeee;
   padding:10px;
   border: 1px solid #444444;
-  width:50%;
+
   margin: 10px;
 }
 .rider_info{
