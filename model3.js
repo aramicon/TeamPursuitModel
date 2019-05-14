@@ -15,12 +15,16 @@ let settings={
   track_centre_x:400,
   track_centre_y:200,
   race_bend_distance:0,
-  start_position_offset:3
+  start_position_offset:3,
+  drag_coefficent:0.32,
+  air_density:1.225,
+  draft_power_savings:0.33
 }
 
 let race = {
-  distance:40000,
-  start_order:[2,0,1],
+  distance:400,
+  start_order:[2,1,0],
+  current_order:[],
   riders: [],
   race_clock:0,
   race_instructions:[],
@@ -29,7 +33,7 @@ let race = {
 
 let riders = [
   {name:'Chris',
-  threshold_power:100000,
+  threshold_power:100,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -51,10 +55,11 @@ let riders = [
   distance_this_step_remaining:0,
   current_bend_angle:0,
   distance_covered:0,
-  bend_centre_x:0
+  bend_centre_x:0,
+  power_out:0
   },
   {name:'Bob',
-  threshold_power:100000,
+  threshold_power:100,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -76,10 +81,11 @@ let riders = [
   distance_this_step_remaining:0,
   current_bend_angle:0,
   distance_covered:0,
-  bend_centre_x:0
+  bend_centre_x:0,
+  power_out:0
 },
 {name:'Laura',
-threshold_power:100000,
+threshold_power:120,
 endurance:8,
 burst_power:9,
 burst_endurance:2,
@@ -90,6 +96,7 @@ current_position_y:0,
 starting_position_x:0,
 starting_position_y:0,
 current_track_position:'',
+current_aim:'',
 mass:75,
 velocity:0,
 color:'#222222',
@@ -101,7 +108,8 @@ start_offset:0,
 distance_this_step_remaining:0,
 current_bend_angle:0,
 distance_covered:0,
-bend_centre_x:0
+bend_centre_x:0,
+power_out:0
 }
 ]
 
@@ -125,9 +133,11 @@ function load_race(){
   // use the given order
   ctx.clearRect(0, 0, c.width, c.height);
   race.riders = [];
+  race.current_order = [];
   console.log("race.start_order.length "+race.start_order.length)
   for(i = 0;i<race.start_order.length;i++){
     console.log("rider position " + i  )
+
 
     rider = riders[race.start_order[i]]
     rider.start_offset = i*settings.start_position_offset;
@@ -137,6 +147,15 @@ function load_race(){
     rider.current_position_y = rider.starting_position_y;
     rider.current_track_position = 'start';
     rider.current_bend_angle=0;
+
+    if (i==0){
+      rider.current_aim = "lead";
+    }
+    else{
+      rider.current_aim = "follow";
+    }
+
+    race.current_order.push(i);
 
     ctx.arc(rider.current_position_x, rider.current_position_y, 6, 0, 2 * Math.PI);
     ctx.fillStyle = rider.color;
@@ -172,16 +191,58 @@ function moveRace(){
   ctx.clearRect(0, 0, c.width, c.height);
   //console.log("race at " + race.race_clock + " seconds / " + race.distance);
   //move the riders and update the time
-  for(i=0;i<race.riders.length;i++){
-    rider = race.riders[i];
+  for(i=0;i<race.current_order.length;i++){
+    rider = race.riders[race.current_order[i]];
     //work out how far the rider can go in this time step
 
-    rider.acceleration_this_step = Math.sqrt(rider.threshold_power/(2*rider.mass*race.race_clock));
+    //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
+    let drag_watts = 0;
+    let usable_power = 0;
+
+    if (rider.current_aim =="lead"){
+      //push the pace at the front
+      drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(rider.velocity,2))/2);
+      usable_power = rider.threshold_power - drag_watts;
+      rider.power_out = usable_power;
+      rider.acceleration_this_step = Math.sqrt(usable_power/(2*rider.mass*race.race_clock));
+    }
+    else{
+      //try to follow (travel the same distace as- apply the same power) the rider in front of you
+      let rider_to_follow = {};
+      if (i==0){
+        rider_to_follow = race.riders[race.riders.length-1];
+      }
+      else{
+        rider_to_follow = race.riders[i-1];
+       }
+      usable_power = rider_to_follow.power_out;
+
+      // assume we are drafting and try to cover the same distance as the rider in front, which will take a certain amount of power
+      rider_to_follow_distance = rider_to_follow.distance_covered -  rider.distance_covered;
+      let new_power_req = Math.pow((rider_to_follow_distance - rider.velocity),2)*(2*rider.mass*race.race_clock);
+      new_power_req -= new_power_req*settings.draft_power_savings;
+
+      usable_power = rider.power_out + new_power_req;
+
+      if (rider.threshold_power < usable_power){
+        //oops, you can't keep up
+        usable_power = rider.threshold_power;
+        //assume no drafting once you can't keep up?
+        rider.acceleration_this_step = Math.sqrt(usable_power/(2*rider.mass*race.race_clock));
+
+      }
+      else{
+        rider.acceleration_this_step = (rider_to_follow_distance - rider.velocity);
+      }
+      rider.power_out = usable_power;
+
+    }
+
 
     rider.velocity += rider.acceleration_this_step;
-    rider.distance_this_step = rider.velocity;
+    rider.distance_this_step = rider.velocity; //asssumes we are travelling for 1 second!
 
-    console.log(race.race_clock + ": "+ rider.name + " acceleration at time " + race.race_clock + " seconds  =  " + rider.acceleration_this_step + " new velocity is " + rider.velocity);
+    console.log(rider.name + " " + rider.current_aim + " at " + race.race_clock + " power " + usable_power + " usable/" + drag_watts + "drag acceleration " + rider.acceleration_this_step + " new velocity " + rider.velocity);
 
     //if on a straight just keep going in that direction
     //may need to break a distance covered down into parts (e.g. going from bend to straight)
@@ -212,7 +273,6 @@ function moveRace(){
           console.log(race.race_clock + ": " + rider.name + " straight 1 (start) partial "+distance_this_step_segment+" of "+rider.distance_this_step+" to (" + rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining " +   rider.distance_this_step_remaining + " start offset " + rider.start_offset  )
           rider.current_bend_angle=90;
         }
-
       }
       else if (  rider.current_track_position == 'bend1') {
         console.log(race.race_clock + ": " + rider.name +  " rider.bend_distance_travelled = " + rider.bend_distance_travelled + " distance_this_step_segment = " + distance_this_step_segment + " settings.race_bend_distance = " + settings.race_bend_distance);
