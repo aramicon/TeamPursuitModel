@@ -15,22 +15,21 @@ let settings={
   track_centre_x:400,
   track_centre_y:200,
   race_bend_distance:0,
-  start_position_offset:20
+  start_position_offset:3
 }
 
 let race = {
-  distance:800,
-  start_order:[0,1],
+  distance:40000,
+  start_order:[2,0,1],
   riders: [],
   race_clock:0,
   race_instructions:[],
-  current_distance_of_finish_rider:0,
-  bend_centre_x:0
+  current_distance_of_finish_rider:0
 }
 
 let riders = [
   {name:'Chris',
-  threshold_power:120,
+  threshold_power:100000,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -51,10 +50,11 @@ let riders = [
   start_offset:0,
   distance_this_step_remaining:0,
   current_bend_angle:0,
-  distance_covered:0
+  distance_covered:0,
+  bend_centre_x:0
   },
   {name:'Bob',
-  threshold_power:200,
+  threshold_power:100000,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -75,7 +75,33 @@ let riders = [
   start_offset:0,
   distance_this_step_remaining:0,
   current_bend_angle:0,
-  distance_covered:0
+  distance_covered:0,
+  bend_centre_x:0
+},
+{name:'Laura',
+threshold_power:100000,
+endurance:8,
+burst_power:9,
+burst_endurance:2,
+starting_energy:100,
+current_energy:100,
+current_position_x:0,
+current_position_y:0,
+starting_position_x:0,
+starting_position_y:0,
+current_track_position:'',
+mass:75,
+velocity:0,
+color:'#222222',
+straight_distance_travelled:0,
+bend_distance_travelled :0,
+distance_this_step:0,
+acceleration_this_step:0,
+start_offset:0,
+distance_this_step_remaining:0,
+current_bend_angle:0,
+distance_covered:0,
+bend_centre_x:0
 }
 ]
 
@@ -119,13 +145,10 @@ function load_race(){
     race.riders.push(rider);
     console.log("Start " + rider.name + " at position " + race.start_order[i] + " with start offset of " + rider.start_offset);
 
-
-
-
   }
   addRiderDisplay();
 
-  race.bend_centre_x = 0;
+  rider.bend_centre_x = 0;
   rider.distance_this_step = 0;
   rider.acceleration_this_step = 0;
   settings.race_bend_distance = Math.PI * settings.track_bend_radius;
@@ -154,10 +177,11 @@ function moveRace(){
     //work out how far the rider can go in this time step
 
     rider.acceleration_this_step = Math.sqrt(rider.threshold_power/(2*rider.mass*race.race_clock));
+
     rider.velocity += rider.acceleration_this_step;
     rider.distance_this_step = rider.velocity;
 
-    console.log("Rider "+ rider.name + " acceleration at time " + race.race_clock + " seconds  =  " + rider.acceleration_this_step + " new velocity is " + rider.velocity);
+    console.log(race.race_clock + ": "+ rider.name + " acceleration at time " + race.race_clock + " seconds  =  " + rider.acceleration_this_step + " new velocity is " + rider.velocity);
 
     //if on a straight just keep going in that direction
     //may need to break a distance covered down into parts (e.g. going from bend to straight)
@@ -173,7 +197,7 @@ function moveRace(){
           rider.current_position_x -= distance_this_step_segment*settings.vis_scale;
           rider.distance_covered+=distance_this_step_segment;
           rider.distance_this_step_remaining = 0;
-          console.log("Travel full distance "+distance_this_step_segment+" on start straight to (" + rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining = " +   rider.distance_this_step_remaining  + " with start offset of " + rider.start_offset  )
+          console.log(race.race_clock + ": " + rider.name + "straight 1 (start) full "+distance_this_step_segment+" to (" + rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining = " +   rider.distance_this_step_remaining  + " with start offset of " + rider.start_offset  )
         }
         else{
           distance_this_step_segment =  (settings.track_straight_length/2 + rider.start_offset) - rider.straight_distance_travelled;
@@ -183,24 +207,24 @@ function moveRace(){
           rider.distance_this_step_remaining -= distance_this_step_segment;
           //rest of segment is on the bend
           rider.current_track_position = 'bend1';
-          race.bend_centre_x = rider.current_position_x
-          //console.log("race.bend_centre_x="+race.bend_centre_x);
-          console.log("Travel partial distance, "+distance_this_step_segment+" of "+rider.distance_this_step+" on start straight to (" + rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining " +   rider.distance_this_step_remaining + " with start offset of " + rider.start_offset  )
+          rider.bend_centre_x = rider.current_position_x
+          //console.log("rider.bend_centre_x="+rider.bend_centre_x);
+          console.log(race.race_clock + ": " + rider.name + " straight 1 (start) partial "+distance_this_step_segment+" of "+rider.distance_this_step+" to (" + rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining " +   rider.distance_this_step_remaining + " start offset " + rider.start_offset  )
           rider.current_bend_angle=90;
         }
 
       }
       else if (  rider.current_track_position == 'bend1') {
-        console.log("rider.bend_distance_travelled = " + rider.bend_distance_travelled + "distance_this_step_segment = " + distance_this_step_segment + " settings.race_bend_distance = " + settings.race_bend_distance);
+        console.log(race.race_clock + ": " + rider.name +  " rider.bend_distance_travelled = " + rider.bend_distance_travelled + " distance_this_step_segment = " + distance_this_step_segment + " settings.race_bend_distance = " + settings.race_bend_distance);
         if ((rider.bend_distance_travelled + distance_this_step_segment) <= settings.race_bend_distance){
           //can do whole segment on bend
           rider.bend_distance_travelled+=distance_this_step_segment;
           rider.current_bend_angle +=((distance_this_step_segment*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
           rider.distance_covered+=distance_this_step_segment;
-          rider.current_position_x = race.bend_centre_x + Math.cos((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+          rider.current_position_x = rider.bend_centre_x + Math.cos((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
           rider.current_position_y = settings.track_centre_y - Math.sin((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
           rider.distance_this_step_remaining = 0;
-          console.log("Travel full distance "+distance_this_step_segment+" on bend 1 to (" + rider.current_position_x + "," + rider.current_position_y + ") rider.current_bend_angle angle "  + rider.current_bend_angle  )
+          console.log(race.race_clock + ": " + rider.name +  " bend 1 full "+distance_this_step_segment+" to (" + rider.current_position_x + "," + rider.current_position_y + ") bend_angle "  + rider.current_bend_angle  )
         }
         else{
           // some distance on the bend then 0 or more on the straight
@@ -210,14 +234,17 @@ function moveRace(){
         //  rider.bend_distance_travelled+=distance_on_bend;
           rider.distance_covered+=distance_on_bend;
           rider.distance_this_step_remaining -= distance_on_bend;
-          rider.current_position_x = race.bend_centre_x + Math.cos((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+          rider.current_position_x = rider.bend_centre_x + Math.cos((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
           rider.current_position_y = settings.track_centre_y - Math.sin((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+
+          console.log(race.race_clock + ": " + rider.name +  " bend 1 partial "+distance_on_bend+" of "+distance_this_step_segment + " to (" + rider.current_position_x + "," + rider.current_position_y + ") bend_angle " + rider.current_bend_angle  )
+
           //rider is now on straight2
           rider.current_bend_angle = 0;
           rider.current_track_position = 'straight2';
           rider.straight_distance_travelled = 0;
           rider.bend_distance_travelled = 0;
-          console.log("Travel partial distance, "+distance_on_bend+" of "+distance_this_step_segment + " on bend 1 to (" + rider.current_position_x + "," + rider.current_position_y + ") rider.current_bend_angle angle " + rider.current_bend_angle  )
+
         }
       }
       else if (rider.current_track_position == 'straight2') {
@@ -228,7 +255,7 @@ function moveRace(){
           rider.current_position_x += distance_this_step_segment*settings.vis_scale;
           rider.distance_covered+=distance_this_step_segment;
           rider.distance_this_step_remaining = 0;
-          console.log("Travel full distance "+distance_this_step_segment+" on  straight 2 to (" + rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining = " +   rider.distance_this_step_remaining   )
+          console.log(race.race_clock + ": " + rider.name + " straight 2 full "+distance_this_step_segment+" to (" + rider.current_position_x + "," + rider.current_position_y + ")   travelled " + rider.straight_distance_travelled + " of " + settings.track_straight_length   )
         }
         else{
           distance_this_step_segment =  settings.track_straight_length - rider.straight_distance_travelled;
@@ -236,25 +263,27 @@ function moveRace(){
           rider.current_position_x += distance_this_step_segment*settings.vis_scale;
           rider.distance_covered+=distance_this_step_segment;
           rider.distance_this_step_remaining -= distance_this_step_segment;
+          console.log(race.race_clock + ": " +  rider.name + " straight 2 partial "+distance_this_step_segment+" of "+rider.distance_this_step+" to (" +rider.current_position_x + "," + rider.current_position_y + ")   travelled " + rider.straight_distance_travelled + " distance_this_step_remaining" +   rider.distance_this_step_remaining )
           //rest of segment goes on to bend 2
+
           rider.current_track_position = 'bend2';
-          race.bend_centre_x = rider.current_position_x
-          //console.log("race.bend_centre_x="+race.bend_centre_x);
-          console.log("Travel partial distance, "+distance_this_step_segment+" of "+rider.distance_this_step+" on straight 2 to (" +rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining" +   rider.distance_this_step_remaining )
+          rider.bend_centre_x = rider.current_position_x
+          //console.log("rider.bend_centre_x="+rider.bend_centre_x);
+
           rider.current_bend_angle=270;
         }
       }
       else if (rider.current_track_position == 'bend2') {
-        console.log("bend 2 rider.bend_distance_travelled = " + rider.bend_distance_travelled + "distance_this_step_segment = " + distance_this_step_segment + " settings.race_bend_distance = " + settings.race_bend_distance);
+        console.log(race.race_clock + ": " + rider.name +  " bend 2 bend_distance_travelled = " + rider.bend_distance_travelled + "distance_this_step_segment = " + distance_this_step_segment + " settings.race_bend_distance = " + settings.race_bend_distance);
         if ((rider.bend_distance_travelled + distance_this_step_segment) <= settings.race_bend_distance){
           //can do whole segment on bend
           rider.bend_distance_travelled+=distance_this_step_segment;
           rider.current_bend_angle +=((distance_this_step_segment*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
           rider.distance_covered+=distance_this_step_segment;
-          rider.current_position_x = race.bend_centre_x + Math.cos((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+          rider.current_position_x = rider.bend_centre_x + Math.cos((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
           rider.current_position_y = settings.track_centre_y - Math.sin((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
           rider.distance_this_step_remaining = 0;
-          console.log("Travel full distance "+distance_this_step_segment+" on bend 2 to (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
+          console.log(race.race_clock + ": " + rider.name + " bend 2 full distance "+distance_this_step_segment+" to (" + rider.current_position_x + "," + rider.current_position_y + ") bend angle " + rider.current_bend_angle )
         }
         else{
           // some distance on the bend then 0 or more on the straight
@@ -262,15 +291,16 @@ function moveRace(){
           rider.current_bend_angle +=((distance_on_bend*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
           rider.distance_covered+=distance_on_bend;
           rider.distance_this_step_remaining -= distance_on_bend;
-          rider.current_position_x = race.bend_centre_x + Math.cos((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+          rider.current_position_x = rider.bend_centre_x + Math.cos((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
           rider.current_position_y = settings.track_centre_y - Math.sin((rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+          console.log(race.race_clock + ": " + rider.name +  " bend 2 partial "+distance_on_bend+" of "+distance_this_step_segment + " to (" + rider.current_position_x + "," + rider.current_position_y + ") bend angle " + rider.current_bend_angle  );
 
           //rider is now on straight2
           rider.current_bend_angle = 0;
           rider.bend_distance_travelled= 0;
           rider.current_track_position = 'straight1';
           rider.straight_distance_travelled = 0;
-          console.log("Travel partial distance, "+distance_on_bend+" of "+distance_this_step_segment + " on bend 2 to (" + rider.current_position_x + "," + rider.current_position_y + ")"  )
+
         }
       }
       else if (rider.current_track_position == 'straight1') {
@@ -280,7 +310,7 @@ function moveRace(){
             rider.current_position_x -= distance_this_step_segment*settings.vis_scale;
             rider.distance_covered+=distance_this_step_segment;
             rider.distance_this_step_remaining = 0;
-            console.log("Travel full distance "+distance_this_step_segment+" on  straight 1 to (" + rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining = " +   rider.distance_this_step_remaining   )
+            console.log(race.race_clock + ": " + rider.name + " straight 1 full "+distance_this_step_segment+" to (" + rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining = " +   rider.distance_this_step_remaining   )
           }
           else{
             distance_this_step_segment =  settings.track_straight_length - rider.straight_distance_travelled;
@@ -288,11 +318,12 @@ function moveRace(){
             rider.current_position_x -= distance_this_step_segment*settings.vis_scale;
             rider.distance_covered+=distance_this_step_segment;
             rider.distance_this_step_remaining -= distance_this_step_segment;
+            console.log(race.race_clock + ": " + rider.name + " straight 1 partial "+distance_this_step_segment+" of "+rider.distance_this_step+" to (" +rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining" +   rider.distance_this_step_remaining );
+
             //rest of segment goes on to bend 2
             rider.current_track_position = 'bend1';
-            race.bend_centre_x = rider.current_position_x
-            //console.log("race.bend_centre_x="+race.bend_centre_x);
-            console.log("Travel partial distance, "+distance_this_step_segment+" of "+rider.distance_this_step+" on straight 1 to (" +rider.current_position_x + "," + rider.current_position_y + ")   rider.distance_this_step_remaining" +   rider.distance_this_step_remaining )
+            rider.bend_centre_x = rider.current_position_x
+            //console.log("rider.bend_centre_x="+rider.bend_centre_x);
             rider.current_bend_angle=90;
           }
       }
