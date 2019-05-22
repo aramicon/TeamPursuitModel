@@ -3,34 +3,38 @@
     <title>Team Pursuit Model</title>
     <link rel="stylesheet" type = "text/css" href = "model3.css">
     <link rel="stylesheet" type = "text/css" href = "bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
     <script type="text/javascript" src = "jquery-3.4.1.min.js"></script>
-
-
+    <script type="text/javascript" src = "model3.js"></script>
   </head>
   <body>
     <div class="container-fluid">
-
         <h1>Team Pursuit Model</h1>
         <canvas id="bikeCanvas" width="800" height="400" style="border:1px solid #d3d3d3;">
           Your browser does not support the HTML5 canvas tag.</canvas>
           <div class="race_info">
             <form>
-    <div class="form-group">
-      <label for="race_length">Race Length</label>
-      <input type="text" class="form-control" id="input_race_length">
-    </div>
-</form>
-        <span class="label1">TIME:</span><span id="race_info_clock"></span>
-        <div class="riders_info" id = "riders_info"></div>
-    </div>
-
-
-    <div class="race_actions" id = "race_actions"></div>
-      <div class="button" onClick = "startRace()">Start</div>
-      <div class="button buttonRed" onClick = "stopRace()">Pause</div>
-      <div class="button buttonOrange" onClick = "resetRace()">Reset</div>
-
-      <script type="text/javascript" src = "model3.js"></script>
-    </div>
+              <div class="form-group">
+                <label for="race_length">Race Length</label>
+                <input type="text" class="form-control" id="input_race_length">
+              </div>
+            </form>
+            <span class="label1">TIME:</span><span id="race_info_clock"></span>
+            <div class="riders_info" id = "riders_info"></div>
+        </div>
+        <div class="race_actions" id = "race_actions">
+          <button type="button" id="button_play" class="btn" onclick='playRace()'>
+            <i class="fa fa-play fa-3x"></i>
+          </button>
+          <button type="button" id="button_stop" class="btn" onclick='stopRace()'>
+            <i class="fa fa-stop fa-3x"></i>
+          </button>
+          <button type="button" id="button_fw" class="btn" onclick='forwardStep()'>
+            <i class="fa fa-forward fa-3x"></i>
+          </button>
+          <span class="current_activity" id = "current_activity"> <i class="fas fa-cog fa-2x" style="color:#999999"></i></span>
+        </div>
+      </div>
 </body>
 </html>
