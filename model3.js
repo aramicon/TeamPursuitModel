@@ -20,10 +20,21 @@ let settings={
   start_position_offset:3,
   drag_coefficent:0.32,
   air_density:1.225,
-  draft_power_savings:0.33
+  draft_power_savings:0.33,
+  drafting_effect_on_drag:0.4,
+  temperaturev:22,
+  elevationv:100,
+  bike_weight:9,
+  gradev:0, //obvs track is flat
+  rollingRes:0.004,
+  power_adjustment_step_size_up:10,//how many watts can a rider increase by
+  power_adjustment_step_size_down:-20,//slowing down is quicker!
+  transv:0.95,//transmission efficiency
+  headwindv:0,//headwind, zero seems fair for an indoor track
+  race_move_wait_time:100,//slows down the visualisation
 }
 let race = {
-  distance:4000,
+  distance:1000,
   start_order:[0,1,2],
   current_order:[],
   riders: [],
@@ -33,7 +44,7 @@ let race = {
 }
 let riders = [
   {name:'Chris',
-  threshold_power:100,
+  threshold_power:300,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -45,6 +56,7 @@ let riders = [
   starting_position_y:0,
   current_track_position:'',
   mass:75,
+  weight:75,
   velocity:0,
   color:'#ff0000',
   straight_distance_travelled:0,
@@ -56,7 +68,8 @@ let riders = [
   current_bend_angle:0,
   distance_covered:0,
   bend_centre_x:0,
-  power_out:0
+  power_out:0,
+  frontalArea:0.233
   },
   {name:'Bob',
   threshold_power:300,
@@ -71,6 +84,7 @@ let riders = [
   starting_position_y:0,
   current_track_position:'',
   mass:75,
+  weight:75,
   velocity:0,
   color:'#ff00ff',
   straight_distance_travelled:0,
@@ -82,11 +96,12 @@ let riders = [
   current_bend_angle:0,
   distance_covered:0,
   bend_centre_x:0,
-  power_out:0
+  power_out:0,
+  frontalArea:0.233
 },
 {
   name:'Laura',
-  threshold_power:120,
+  threshold_power:100,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -99,6 +114,7 @@ let riders = [
   current_track_position:'',
   current_aim:'',
   mass:75,
+  weight:75,
   velocity:0,
   color:'#222222',
   straight_distance_travelled:0,
@@ -110,7 +126,8 @@ let riders = [
   current_bend_angle:0,
   distance_covered:0,
   bend_centre_x:0,
-  power_out:0
+  power_out:0,
+  frontalArea:0.233
 }
 ];
 
@@ -124,14 +141,30 @@ function addRiderDisplay(){
   }
 }
 
-
 function resetRace(){
   console.log("RESETTING RACE")
   load_race()
 }
 
-function moveRace(){
+function newton(aero, hw, tr, tran, p) {        /* Newton's method */
+  //from http://www.bikecalculator.com/
+		var vel = 20;       // Initial guess
+		var MAX = 10;       // maximum iterations
+		var TOL = 0.05;     // tolerance
+		for (i_n=1; i_n < MAX; i_n++) {
+			var tv = vel + hw;
+			var aeroEff = (tv > 0.0) ? aero : -aero; // wind in face, must reverse effect
+			var f = vel * (aeroEff * tv * tv + tr) - tran * p; // the function
+			var fp = aeroEff * (3.0 * vel + hw) * tv + tr;     // the derivative
+			var vNew = vel - f / fp;
+			if (Math.abs(vNew - vel) < TOL) return vNew;  // success
+			vel = vNew;
+		}
+		return 0.0;  // failed to converge
+}
 
+
+function moveRace(){
   race.race_clock++;
   $("#race_info_clock").text(race.race_clock);
   ctx.clearRect(0, 0, c.width, c.height);
@@ -139,16 +172,45 @@ function moveRace(){
   //move the riders and update the time
   for(i=0;i<race.current_order.length;i++){
     race_rider = race.riders[race.current_order[i]];
-    //work out how far the rider can go in this time step
+    //work out how far the race_rider can go in this time step
     //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
     let drag_watts = 0;
     let usable_power = 0;
+    let density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
+    let twt = 9.8 * race_rider.weight + settings.bike_weight;  // total weight in newtons
+    let A2 = 0.5 * race_rider.frontalArea * density;  // full air resistance parameter
+    let tres = twt * (settings.gradev + settings.rollingRes); // gravity and rolling resistance
     if (race_rider.current_aim =="lead"){
       //push the pace at the front
+      let target_power = race_rider.threshold_power; //try to get to this
+      //work out the velocity from the power
+
+      let powerv = race_rider.power_out, power_adjustment = 0;
+      if (powerv > target_power){//slowing down
+        if((powerv - target_power) > settings.power_adjustment_step_size_down){
+          power_adjustment = settings.power_adjustment_step_size_down;
+        }
+        else{
+          power_adjustment = (powerv - target_power);
+        }
+      }
+      else if(powerv < target_power){//speeding up
+        if((target_power - powerv) > settings.power_adjustment_step_size_up){
+          power_adjustment = settings.power_adjustment_step_size_up;
+        }
+        else{
+          power_adjustment = (target_power - powerv);
+        }
+      }
+      powerv+=power_adjustment;
+
+      race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
+
       drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
-      usable_power = race_rider.threshold_power - drag_watts;
+      usable_power = powerv; //race_rider.threshold_power - drag_watts;
       race_rider.power_out = usable_power;
-        race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
+      //race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
+      race_rider.acceleration_this_step = 0;//disable old acceleration formula
     }
     else{
       //try to follow (travel the same distace as- apply the same power) the race_rider in front of you
@@ -162,19 +224,59 @@ function moveRace(){
       usable_power = rider_to_follow.power_out;
       // assume we are drafting and try to cover the same distance as the race_rider in front, which will take a certain amount of power
       rider_to_follow_distance = rider_to_follow.distance_covered -  race_rider.distance_covered;
-      let new_power_req = Math.pow((rider_to_follow_distance - race_rider.velocity),2)*(2*race_rider.mass*race.race_clock);
-      new_power_req -= new_power_req*settings.draft_power_savings;
-      usable_power = race_rider.power_out + new_power_req;
-      if (race_rider.threshold_power < usable_power){
-        //oops, you can't keep up
-        usable_power = race_rider.threshold_power;
-        //assume no drafting once you can't keep up?
-        race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
+      //this is your target velocity, but it might not be possible. assuming 1 s - 1 step
+      let target_velocity = rider_to_follow_distance;
+      //work out the power needed for this velocity- remember we are drafting
+      let tv = target_velocity + settings.headwindv;
+      A2 = A2*settings.drafting_effect_on_drag;
+      let A2Eff = (tv > 0.0) ? A2 : -A2; // wind in face, must reverse effect
+      let target_power = (target_velocity * tres + target_velocity * tv * tv * A2Eff) / settings.transv;
+      if (target_power > race_rider.threshold_power){
+        target_power = race_rider.threshold_power; //can't go over this (for now)
       }
-      else{
-        race_rider.acceleration_this_step = (rider_to_follow_distance - race_rider.velocity);
+
+
+      //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
+      let powerv = race_rider.power_out, power_adjustment = 0;
+      if (powerv > target_power){//slowing down
+        if((powerv - target_power) > settings.power_adjustment_step_size_down){
+          power_adjustment = settings.power_adjustment_step_size_down;
+        }
+        else{
+          power_adjustment = (powerv - target_power);
+        }
       }
+      else if(powerv < target_power){//speeding up
+        if((target_power - powerv) > settings.power_adjustment_step_size_up){
+          power_adjustment = settings.power_adjustment_step_size_up;
+        }
+        else{
+          power_adjustment = (target_power - powerv);
+        }
+      }
+      powerv+=power_adjustment;
+
+      race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
+
+      drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
+      usable_power = powerv; //race_rider.threshold_power - drag_watts;
       race_rider.power_out = usable_power;
+      //race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
+      race_rider.acceleration_this_step = 0;//disable old acceleration formula
+
+      //let new_power_req = Math.pow((rider_to_follow_distance - race_rider.velocity),2)*(2*race_rider.mass*race.race_clock);
+      //new_power_req -= new_power_req*settings.draft_power_savings;
+      //usable_power = race_rider.power_out + new_power_req;
+      //if (race_rider.threshold_power < usable_power){
+        //oops, you can't keep up
+        //usable_power = race_rider.threshold_power;
+        //assume no drafting once you can't keep up?
+        //race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
+    //  }
+      //else{
+      //  race_rider.acceleration_this_step = (rider_to_follow_distance - race_rider.velocity);
+    //  }
+      //race_rider.power_out = usable_power;
     }
     race_rider.velocity += race_rider.acceleration_this_step;
     race_rider.distance_this_step = race_rider.velocity; //asssumes we are travelling for 1 second!
@@ -339,7 +441,7 @@ function moveRace(){
     setTimeout(
       function(){
         moveRace();
-    },100);
+    },settings.race_move_wait_time);
   }
   else{
     //stopRace();
