@@ -1,15 +1,13 @@
+
+//code by Donal kelly donakello@gmail.com
+//Model of team pursuit track cycle race
+
+
+
+
 let c = {};
-
-// let info =  document.getElementById("race_info1");
-// let riders_info =  document.getElementById("riders_info");
 let ctx = {};
-
-
 var race_state = 'stop';
-
-
-
-
 let settings={
   radius:100,
   fixed_test_distance:1,
@@ -86,49 +84,43 @@ let riders = [
   bend_centre_x:0,
   power_out:0
 },
-{name:'Laura',
-threshold_power:120,
-endurance:8,
-burst_power:9,
-burst_endurance:2,
-starting_energy:100,
-current_energy:100,
-current_position_x:0,
-current_position_y:0,
-starting_position_x:0,
-starting_position_y:0,
-current_track_position:'',
-current_aim:'',
-mass:75,
-velocity:0,
-color:'#222222',
-straight_distance_travelled:0,
-bend_distance_travelled :0,
-distance_this_step:0,
-acceleration_this_step:0,
-start_offset:0,
-distance_this_step_remaining:0,
-current_bend_angle:0,
-distance_covered:0,
-bend_centre_x:0,
-power_out:0
+{
+  name:'Laura',
+  threshold_power:120,
+  endurance:8,
+  burst_power:9,
+  burst_endurance:2,
+  starting_energy:100,
+  current_energy:100,
+  current_position_x:0,
+  current_position_y:0,
+  starting_position_x:0,
+  starting_position_y:0,
+  current_track_position:'',
+  current_aim:'',
+  mass:75,
+  velocity:0,
+  color:'#222222',
+  straight_distance_travelled:0,
+  bend_distance_travelled :0,
+  distance_this_step:0,
+  acceleration_this_step:0,
+  start_offset:0,
+  distance_this_step_remaining:0,
+  current_bend_angle:0,
+  distance_covered:0,
+  bend_centre_x:0,
+  power_out:0
 }
 ];
 
-
-  $('#input_race_length').val(race.distance);
-
-for (k=0;k<360;k++){
-  console.log()
-}
 console.log("Track bend radius = 22m");
 console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/2 );
 
-
 function addRiderDisplay(){
+  $("#riders_info" ).empty();
   for(i=0;i<race.riders.length;i++){
-      $("#riders_info" ).empty();
-    $("#riders_info" ).append("<span>Rider " + i + "</span><span id='rider_distance_"+i+"'></span>" );
+    $("#riders_info" ).append("<span>Rider " + i + "</span><span id='rider_distance_"+i+"'></span><br />" );
   }
 }
 
@@ -408,6 +400,9 @@ function load_race(){
 $(document).ready(function() {
   c = document.getElementById("bikeCanvas");
   ctx =c.getContext("2d");
+  $('#input_race_length').val(race.distance);
+
+
   load_race();
 }
 );
@@ -432,10 +427,7 @@ function playRace() {
       d3.select("#button_play i").attr('class', "fa fa-pause fa-3x");
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
     }
-
     moveRace();
-
-
     console.log("button play pressed, play was "+race_state);
 }
 
@@ -452,7 +444,7 @@ function forwardStep() {
       if(race_state == "pause"){
         console.log("button forward invoked.");
         d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
-        setTimeout(function(){   d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x "); }, 200);
+        setTimeout(function(){  d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x "); }, 200);
         moveRace();
       }
 
