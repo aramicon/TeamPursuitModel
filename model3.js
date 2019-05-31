@@ -25,7 +25,7 @@ let settings={
   draft_power_savings:0.33
 }
 let race = {
-  distance:400,
+  distance:4000,
   start_order:[0,1,2],
   current_order:[],
   riders: [],
@@ -61,7 +61,7 @@ let riders = [
   power_out:0
   },
   {name:'Bob',
-  threshold_power:100,
+  threshold_power:300,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
