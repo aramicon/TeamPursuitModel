@@ -47,12 +47,12 @@
 }
 .race_info{
   background-color: #eeeeee;
-  padding:10px;
-  border: 1px solid #444444;
-  width:200px;
+  padding: 10px;
+  border: 2px solid #444444;
+  width: 30%;
   margin: 10px;
-  margin-right:40px;
-  float:right;
+  margin-right: 100px;
+  float: right;
 }
 .riders_info{
   background-color: #eeeeee;
@@ -69,4 +69,25 @@
 }
 .player{
   margin: 50px 0;
+}
+
+#race_info_clock{
+  background-color: #ffffff;
+  padding: 4px;
+  border: 1px solid #333333;
+}
+.info_row {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  width: 100%;
+  margin-left:10px;
+}
+
+.info_column {
+  display: flex;
+  flex-direction: column;
+  //flex-basis: 100%;
+  flex: 0 0 20em;
+  padding:4px;
 }

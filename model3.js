@@ -32,6 +32,7 @@ let settings={
   transv:0.95,//transmission efficiency
   headwindv:0,//headwind, zero seems fair for an indoor track
   race_move_wait_time:100,//slows down the visualisation
+  frontalArea:0.233,
 }
 let race = {
   distance:1000,
@@ -44,7 +45,7 @@ let race = {
 }
 let riders = [
   {name:'Chris',
-  threshold_power:300,
+  threshold_power:450,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -58,7 +59,7 @@ let riders = [
   mass:75,
   weight:75,
   velocity:0,
-  color:'#ff0000',
+  colour:'#ff0000',
   straight_distance_travelled:0,
   bend_distance_travelled :0,
   distance_this_step:0,
@@ -69,10 +70,9 @@ let riders = [
   distance_covered:0,
   bend_centre_x:0,
   power_out:0,
-  frontalArea:0.233
   },
   {name:'Bob',
-  threshold_power:300,
+  threshold_power:450,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -86,7 +86,7 @@ let riders = [
   mass:75,
   weight:75,
   velocity:0,
-  color:'#ff00ff',
+  colour:'#ff00ff',
   straight_distance_travelled:0,
   bend_distance_travelled :0,
   distance_this_step:0,
@@ -97,11 +97,10 @@ let riders = [
   distance_covered:0,
   bend_centre_x:0,
   power_out:0,
-  frontalArea:0.233
 },
 {
   name:'Laura',
-  threshold_power:100,
+  threshold_power:400,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -116,7 +115,7 @@ let riders = [
   mass:75,
   weight:75,
   velocity:0,
-  color:'#222222',
+  colour:'#222222',
   straight_distance_travelled:0,
   bend_distance_travelled :0,
   distance_this_step:0,
@@ -127,7 +126,6 @@ let riders = [
   distance_covered:0,
   bend_centre_x:0,
   power_out:0,
-  frontalArea:0.233
 }
 ];
 
@@ -137,7 +135,7 @@ console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/
 function addRiderDisplay(){
   $("#riders_info" ).empty();
   for(i=0;i<race.riders.length;i++){
-    $("#riders_info" ).append("<span>Rider " + i + "</span><span id='rider_distance_"+i+"'></span><br />" );
+    $("#riders_info" ).append("<div id='rider_values_"+i+"' class='info_row'></div>" );
   }
 }
 
@@ -178,7 +176,7 @@ function moveRace(){
     let usable_power = 0;
     let density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
     let twt = 9.8 * race_rider.weight + settings.bike_weight;  // total weight in newtons
-    let A2 = 0.5 * race_rider.frontalArea * density;  // full air resistance parameter
+    let A2 = 0.5 * settings.frontalArea * density;  // full air resistance parameter
     let tres = twt * (settings.gradev + settings.rollingRes); // gravity and rolling resistance
     if (race_rider.current_aim =="lead"){
       //push the pace at the front
@@ -426,11 +424,11 @@ function moveRace(){
             race_rider.current_bend_angle=90;
           }
       }
-       $("#rider_distance_"+i).text(race_rider.distance_covered);
+       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+race.riders[i].colour+"' >" + race_rider.name + " </div><div class='info_column'>"+Math.round(race_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(race_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(race_rider.power_out * 100)/100 + " watts</div>");
     }
     ctx.beginPath();
     ctx.arc(race_rider.current_position_x, race_rider.current_position_y, 6, 0, 2 * Math.PI);
-    ctx.fillStyle = race_rider.color;
+    ctx.fillStyle = race_rider.colour;
     ctx.fill();
     //work out how much the race_rider can travel in this second
   }
@@ -450,6 +448,19 @@ function moveRace(){
   }
 }
 
+function update_race_settings(){
+  let input_race_length = parseInt($('#input_race_length').val());
+  if(Number.isInteger(input_race_length)){
+    race.distance = input_race_length;
+  }
+  //frontalArea (drag)
+  let input_frontalArea = parseFloat($('#frontalArea').val());
+  if(!Number.isNaN(input_frontalArea)){
+    settings.frontalArea = input_frontalArea;
+    console.log("updated settings.frontalArea to " + settings.frontalArea )
+  }
+}
+
 function load_race(){
   //set up the race using the riders given
   // use the given order
@@ -458,10 +469,7 @@ function load_race(){
   race.current_order = [];
   race.race_clock = 0;
   settings.race_bend_distance = Math.PI * settings.track_bend_radius;
-  let input_race_length = parseInt($('#input_race_length').val());
-  if(Number.isInteger(input_race_length)){
-    race.distance = input_race_length;
-  }
+
   console.log("race.start_order.length "+race.start_order.length)
   for(i = 0;i<race.start_order.length;i++){
     let load_rider = riders[race.start_order[i]];
@@ -490,7 +498,7 @@ function load_race(){
     race.current_order.push(race.start_order[i]);
     ctx.beginPath();
     ctx.arc(load_rider.current_position_x, load_rider.current_position_y, 6, 0, 2 * Math.PI);
-    ctx.fillStyle = load_rider.color;
+    ctx.fillStyle = load_rider.colour;
     ctx.fill();
     race.riders.push(load_rider);
     console.log("loading rider " + load_rider.name + " at position " + race.start_order[i] + " with start offset of " + load_rider.start_offset);
@@ -503,6 +511,7 @@ $(document).ready(function() {
   c = document.getElementById("bikeCanvas");
   ctx =c.getContext("2d");
   $('#input_race_length').val(race.distance);
+  $('#frontalArea').val(settings.frontalArea);
 
 
   load_race();
@@ -514,18 +523,17 @@ function playRace() {
       race_state='play';
       var button = d3.select("#button_play").classed('btn-success', true);
       button.select("i").attr('class', "fa fa-pause fa-3x");
-
+      update_race_settings();
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
     }
     else if(race_state=='play' || race_state=='resume'){
       race_state = 'pause';
       d3.select("#button_play i").attr('class', "fa fa-play fa-3x");
-
-
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x ");
     }
     else if(race_state=='pause'){
       race_state = 'resume';
+      update_race_settings();
       d3.select("#button_play i").attr('class', "fa fa-pause fa-3x");
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
     }

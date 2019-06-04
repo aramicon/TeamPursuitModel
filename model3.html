@@ -5,7 +5,10 @@
     <link rel="stylesheet" type = "text/css" href = "bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
-    <script type="text/javascript" src = "jquery-3.4.1.min.js"></script>
+    <!-- <script type="text/javascript" src = "jquery-3.4.1.min.js"></script> -->
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
     <script type="text/javascript" src = "model3.js"></script>
   </head>
   <body>
@@ -14,14 +17,35 @@
         <canvas id="bikeCanvas" width="800" height="400" style="border:1px solid #d3d3d3;">
           Your browser does not support the HTML5 canvas tag.</canvas>
           <div class="race_info">
-            <form>
-              <div class="form-group">
-                <label for="race_length">Race Length</label>
-                <input type="text" class="form-control" id="input_race_length">
+            <div id="accordion">
+              <div class="card">
+                <div class="card-header" id="headingTwo">
+                  <h5 class="mb-0">
+                    <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#raceSettings" aria-expanded="false" aria-controls="raceSettings">
+                      Race Settings
+                    </button>
+                  </h5>
+                </div>
+                <div id="raceSettings" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label for="race_length">Race Length</label>
+                      <input type="text" class="form-control" id="input_race_length">
+                    </div
+                    <div class="form-group">
+                      <label for="frontalArea">Frontal Area (all riders)</label>
+                      <input type="text" class="form-control" id="frontalArea">
+                    </div>
+                  </div>
+                </div>
               </div>
-            </form>
-            <span class="label1">TIME:</span><span id="race_info_clock"></span>
-            <div class="riders_info" id = "riders_info"></div>
+          </div>
+          <div>
+            <ul class="list-group">
+              <li class="list-group-item"><i class="fas fa-stopwatch"></i> TIME: </span><span id="race_info_clock">0</span>s</li>
+            </ul>
+          <div class="riders_info" id = "riders_info"></div>
+        </div>
         </div>
         <div class="race_actions" id = "race_actions">
           <button type="button" id="button_play" class="btn" onclick='playRace()'>
