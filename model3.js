@@ -27,8 +27,8 @@ let settings={
   bike_weight:9,
   gradev:0, //obvs track is flat
   rollingRes:0.004,
-  power_adjustment_step_size_up:10,//how many watts can a rider increase by
-  power_adjustment_step_size_down:-20,//slowing down is quicker!
+  power_adjustment_step_size_up:20,//how many watts can a rider increase by
+  power_adjustment_step_size_down:-40,//slowing down is quicker!
   transv:0.95,//transmission efficiency
   headwindv:0,//headwind, zero seems fair for an indoor track
   race_move_wait_time:100,//slows down the visualisation
@@ -70,9 +70,10 @@ let riders = [
   distance_covered:0,
   bend_centre_x:0,
   power_out:0,
+  distance_from_rider_in_front:0,
   },
   {name:'Bob',
-  threshold_power:450,
+  threshold_power:400,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -97,6 +98,7 @@ let riders = [
   distance_covered:0,
   bend_centre_x:0,
   power_out:0,
+  distance_from_rider_in_front:0,
 },
 {
   name:'Laura',
@@ -115,7 +117,7 @@ let riders = [
   mass:75,
   weight:75,
   velocity:0,
-  colour:'#222222',
+  colour:'#a6a6a6',
   straight_distance_travelled:0,
   bend_distance_travelled :0,
   distance_this_step:0,
@@ -126,6 +128,7 @@ let riders = [
   distance_covered:0,
   bend_centre_x:0,
   power_out:0,
+  distance_from_rider_in_front:0,
 }
 ];
 
@@ -167,7 +170,10 @@ function moveRace(){
   $("#race_info_clock").text(race.race_clock);
   ctx.clearRect(0, 0, c.width, c.height);
   //console.log("race at " + race.race_clock + " seconds / " + race.distance);
+
+
   //move the riders and update the time
+
   for(i=0;i<race.current_order.length;i++){
     race_rider = race.riders[race.current_order[i]];
     //work out how far the race_rider can go in this time step
@@ -226,18 +232,28 @@ function moveRace(){
       let target_velocity = rider_to_follow_distance;
       //work out the power needed for this velocity- remember we are drafting
       let tv = target_velocity + settings.headwindv;
-      A2 = A2*settings.drafting_effect_on_drag;
+      //to work out the shelter, distance from the rider in front is needed
+
+      let level_of_shelter = 1;
+      if (race_rider.distance_from_rider_in_front > 3){
+        level_of_shelter = 0; //after 3m assume no shelter: this is a hardcoded guess
+      }
+      else if (race_rider.distance_from_rider_in_front > 0){
+        //between 0 and three metres need to drop off - try a linear model
+        level_of_shelter = (1-(level_of_shelter/3));
+      }
+      A2 -= A2*(settings.drafting_effect_on_drag*level_of_shelter);
       let A2Eff = (tv > 0.0) ? A2 : -A2; // wind in face, must reverse effect
       let target_power = (target_velocity * tres + target_velocity * tv * tv * A2Eff) / settings.transv;
       if (target_power > race_rider.threshold_power){
         target_power = race_rider.threshold_power; //can't go over this (for now)
       }
 
-
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
       let powerv = race_rider.power_out, power_adjustment = 0;
+
       if (powerv > target_power){//slowing down
-        if((powerv - target_power) > settings.power_adjustment_step_size_down){
+        if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
           power_adjustment = settings.power_adjustment_step_size_down;
         }
         else{
@@ -424,7 +440,7 @@ function moveRace(){
             race_rider.current_bend_angle=90;
           }
       }
-       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+race.riders[i].colour+"' >" + race_rider.name + " </div><div class='info_column'>"+Math.round(race_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(race_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(race_rider.power_out * 100)/100 + " watts</div>");
+
     }
     ctx.beginPath();
     ctx.arc(race_rider.current_position_x, race_rider.current_position_y, 6, 0, 2 * Math.PI);
@@ -432,6 +448,22 @@ function moveRace(){
     ctx.fill();
     //work out how much the race_rider can travel in this second
   }
+
+  //update each rider's distance value for the rider in front of them (lead is zero)
+    race.riders[race.current_order[0]].distance_from_rider_in_front = 0;
+    for(i=0;i<race.current_order.length;i++){
+      let ri = race.current_order[i];
+      let display_rider = race.riders[ri];
+      if(i>0){
+        display_rider.distance_from_rider_in_front = race.riders[ri-1].distance_covered - display_rider.distance_covered;
+        // if  (Math.abs(display_rider.distance_from_rider_in_front) > 0.05){
+        //   debugger
+        // }
+      }
+
+       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>");
+
+    }
 
   //work out the distance covered of the second last rider
 
