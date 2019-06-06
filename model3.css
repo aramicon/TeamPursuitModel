@@ -49,23 +49,27 @@
   background-color: #eeeeee;
   padding: 10px;
   border: 2px solid #444444;
-  width: 30%;
   margin: 10px;
-  margin-right: 100px;
-  float: right;
+  float: left;
+}
+.race_canvas{
+float:left;
+
 }
 .riders_info{
   background-color: #eeeeee;
   padding:10px;
   border: 1px solid #444444;
-
+  display: inline-flex;
   margin: 10px;
+    width: 100%;
 }
 .rider_info{
   background-color: #ffefee;
   border:1px solid #333333;
   padding:2px;
   display: inline-block;
+
 }
 .player{
   margin: 50px 0;
@@ -82,6 +86,9 @@
   flex-wrap: wrap;
   width: 100%;
   margin-left:10px;
+}
+#rider_values_header{
+  font-weight:bold;
 }
 
 .info_column {

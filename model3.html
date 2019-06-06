@@ -14,40 +14,47 @@
   <body>
     <div class="container-fluid">
         <h1>Team Pursuit Model</h1>
-        <canvas id="bikeCanvas" width="800" height="400" style="border:1px solid #d3d3d3;">
-          Your browser does not support the HTML5 canvas tag.</canvas>
-          <div class="race_info">
-            <div id="accordion">
-              <div class="card">
-                <div class="card-header" id="headingTwo">
-                  <h5 class="mb-0">
-                    <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#raceSettings" aria-expanded="false" aria-controls="raceSettings">
-                      Race Settings
-                    </button>
-                  </h5>
-                </div>
-                <div id="raceSettings" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
-                  <div class="card-body">
-                    <div class="form-group">
-                      <label for="race_length">Race Length</label>
-                      <input type="text" class="form-control" id="input_race_length">
-                    </div
-                    <div class="form-group">
-                      <label for="frontalArea">Frontal Area (all riders)</label>
-                      <input type="text" class="form-control" id="frontalArea">
-                    </div>
+        <div class="race_info">
+          <div id="accordion">
+            <div class="card">
+              <div class="card-header" id="headingTwo">
+                <h5 class="mb-0">
+                  <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#raceSettings" aria-expanded="false" aria-controls="raceSettings">
+                    Race Settings
+                  </button>
+                </h5>
+              </div>
+              <div id="raceSettings" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+                <div class="card-body">
+                  <div class="form-group">
+                    <label for="race_length">Race Length</label>
+                    <input type="text" class="form-control" id="input_race_length">
+                  </div>
+                  <div class="form-group">
+                    <label for="frontalArea">Frontal Area (all riders)</label>
+                    <input type="text" class="form-control" id="frontalArea">
+                  </div>
+                  <div class="form-group">
+                    <label for="teamorder">Team Order</label>
+                    <input type="text" class="form-control" id="teamorder">
                   </div>
                 </div>
               </div>
-          </div>
-          <div>
-            <ul class="list-group">
-              <li class="list-group-item"><i class="fas fa-stopwatch"></i> TIME: </span><span id="race_info_clock">0</span> s</li>
-            </ul>
-          <div class="riders_info" id = "riders_info"></div>
+            </div>
         </div>
+        <div>
+          <ul class="list-group">
+            <li class="list-group-item"><i class="fas fa-stopwatch"></i> TIME: </span><span id="race_info_clock">0</span> s</li>
+          </ul>
+      </div>
+      </div>
+        <div class="race_canvas"><canvas id="bikeCanvas" width="800" height="400" style="border:1px solid #d3d3d3;">
+          Your browser does not support the HTML5 canvas tag.</canvas>
         </div>
+
         <div class="race_actions" id = "race_actions">
+
+          <div>
           <button type="button" id="button_play" class="btn" onclick='playRace()'>
             <i class="fa fa-play fa-3x"></i>
           </button>
@@ -59,6 +66,35 @@
           </button>
           <span class="current_activity" id = "current_activity"> <i class="fas fa-cog fa-2x" style="color:#999999"></i></span>
         </div>
+
+          <div class="btn-group-vertical ml-4 mt-4" role="group" aria-label="Basic example">
+    <div class="btn-group">
+        <div class="text-center form-control-lg mb-2" id="instruction_info">Change effort</div>
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(1);">1</button>
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(2);">2</button>
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(3);">3</button>
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(4);">4</button>
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(5);">5</button>
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(6);">6</button>
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(7);">7</button>
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(8);">8</button>
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(9);">9</button>
+    </div>
+    <div class="btn-group">
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="">x</button>
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(0);">0</button>
+        <button type="button" class="btn btn-outline-secondary py-3" onclick="">x</button>
+        <!-- <button type="button" class="btn btn-primary py-3" onclick="">Go</button> -->
+    </div>
+</div>
+        </div>
+          <div class="riders_info" id = "riders_info"></div>
       </div>
 </body>
 </html>

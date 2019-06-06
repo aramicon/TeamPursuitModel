@@ -44,8 +44,9 @@ let race = {
   current_distance_of_finish_rider:0
 }
 let riders = [
-  {name:'Chris',
+  {name:'Aardvark',
   threshold_power:450,
+  current_power_effort:0,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -72,8 +73,9 @@ let riders = [
   power_out:0,
   distance_from_rider_in_front:0,
   },
-  {name:'Bob',
+  {name:'Bee Man',
   threshold_power:400,
+  current_power_effort:0,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -101,8 +103,9 @@ let riders = [
   distance_from_rider_in_front:0,
 },
 {
-  name:'Laura',
-  threshold_power:400,
+  name:'CC 20',
+  threshold_power:287,
+  current_power_effort:0,
   endurance:8,
   burst_power:9,
   burst_endurance:2,
@@ -137,6 +140,7 @@ console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/
 
 function addRiderDisplay(){
   $("#riders_info" ).empty();
+  $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column'>Rider</div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div></div>");
   for(i=0;i<race.riders.length;i++){
     $("#riders_info" ).append("<div id='rider_values_"+i+"' class='info_row'></div>" );
   }
@@ -164,14 +168,23 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method */
 		return 0.0;  // failed to converge
 }
 
+function setEffort(effort){
+  //change the effort of the leading rider
+  let leadingRider = race.riders[race.current_order[0]];
+  let new_power = leadingRider.threshold_power*(effort+1)/10;
+  leadingRider.current_power_effort = new_power;
+  $('#instruction_info').text("Change effort to " + effort + ": " + new_power + " watts");
+
+
+
+}
+
 
 function moveRace(){
   race.race_clock++;
   $("#race_info_clock").text(race.race_clock);
   ctx.clearRect(0, 0, c.width, c.height);
   //console.log("race at " + race.race_clock + " seconds / " + race.distance);
-
-
   //move the riders and update the time
 
   for(i=0;i<race.current_order.length;i++){
@@ -186,7 +199,7 @@ function moveRace(){
     let tres = twt * (settings.gradev + settings.rollingRes); // gravity and rolling resistance
     if (race_rider.current_aim =="lead"){
       //push the pace at the front
-      let target_power = race_rider.threshold_power; //try to get to this
+      let target_power = race_rider.current_power_effort; //try to get to this
       //work out the velocity from the power
 
       let powerv = race_rider.power_out, power_adjustment = 0;
@@ -211,7 +224,7 @@ function moveRace(){
       race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
 
       drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
-      usable_power = powerv; //race_rider.threshold_power - drag_watts;
+      usable_power = powerv; //race_rider.current_power_effort - drag_watts;
       race_rider.power_out = usable_power;
       //race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
       race_rider.acceleration_this_step = 0;//disable old acceleration formula
@@ -220,10 +233,10 @@ function moveRace(){
       //try to follow (travel the same distace as- apply the same power) the race_rider in front of you
       let rider_to_follow = {};
       if (i==0){
-        rider_to_follow = race.riders[race.riders.length-1];
+        rider_to_follow = race.riders[race.current_order[race.current_order.length-1]];
       }
       else{
-        rider_to_follow = race.riders[i-1];
+        rider_to_follow = race.riders[race.current_order[i-1]];
        }
       usable_power = rider_to_follow.power_out;
       // assume we are drafting and try to cover the same distance as the race_rider in front, which will take a certain amount of power
@@ -245,8 +258,8 @@ function moveRace(){
       A2 -= A2*(settings.drafting_effect_on_drag*level_of_shelter);
       let A2Eff = (tv > 0.0) ? A2 : -A2; // wind in face, must reverse effect
       let target_power = (target_velocity * tres + target_velocity * tv * tv * A2Eff) / settings.transv;
-      if (target_power > race_rider.threshold_power){
-        target_power = race_rider.threshold_power; //can't go over this (for now)
+      if (target_power > race_rider.current_power_effort){
+        target_power = race_rider.current_power_effort; //can't go over this (for now)
       }
 
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
@@ -257,7 +270,7 @@ function moveRace(){
           power_adjustment = settings.power_adjustment_step_size_down;
         }
         else{
-          power_adjustment = (powerv - target_power);
+          power_adjustment = (target_power - powerv);
         }
       }
       else if(powerv < target_power){//speeding up
@@ -272,18 +285,18 @@ function moveRace(){
 
       race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
 
-      drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
-      usable_power = powerv; //race_rider.threshold_power - drag_watts;
+      //drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
+      usable_power = powerv; //race_rider.current_power_effort - drag_watts;
       race_rider.power_out = usable_power;
       //race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
-      race_rider.acceleration_this_step = 0;//disable old acceleration formula
+      //race_rider.acceleration_this_step = 0;//disable old acceleration formula
 
       //let new_power_req = Math.pow((rider_to_follow_distance - race_rider.velocity),2)*(2*race_rider.mass*race.race_clock);
       //new_power_req -= new_power_req*settings.draft_power_savings;
       //usable_power = race_rider.power_out + new_power_req;
-      //if (race_rider.threshold_power < usable_power){
+      //if (race_rider.current_power_effort < usable_power){
         //oops, you can't keep up
-        //usable_power = race_rider.threshold_power;
+        //usable_power = race_rider.current_power_effort;
         //assume no drafting once you can't keep up?
         //race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
     //  }
@@ -292,7 +305,7 @@ function moveRace(){
     //  }
       //race_rider.power_out = usable_power;
     }
-    race_rider.velocity += race_rider.acceleration_this_step;
+    //race_rider.velocity += race_rider.acceleration_this_step;
     race_rider.distance_this_step = race_rider.velocity; //asssumes we are travelling for 1 second!
 
     console.log(race_rider.name + " " + race_rider.current_aim + " at " + race.race_clock + " power " + usable_power + " usable/" + drag_watts + "drag acceleration " + race_rider.acceleration_this_step + " new velocity " + race_rider.velocity);
@@ -491,6 +504,11 @@ function update_race_settings(){
     settings.frontalArea = input_frontalArea;
     console.log("updated settings.frontalArea to " + settings.frontalArea )
   }
+  let input_teamOrder = $('#teamorder').val().split(",").map(a=>+a);
+  if(input_teamOrder.length > 0){
+    race.start_order = input_teamOrder;
+    console.log("updated race.start_order " + race.start_order )
+  }
 }
 
 function load_race(){
@@ -521,6 +539,7 @@ function load_race(){
     load_rider.distance_this_step_remaining=0;
     load_rider.power_out=0;
     load_rider.velocity=0;
+    load_rider.current_power_effort = load_rider.threshold_power;
     if (i==0){
       load_rider.current_aim = "lead";
     }
@@ -544,6 +563,7 @@ $(document).ready(function() {
   ctx =c.getContext("2d");
   $('#input_race_length').val(race.distance);
   $('#frontalArea').val(settings.frontalArea);
+  $('#teamorder').val(race.start_order.map(a=>a).join(","));
 
 
   load_race();
@@ -555,18 +575,17 @@ function playRace() {
       race_state='play';
       var button = d3.select("#button_play").classed('btn-success', true);
       button.select("i").attr('class', "fa fa-pause fa-3x");
-      update_race_settings();
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
     }
     else if(race_state=='play' || race_state=='resume'){
       race_state = 'pause';
+      update_race_settings();
       d3.select("#button_play i").attr('class', "fa fa-play fa-3x");
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x ");
     }
     else if(race_state=='pause'){
       race_state = 'resume';
-      update_race_settings();
-      d3.select("#button_play i").attr('class', "fa fa-pause fa-3x");
+          d3.select("#button_play i").attr('class', "fa fa-pause fa-3x");
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
     }
     moveRace();
@@ -579,6 +598,7 @@ function stopRace(){
     button.select("i").attr('class', "fa fa-play fa-3x");
     d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x");
     console.log("button stop invoked.");
+    update_race_settings();
     resetRace();
 }
 
