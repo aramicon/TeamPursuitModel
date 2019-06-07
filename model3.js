@@ -45,7 +45,7 @@ let race = {
 }
 let riders = [
   {name:'Aardvark',
-  threshold_power:450,
+  threshold_power:300,
   current_power_effort:0,
   endurance:8,
   burst_power:9,
@@ -74,7 +74,7 @@ let riders = [
   distance_from_rider_in_front:0,
   },
   {name:'Bee Man',
-  threshold_power:400,
+  threshold_power:300,
   current_power_effort:0,
   endurance:8,
   burst_power:9,
@@ -104,7 +104,7 @@ let riders = [
 },
 {
   name:'CC 20',
-  threshold_power:287,
+  threshold_power:300,
   current_power_effort:0,
   endurance:8,
   burst_power:9,
@@ -174,9 +174,24 @@ function setEffort(effort){
   let new_power = leadingRider.threshold_power*(effort+1)/10;
   leadingRider.current_power_effort = new_power;
   $('#instruction_info').text("Change effort to " + effort + ": " + new_power + " watts");
+}
 
+function switchLead(positions_to_drop_back){
+  //move the lead rider back a given number of spaces: positions_to_drop_back, 1-team_size - 1
+  if (positions_to_drop_back >= (race.current_order.length-1)){
+    positions_to_drop_back = (race.current_order.length-1);
+  }
 
+  let new_order = race.current_order.slice(1,positions_to_drop_back+1);
+  new_order.push(race.current_order[0]);
+  new_order.push(...race.current_order.slice(positions_to_drop_back+1,race.current_order.length));
 
+  race.current_order = new_order;
+  //change the rider roles
+  race.riders[new_order[0]].current_aim = "lead";
+  for(i=1;i<new_order.length;i++){race.riders[new_order[i]].current_aim = "follow";}
+
+  console.log("Move lead rider back " + positions_to_drop_back + " positions in order, new order " + new_order);
 }
 
 
@@ -468,7 +483,8 @@ function moveRace(){
       let ri = race.current_order[i];
       let display_rider = race.riders[ri];
       if(i>0){
-        display_rider.distance_from_rider_in_front = race.riders[ri-1].distance_covered - display_rider.distance_covered;
+        let rif = race.current_order[i-1]
+        display_rider.distance_from_rider_in_front = race.riders[rif].distance_covered - display_rider.distance_covered;
         // if  (Math.abs(display_rider.distance_from_rider_in_front) > 0.05){
         //   debugger
         // }
