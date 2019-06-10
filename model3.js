@@ -17,7 +17,7 @@ let settings={
   track_centre_x:400,
   track_centre_y:200,
   race_bend_distance:0,
-  start_position_offset:3,
+  start_position_offset:2,
   drag_coefficent:0.32,
   air_density:1.225,
   draft_power_savings:0.33,
@@ -35,7 +35,7 @@ let settings={
   frontalArea:0.233,
 }
 let race = {
-  distance:1000,
+  distance:4000,
   start_order:[0,1,2],
   current_order:[],
   riders: [],
@@ -45,7 +45,7 @@ let race = {
 }
 let riders = [
   {name:'Aardvark',
-  threshold_power:300,
+  threshold_power:400,
   current_power_effort:0,
   endurance:8,
   burst_power:9,
@@ -74,7 +74,7 @@ let riders = [
   distance_from_rider_in_front:0,
   },
   {name:'Bee Man',
-  threshold_power:300,
+  threshold_power:350,
   current_power_effort:0,
   endurance:8,
   burst_power:9,
@@ -262,13 +262,17 @@ function moveRace(){
       let tv = target_velocity + settings.headwindv;
       //to work out the shelter, distance from the rider in front is needed
 
-      let level_of_shelter = 1;
+      let level_of_shelter = 1;//maximum shelter
       if (race_rider.distance_from_rider_in_front > 3){
         level_of_shelter = 0; //after 3m assume no shelter: this is a hardcoded guess
       }
       else if (race_rider.distance_from_rider_in_front > 0){
         //between 0 and three metres need to drop off - try a linear model
         level_of_shelter = (1-(level_of_shelter/3));
+      }
+      else if (race_rider.distance_from_rider_in_front == -1){
+        //if you have no rider in front of you this distance is set to -1, so you have no shelter
+        level_of_shelter = 0;
       }
       A2 -= A2*(settings.drafting_effect_on_drag*level_of_shelter);
       let A2Eff = (tv > 0.0) ? A2 : -A2; // wind in face, must reverse effect
@@ -297,7 +301,6 @@ function moveRace(){
         }
       }
       powerv+=power_adjustment;
-
       race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
 
       //drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
@@ -322,7 +325,6 @@ function moveRace(){
     }
     //race_rider.velocity += race_rider.acceleration_this_step;
     race_rider.distance_this_step = race_rider.velocity; //asssumes we are travelling for 1 second!
-
     console.log(race_rider.name + " " + race_rider.current_aim + " at " + race.race_clock + " power " + usable_power + " usable/" + drag_watts + "drag acceleration " + race_rider.acceleration_this_step + " new velocity " + race_rider.velocity);
 
     //if on a straight just keep going in that direction
@@ -389,7 +391,6 @@ function moveRace(){
         }
       }
       else if (race_rider.current_track_position == 'straight2') {
-
         if (race_rider.straight_distance_travelled + distance_this_step_segment <= (settings.track_straight_length)){
           //can do full step on straight
           race_rider.straight_distance_travelled += distance_this_step_segment;
@@ -410,7 +411,6 @@ function moveRace(){
           race_rider.current_track_position = 'bend2';
           race_rider.bend_centre_x = race_rider.current_position_x
           //console.log("race_rider.bend_centre_x="+race_rider.bend_centre_x);
-
           race_rider.current_bend_angle=270;
         }
       }
@@ -441,7 +441,6 @@ function moveRace(){
           race_rider.bend_distance_travelled= 0;
           race_rider.current_track_position = 'straight1';
           race_rider.straight_distance_travelled = 0;
-
         }
       }
       else if (race_rider.current_track_position == 'straight1') {
@@ -468,34 +467,49 @@ function moveRace(){
             race_rider.current_bend_angle=90;
           }
       }
-
     }
     ctx.beginPath();
-    ctx.arc(race_rider.current_position_x, race_rider.current_position_y, 6, 0, 2 * Math.PI);
+    ctx.arc(race_rider.current_position_x, race_rider.current_position_y, 4, 0, 2 * Math.PI);
     ctx.fillStyle = race_rider.colour;
     ctx.fill();
     //work out how much the race_rider can travel in this second
   }
 
   //update each rider's distance value for the rider in front of them (lead is zero)
-    race.riders[race.current_order[0]].distance_from_rider_in_front = 0;
+    //race.riders[race.current_order[0]].distance_from_rider_in_front = 0;
     for(i=0;i<race.current_order.length;i++){
       let ri = race.current_order[i];
       let display_rider = race.riders[ri];
-      if(i>0){
-        let rif = race.current_order[i-1]
-        display_rider.distance_from_rider_in_front = race.riders[rif].distance_covered - display_rider.distance_covered;
+      //is there a rider in front, i.e. who has covered more distance? find the closest rider that is in front of you and use this gap to work out your shelter
+      let rif = -1;
+      let min_distance = -1;
+      for(j=0;j<race.current_order.length;j++){
+          if(i!==j){ //ignore distance to self
+            if((race.riders[race.current_order[j]].distance_covered - display_rider.distance_covered) >= 0){//ignore riders behind you
+              if(min_distance==-1){
+                min_distance = race.riders[race.current_order[j]].distance_covered - display_rider.distance_covered
+              }
+              else if ((race.riders[race.current_order[j]].distance_covered - display_rider.distance_covered) <  min_distance){
+                min_distance = race.riders[race.current_order[j]].distance_covered - display_rider.distance_covered;
+              }
+            }
+          }
+      }
+      //let rif = race.current_order[i-1]
+      //display_rider.distance_from_rider_in_front = race.riders[rif].distance_covered - display_rider.distance_covered;
+      display_rider.distance_from_rider_in_front = min_distance;
         // if  (Math.abs(display_rider.distance_from_rider_in_front) > 0.05){
         //   debugger
         // }
-      }
 
-       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>");
+
+      //display the rider properties
+
+       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + (display_rider.current_aim=='lead'?" -LEAD-":"") + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>");
 
     }
 
   //work out the distance covered of the second last rider
-
   if (race.riders[race.current_order[race.current_order.length-1]].distance_covered < race.distance && (race_state == "play" || race_state == "resume" )){
     setTimeout(
       function(){
@@ -564,7 +578,7 @@ function load_race(){
     }
     race.current_order.push(race.start_order[i]);
     ctx.beginPath();
-    ctx.arc(load_rider.current_position_x, load_rider.current_position_y, 6, 0, 2 * Math.PI);
+    ctx.arc(load_rider.current_position_x, load_rider.current_position_y, 4, 0, 2 * Math.PI);
     ctx.fillStyle = load_rider.colour;
     ctx.fill();
     race.riders.push(load_rider);
