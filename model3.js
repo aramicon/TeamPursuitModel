@@ -33,6 +33,9 @@ let settings={
   headwindv:0,//headwind, zero seems fair for an indoor track
   race_move_wait_time:100,//slows down the visualisation
   frontalArea:0.233,
+  damping_visibility_distance:20,// # metres from which damping can start
+  fatigue_failure_level:100, // when fatigue get here, riders have to rest
+
 }
 let race = {
   distance:4000,
@@ -48,7 +51,7 @@ let riders = [
   threshold_power:400,
   current_power_effort:0,
   endurance:8,
-  burst_power:9,
+  max_power:900,
   burst_endurance:2,
   starting_energy:100,
   current_energy:100,
@@ -72,12 +75,17 @@ let riders = [
   bend_centre_x:0,
   power_out:0,
   distance_from_rider_in_front:0,
+  endurance_fatigue_level:0,
+  burst_fatigue_level:0,
+  fatigue_rate:2,
+  recovery_rate:2,
+  output_level:6,//6 is threshold
   },
   {name:'Bee Man',
   threshold_power:350,
   current_power_effort:0,
   endurance:8,
-  burst_power:9,
+  max_power:900,
   burst_endurance:2,
   starting_energy:100,
   current_energy:100,
@@ -101,13 +109,18 @@ let riders = [
   bend_centre_x:0,
   power_out:0,
   distance_from_rider_in_front:0,
+  endurance_fatigue_level:0,
+  burst_fatigue_level:0,
+  fatigue_rate:2,
+  recovery_rate:2,
+  output_level:6,//6 is threshold
 },
 {
   name:'CC 20',
   threshold_power:300,
   current_power_effort:0,
   endurance:8,
-  burst_power:9,
+  max_power:900,
   burst_endurance:2,
   starting_energy:100,
   current_energy:100,
@@ -132,6 +145,11 @@ let riders = [
   bend_centre_x:0,
   power_out:0,
   distance_from_rider_in_front:0,
+  endurance_fatigue_level:0,
+  burst_fatigue_level:0,
+  fatigue_rate:2,
+  recovery_rate:2,
+  output_level:6,//6 is threshold
 }
 ];
 
@@ -140,7 +158,7 @@ console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/
 
 function addRiderDisplay(){
   $("#riders_info" ).empty();
-  $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column'>Rider</div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div></div>");
+  $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column'>Rider</div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div><div class='info_column'>Fatigue</div></div>");
   for(i=0;i<race.riders.length;i++){
     $("#riders_info" ).append("<div id='rider_values_"+i+"' class='info_row'></div>" );
   }
@@ -171,8 +189,9 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method */
 function setEffort(effort){
   //change the effort of the leading rider
   let leadingRider = race.riders[race.current_order[0]];
-  let new_power = leadingRider.threshold_power*(effort+1)/10;
-  leadingRider.current_power_effort = new_power;
+    leadingRider.output_level = effort+1;
+  // let new_power = leadingRider.threshold_power*(effort+1)/10;
+  // leadingRider.current_power_effort = new_power;
   $('#instruction_info').text("Change effort to " + effort + ": " + new_power + " watts");
 }
 
@@ -189,7 +208,11 @@ function switchLead(positions_to_drop_back){
   race.current_order = new_order;
   //change the rider roles
   race.riders[new_order[0]].current_aim = "lead";
-  for(i=1;i<new_order.length;i++){race.riders[new_order[i]].current_aim = "follow";}
+  for(i=1;i<new_order.length;i++){
+    race.riders[new_order[i]].current_aim = "follow";
+    //reset their power level
+      race.riders[new_order[i]].current_power_effort = race.riders[new_order[i]].threshold_power;
+  }
 
   console.log("Move lead rider back " + positions_to_drop_back + " positions in order, new order " + new_order);
 }
@@ -214,6 +237,36 @@ function moveRace(){
     let tres = twt * (settings.gradev + settings.rollingRes); // gravity and rolling resistance
     if (race_rider.current_aim =="lead"){
       //push the pace at the front
+      //what's the current effort?
+      //consider fatigue
+      if(race_rider.endurance_fatigue_level >= settings.fatigue_failure_level){
+        race_rider.output_level = 5;
+      }
+      //set the power level based on the effort instruction
+      if (race_rider.output_level < 6){
+        race_rider.current_power_effort = race_rider.threshold_power*(race_rider.output_level)/10;
+        //recover if going under the threshold
+        if (race_rider.endurance_fatigue_level > 0){
+          race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.current_power_effort)/race_rider.threshold_power)
+        }
+      }
+      else if(race_rider.output_level == 6){
+        race_rider.current_power_effort = race_rider.threshold_power;
+      }
+      else{
+        race_rider.current_power_effort = race_rider.max_power*(race_rider.output_level)/10;
+        //add fatigue if going harder than the threshold
+
+        race_rider.endurance_fatigue_level += race_rider.fatigue_rate*( (race_rider.max_power- race_rider.current_power_effort)/race_rider.max_power)
+
+      }
+
+
+
+
+
+
+      // leadingRider.current_power_effort = new_power;
       let target_power = race_rider.current_power_effort; //try to get to this
       //work out the velocity from the power
 
@@ -255,9 +308,10 @@ function moveRace(){
        }
       usable_power = rider_to_follow.power_out;
       // assume we are drafting and try to cover the same distance as the race_rider in front, which will take a certain amount of power
-      rider_to_follow_distance = rider_to_follow.distance_covered -  race_rider.distance_covered;
+      //need to factor in the original offset
+      let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
       //this is your target velocity, but it might not be possible. assuming 1 s - 1 step
-      let target_velocity = rider_to_follow_distance;
+      let target_velocity = distance_to_cover;
       //work out the power needed for this velocity- remember we are drafting
       let tv = target_velocity + settings.headwindv;
       //to work out the shelter, distance from the rider in front is needed
@@ -284,9 +338,15 @@ function moveRace(){
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
       let powerv = race_rider.power_out, power_adjustment = 0;
 
+      //to stop radical slowing down/speeding up, need to reduce it as the target rider's velocity is approched
+      let damping = 1;
+      if (Math.abs(distance_to_cover) < settings.damping_visibility_distance){
+        //damping = (Math.abs(distance_to_cover)/settings.damping_visibility_distance);
+      }
+
       if (powerv > target_power){//slowing down
         if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
-          power_adjustment = settings.power_adjustment_step_size_down;
+          power_adjustment = settings.power_adjustment_step_size_down * damping;
         }
         else{
           power_adjustment = (target_power - powerv);
@@ -485,12 +545,13 @@ function moveRace(){
       let min_distance = -1;
       for(j=0;j<race.current_order.length;j++){
           if(i!==j){ //ignore distance to self
-            if((race.riders[race.current_order[j]].distance_covered - display_rider.distance_covered) >= 0){//ignore riders behind you
+            let distance_to_rider = (race.riders[race.current_order[j]].distance_covered - race.riders[race.current_order[j]].start_offset ) - (display_rider.distance_covered - display_rider.start_offset);
+            if(distance_to_rider >= 0){//ignore riders behind you, who will have negative distance
               if(min_distance==-1){
-                min_distance = race.riders[race.current_order[j]].distance_covered - display_rider.distance_covered
+                min_distance = distance_to_rider;
               }
-              else if ((race.riders[race.current_order[j]].distance_covered - display_rider.distance_covered) <  min_distance){
-                min_distance = race.riders[race.current_order[j]].distance_covered - display_rider.distance_covered;
+              else if (distance_to_rider <  min_distance){
+                min_distance = distance_to_rider;
               }
             }
           }
@@ -505,7 +566,7 @@ function moveRace(){
 
       //display the rider properties
 
-       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + (display_rider.current_aim=='lead'?" -LEAD-":"") + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>");
+       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + " " + display_rider.current_aim.toUpperCase() + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + display_rider.endurance_fatigue_level + "</div");
 
     }
 
@@ -570,6 +631,8 @@ function load_race(){
     load_rider.power_out=0;
     load_rider.velocity=0;
     load_rider.current_power_effort = load_rider.threshold_power;
+    load_rider.endurance_fatigue_level = 0;
+    load_rider.burst_fatigue_level = 0;
     if (i==0){
       load_rider.current_aim = "lead";
     }
