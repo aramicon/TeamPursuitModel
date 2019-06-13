@@ -82,10 +82,10 @@ let riders = [
   output_level:6,//6 is threshold
   },
   {name:'Bee Man',
-  threshold_power:350,
+  threshold_power:400,
   current_power_effort:0,
   endurance:8,
-  max_power:900,
+  max_power:1000,
   burst_endurance:2,
   starting_energy:100,
   current_energy:100,
@@ -112,12 +112,12 @@ let riders = [
   endurance_fatigue_level:0,
   burst_fatigue_level:0,
   fatigue_rate:2,
-  recovery_rate:2,
+  recovery_rate:1,
   output_level:6,//6 is threshold
 },
 {
   name:'CC 20',
-  threshold_power:300,
+  threshold_power:400,
   current_power_effort:0,
   endurance:8,
   max_power:900,
@@ -147,7 +147,7 @@ let riders = [
   distance_from_rider_in_front:0,
   endurance_fatigue_level:0,
   burst_fatigue_level:0,
-  fatigue_rate:2,
+  fatigue_rate:4,
   recovery_rate:2,
   output_level:6,//6 is threshold
 }
@@ -256,14 +256,8 @@ function moveRace(){
       else{
         race_rider.current_power_effort = race_rider.max_power*(race_rider.output_level)/10;
         //add fatigue if going harder than the threshold
-
-        race_rider.endurance_fatigue_level += race_rider.fatigue_rate*( (race_rider.max_power- race_rider.current_power_effort)/race_rider.max_power)
-
+        race_rider.endurance_fatigue_level += race_rider.fatigue_rate*( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power);
       }
-
-
-
-
 
 
       // leadingRider.current_power_effort = new_power;
@@ -331,9 +325,32 @@ function moveRace(){
       A2 -= A2*(settings.drafting_effect_on_drag*level_of_shelter);
       let A2Eff = (tv > 0.0) ? A2 : -A2; // wind in face, must reverse effect
       let target_power = (target_velocity * tres + target_velocity * tv * tv * A2Eff) / settings.transv;
-      if (target_power > race_rider.current_power_effort){
-        target_power = race_rider.current_power_effort; //can't go over this (for now)
+
+      //What is the max power that this rider can do for now? Need to consider fatigue
+      let current_max_power = race_rider.max_power;
+
+      if(race_rider.endurance_fatigue_level >= settings.fatigue_failure_level){
+        current_max_power = (race_rider.threshold_power*(5/10));
       }
+      //can't go over the max power
+      if (target_power > current_max_power){
+        target_power = current_max_power; //can't go over this (for now)
+      }
+
+      //fatigue if over the threshold, recover if under
+      if (target_power < race_rider.threshold_power ){
+        //recover if going under the threshold
+        if (race_rider.endurance_fatigue_level > 0){
+          race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- target_power)/race_rider.threshold_power)
+        }
+      }
+      else{
+        //add fatigue if going harder than the threshold
+        race_rider.endurance_fatigue_level += race_rider.fatigue_rate*( (target_power - race_rider.threshold_power)/race_rider.max_power);
+      }
+
+
+
 
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
       let powerv = race_rider.power_out, power_adjustment = 0;
