@@ -117,10 +117,10 @@ let riders = [
 },
 {
   name:'CC 20',
-  threshold_power:400,
+  threshold_power:300,
   current_power_effort:0,
   endurance:8,
-  max_power:900,
+  max_power:700,
   burst_endurance:2,
   starting_energy:100,
   current_energy:100,
