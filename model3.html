@@ -6,10 +6,10 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
     <!-- <script type="text/javascript" src = "jquery-3.4.1.min.js"></script> -->
-    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script type="text/javascript" src = "model3.js"></script>
+    <script src = "model3.js" type="module"></script>
   </head>
   <body>
     <div class="container-fluid">
@@ -53,16 +53,15 @@
         </div>
 
         <div class="race_actions" id = "race_actions">
-
           <div>
-          <button type="button" id="button_play" class="btn" onclick='playRace()'>
+          <button type="button" id="button_play" class="btn">
             <i class="fa fa-play fa-3x"></i>
           </button>
-          <button type="button" id="button_stop" class="btn" onclick='stopRace()'>
-            <i class="fa fa-stop fa-3x"></i>
-          </button>
-          <button type="button" id="button_fw" class="btn" onclick='forwardStep()'>
+          <button type="button" id="button_fw" class="btn">
             <i class="fa fa-forward fa-3x"></i>
+          </button>
+          <button type="button" id="button_stop" class="btn">
+            <i class="fa fa-stop fa-3x"></i>
           </button>
           <span class="current_activity" id = "current_activity"> <i class="fas fa-cog fa-2x" style="color:#999999"></i></span>
         </div>
@@ -72,23 +71,23 @@
         <div class="text-center form-control-lg mb-2" id="instruction_info">Change effort</div>
     </div>
     <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(1);">1</button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(2);">2</button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(3);">3</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_1" >1</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_2">2</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_3">3</button>
     </div>
     <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(4);">4</button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(5);">5</button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(6);">6</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_4">4</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_5">5</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_6">6</button>
     </div>
     <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(7);">7</button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(8);">8</button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(9);">9</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_7">7</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_8">8</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_9">9</button>
     </div>
     <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="">x</button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="setEffort(0);">0</button>
+        <button type="button" class="btn btn-outline-secondary py-3" >x</button>
+        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_0">0</button>
         <button type="button" class="btn btn-outline-secondary py-3" onclick="">x</button>
         <!-- <button type="button" class="btn btn-primary py-3" onclick="">Go</button> -->
     </div>
@@ -96,9 +95,9 @@
         <div class="text-center form-control-lg mb-2" id="instruction_info">Switch</div>
     </div>
     <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="switchLead(1)">></button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="switchLead(2)">>></button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="switchLead(3)">>>></button>
+          <button type="button" class="btn btn-outline-secondary py-3 switch_lead" id="switch_lead_1">></button>
+        <button type="button" class="btn btn-outline-secondary py-3 switch_lead" id="switch_lead_2">>></button>
+        <button type="button" class="btn btn-outline-secondary py-3 switch_lead" id="switch_lead_3">>>></button>
     </div>
 </div>
         </div>

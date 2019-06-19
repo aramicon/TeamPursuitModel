@@ -2,156 +2,15 @@
 //code by Donal kelly donakello@gmail.com
 //Model of team pursuit track cycle race
 
+//import global, race, and rider setting data
 
-
+import {settings} from './global_settings.js';
+import {race} from './race_settings.js';
+import {riders} from './riders.js';
 
 let c = {};
 let ctx = {};
 var race_state = 'stop';
-let settings={
-  radius:100,
-  fixed_test_distance:1,
-  track_bend_radius:22,
-  track_straight_length:55.88496162102456,//((250-(2*Math.PI*22))/2),
-  vis_scale:5,
-  track_centre_x:400,
-  track_centre_y:200,
-  race_bend_distance:0,
-  start_position_offset:2,
-  drag_coefficent:0.32,
-  air_density:1.225,
-  draft_power_savings:0.33,
-  drafting_effect_on_drag:0.4,
-  temperaturev:22,
-  elevationv:100,
-  bike_weight:9,
-  gradev:0, //obvs track is flat
-  rollingRes:0.004,
-  power_adjustment_step_size_up:20,//how many watts can a rider increase by
-  power_adjustment_step_size_down:-40,//slowing down is quicker!
-  transv:0.95,//transmission efficiency
-  headwindv:0,//headwind, zero seems fair for an indoor track
-  race_move_wait_time:100,//slows down the visualisation
-  frontalArea:0.233,
-  damping_visibility_distance:20,// # metres from which damping can start
-  fatigue_failure_level:100, // when fatigue get here, riders have to rest
-
-}
-let race = {
-  distance:4000,
-  start_order:[0,1,2],
-  current_order:[],
-  riders: [],
-  race_clock:0,
-  race_instructions:[],
-  current_distance_of_finish_rider:0
-}
-let riders = [
-  {name:'Aardvark',
-  threshold_power:400,
-  current_power_effort:0,
-  endurance:8,
-  max_power:900,
-  burst_endurance:2,
-  starting_energy:100,
-  current_energy:100,
-  current_position_x:0,
-  current_position_y:0,
-  starting_position_x:0,
-  starting_position_y:0,
-  current_track_position:'',
-  mass:75,
-  weight:75,
-  velocity:0,
-  colour:'#ff0000',
-  straight_distance_travelled:0,
-  bend_distance_travelled :0,
-  distance_this_step:0,
-  acceleration_this_step:0,
-  start_offset:0,
-  distance_this_step_remaining:0,
-  current_bend_angle:0,
-  distance_covered:0,
-  bend_centre_x:0,
-  power_out:0,
-  distance_from_rider_in_front:0,
-  endurance_fatigue_level:0,
-  burst_fatigue_level:0,
-  fatigue_rate:2,
-  recovery_rate:2,
-  output_level:6,//6 is threshold
-  },
-  {name:'Bee Man',
-  threshold_power:400,
-  current_power_effort:0,
-  endurance:8,
-  max_power:1000,
-  burst_endurance:2,
-  starting_energy:100,
-  current_energy:100,
-  current_position_x:0,
-  current_position_y:0,
-  starting_position_x:0,
-  starting_position_y:0,
-  current_track_position:'',
-  mass:75,
-  weight:75,
-  velocity:0,
-  colour:'#ff00ff',
-  straight_distance_travelled:0,
-  bend_distance_travelled :0,
-  distance_this_step:0,
-  acceleration_this_step:0,
-  start_offset:0,
-  distance_this_step_remaining:0,
-  current_bend_angle:0,
-  distance_covered:0,
-  bend_centre_x:0,
-  power_out:0,
-  distance_from_rider_in_front:0,
-  endurance_fatigue_level:0,
-  burst_fatigue_level:0,
-  fatigue_rate:2,
-  recovery_rate:1,
-  output_level:6,//6 is threshold
-},
-{
-  name:'CC 20',
-  threshold_power:300,
-  current_power_effort:0,
-  endurance:8,
-  max_power:700,
-  burst_endurance:2,
-  starting_energy:100,
-  current_energy:100,
-  current_position_x:0,
-  current_position_y:0,
-  starting_position_x:0,
-  starting_position_y:0,
-  current_track_position:'',
-  current_aim:'',
-  mass:75,
-  weight:75,
-  velocity:0,
-  colour:'#a6a6a6',
-  straight_distance_travelled:0,
-  bend_distance_travelled :0,
-  distance_this_step:0,
-  acceleration_this_step:0,
-  start_offset:0,
-  distance_this_step_remaining:0,
-  current_bend_angle:0,
-  distance_covered:0,
-  bend_centre_x:0,
-  power_out:0,
-  distance_from_rider_in_front:0,
-  endurance_fatigue_level:0,
-  burst_fatigue_level:0,
-  fatigue_rate:4,
-  recovery_rate:2,
-  output_level:6,//6 is threshold
-}
-];
 
 console.log("Track bend radius = 22m");
 console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/2 );
@@ -159,7 +18,7 @@ console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/
 function addRiderDisplay(){
   $("#riders_info" ).empty();
   $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column'>Rider</div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div><div class='info_column'>Fatigue</div></div>");
-  for(i=0;i<race.riders.length;i++){
+  for(let i=0;i<race.riders.length;i++){
     $("#riders_info" ).append("<div id='rider_values_"+i+"' class='info_row'></div>" );
   }
 }
@@ -174,7 +33,7 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method */
 		var vel = 20;       // Initial guess
 		var MAX = 10;       // maximum iterations
 		var TOL = 0.05;     // tolerance
-		for (i_n=1; i_n < MAX; i_n++) {
+		for(let i_n=1; i_n < MAX; i_n++) {
 			var tv = vel + hw;
 			var aeroEff = (tv > 0.0) ? aero : -aero; // wind in face, must reverse effect
 			var f = vel * (aeroEff * tv * tv + tr) - tran * p; // the function
@@ -186,20 +45,25 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method */
 		return 0.0;  // failed to converge
 }
 
-function setEffort(effort){
+function setEffort(){
   //change the effort of the leading rider
+let effort = parseInt(event.target.id.replace("set_effort_",""));
   let leadingRider = race.riders[race.current_order[0]];
     leadingRider.output_level = effort+1;
   // let new_power = leadingRider.threshold_power*(effort+1)/10;
   // leadingRider.current_power_effort = new_power;
-  $('#instruction_info').text("Change effort to " + effort + ": " + new_power + " watts");
+  $('#instruction_info').text("Change effort to " + effort);
 }
 
-function switchLead(positions_to_drop_back){
+function switchLead(){
   //move the lead rider back a given number of spaces: positions_to_drop_back, 1-team_size - 1
+  let positions_to_drop_back = parseInt(event.target.id.replace("switch_lead_",""));
   if (positions_to_drop_back >= (race.current_order.length-1)){
     positions_to_drop_back = (race.current_order.length-1);
   }
+
+  let current_leader = race.current_order[0];
+  race.riders[current_leader].current_aim = 'drop';
 
   let new_order = race.current_order.slice(1,positions_to_drop_back+1);
   new_order.push(race.current_order[0]);
@@ -208,10 +72,12 @@ function switchLead(positions_to_drop_back){
   race.current_order = new_order;
   //change the rider roles
   race.riders[new_order[0]].current_aim = "lead";
-  for(i=1;i<new_order.length;i++){
-    race.riders[new_order[i]].current_aim = "follow";
-    //reset their power level
+  for(let i=1;i<new_order.length;i++){
+    if (i != current_leader){ //don't update the drop back rider
+      race.riders[new_order[i]].current_aim = "follow";
+      //reset their power level
       race.riders[new_order[i]].current_power_effort = race.riders[new_order[i]].threshold_power;
+  }
   }
 
   console.log("Move lead rider back " + positions_to_drop_back + " positions in order, new order " + new_order);
@@ -225,8 +91,8 @@ function moveRace(){
   //console.log("race at " + race.race_clock + " seconds / " + race.distance);
   //move the riders and update the time
 
-  for(i=0;i<race.current_order.length;i++){
-    race_rider = race.riders[race.current_order[i]];
+  for(let i=0;i<race.current_order.length;i++){
+    let race_rider = race.riders[race.current_order[i]];
     //work out how far the race_rider can go in this time step
     //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
     let drag_watts = 0;
@@ -293,6 +159,8 @@ function moveRace(){
     }
     else{
       //try to follow (travel the same distace as- apply the same power) the race_rider in front of you
+      //rider may be dropping back
+
       let rider_to_follow = {};
       if (i==0){
         rider_to_follow = race.riders[race.current_order[race.current_order.length-1]];
@@ -379,6 +247,11 @@ function moveRace(){
       }
       powerv+=power_adjustment;
       race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
+
+      //if you are dropping back and get back to the rider in front, go back to a follow state
+      if(race_rider.current_aim =="drop" && race_rider.velocity >= target_velocity){
+        race_rider.current_aim = "follow";
+      }
 
       //drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
       usable_power = powerv; //race_rider.current_power_effort - drag_watts;
@@ -554,13 +427,13 @@ function moveRace(){
 
   //update each rider's distance value for the rider in front of them (lead is zero)
     //race.riders[race.current_order[0]].distance_from_rider_in_front = 0;
-    for(i=0;i<race.current_order.length;i++){
+    for(let i=0;i<race.current_order.length;i++){
       let ri = race.current_order[i];
       let display_rider = race.riders[ri];
       //is there a rider in front, i.e. who has covered more distance? find the closest rider that is in front of you and use this gap to work out your shelter
       let rif = -1;
       let min_distance = -1;
-      for(j=0;j<race.current_order.length;j++){
+      for(let j=0;j<race.current_order.length;j++){
           if(i!==j){ //ignore distance to self
             let distance_to_rider = (race.riders[race.current_order[j]].distance_covered - race.riders[race.current_order[j]].start_offset ) - (display_rider.distance_covered - display_rider.start_offset);
             if(distance_to_rider >= 0){//ignore riders behind you, who will have negative distance
@@ -629,7 +502,7 @@ function load_race(){
   settings.race_bend_distance = Math.PI * settings.track_bend_radius;
 
   console.log("race.start_order.length "+race.start_order.length)
-  for(i = 0;i<race.start_order.length;i++){
+  for(let i = 0;i<race.start_order.length;i++){
     let load_rider = riders[race.start_order[i]];
     load_rider.start_offset = i*settings.start_position_offset;
     load_rider.starting_position_x = settings.track_centre_x + (load_rider.start_offset)*settings.vis_scale ;
@@ -669,11 +542,20 @@ function load_race(){
 }
 
 $(document).ready(function() {
+
+
   c = document.getElementById("bikeCanvas");
   ctx =c.getContext("2d");
   $('#input_race_length').val(race.distance);
   $('#frontalArea').val(settings.frontalArea);
   $('#teamorder').val(race.start_order.map(a=>a).join(","));
+
+  //attache events
+  $("#button_play").on("click", playRace);
+  $("#button_stop").on("click", stopRace);
+  $("#button_fw").on("click", forwardStep);
+  $(".set_effort").on("click", setEffort);
+  $(".switch_lead").on("click", switchLead);
 
 
   load_race();
