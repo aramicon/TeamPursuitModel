@@ -45,25 +45,35 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method */
 		return 0.0;  // failed to converge
 }
 
-function setEffort(){
+function setEffortInstruction(){
   //change the effort of the leading rider
-let effort = parseInt(event.target.id.replace("set_effort_",""));
+  let effort = parseInt(event.target.id.replace("set_effort_",""));
+  race.live_instructions.push(["effort",effort]);
+}
+
+function setEffort(effort){
   let leadingRider = race.riders[race.current_order[0]];
-    leadingRider.output_level = effort+1;
-  // let new_power = leadingRider.threshold_power*(effort+1)/10;
-  // leadingRider.current_power_effort = new_power;
+  leadingRider.output_level = effort+1;
   $('#instruction_info').text("Change effort to " + effort);
 }
 
-function switchLead(){
-  //move the lead rider back a given number of spaces: positions_to_drop_back, 1-team_size - 1
+
+
+
+
+function switchLeadInstruction(){
+  //add an instruction
   let positions_to_drop_back = parseInt(event.target.id.replace("switch_lead_",""));
+  race.live_instructions.push(["drop",positions_to_drop_back]);
+}
+
+function switchLead(positions_to_drop_back){
   if (positions_to_drop_back >= (race.current_order.length-1)){
     positions_to_drop_back = (race.current_order.length-1);
   }
 
   let current_leader = race.current_order[0];
-  race.riders[current_leader].current_aim = 'drop';
+  race.riders[current_leader].current_aim = "drop";
 
   let new_order = race.current_order.slice(1,positions_to_drop_back+1);
   new_order.push(race.current_order[0]);
@@ -73,16 +83,14 @@ function switchLead(){
   //change the rider roles
   race.riders[new_order[0]].current_aim = "lead";
   for(let i=1;i<new_order.length;i++){
-    if (i != current_leader){ //don't update the drop back rider
+    if (new_order[i] != current_leader){ //don't update the drop back rider
       race.riders[new_order[i]].current_aim = "follow";
       //reset their power level
       race.riders[new_order[i]].current_power_effort = race.riders[new_order[i]].threshold_power;
+    }
   }
-  }
-
   console.log("Move lead rider back " + positions_to_drop_back + " positions in order, new order " + new_order);
 }
-
 
 function moveRace(){
   race.race_clock++;
@@ -90,6 +98,17 @@ function moveRace(){
   ctx.clearRect(0, 0, c.width, c.height);
   //console.log("race at " + race.race_clock + " seconds / " + race.distance);
   //move the riders and update the time
+
+  //carry out any live_instructions (they are queued)
+  while (race.live_instructions.length > 0){
+    let instruction = race.live_instructions.pop();
+    if(instruction[0]=="drop"){
+      switchLead(instruction[1]);
+    }
+    else if(instruction[0]=="effort"){
+      setEffort(instruction[1]);
+    }
+  }
 
   for(let i=0;i<race.current_order.length;i++){
     let race_rider = race.riders[race.current_order[i]];
@@ -122,9 +141,10 @@ function moveRace(){
       else{
         race_rider.current_power_effort = race_rider.max_power*(race_rider.output_level)/10;
         //add fatigue if going harder than the threshold
-        race_rider.endurance_fatigue_level += race_rider.fatigue_rate*( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power);
+        let fatigue_rise = race_rider.fatigue_rate*( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power);
+        race_rider.endurance_fatigue_level += fatigue_rise;
+        race_rider.accumulated_fatigue += fatigue_rise;
       }
-
 
       // leadingRider.current_power_effort = new_power;
       let target_power = race_rider.current_power_effort; //try to get to this
@@ -175,16 +195,26 @@ function moveRace(){
       //this is your target velocity, but it might not be possible. assuming 1 s - 1 step
       let target_velocity = distance_to_cover;
       //work out the power needed for this velocity- remember we are drafting
+
+
+      //if your velocity is very high and you are approaching the target rider you will speed past, so if within a certain distance and traveling quickly set your target speed to be that of the target rider or very close to it.
+      if((race_rider.velocity - rider_to_follow.velocity > settings.velocity_difference_limit) &&  (distance_to_cover < settings.damping_visibility_distance)){
+        target_velocity =  rider_to_follow.velocity;
+      }
+      else if((race_rider.velocity - target_velocity > 0) && (distance_to_cover < settings.damping_visibility_distance)){ //if slowing down and target velocity is low but you are close to the target rider, then only slow a little (dropping back)
+          target_velocity =  (rider_to_follow.velocity - settings.velocity_adjustment_dropping_back);
+      }
+
       let tv = target_velocity + settings.headwindv;
       //to work out the shelter, distance from the rider in front is needed
 
       let level_of_shelter = 1;//maximum shelter
-      if (race_rider.distance_from_rider_in_front > 3){
+      if (race_rider.distance_from_rider_in_front > settings.shelter_max_distance){
         level_of_shelter = 0; //after 3m assume no shelter: this is a hardcoded guess
       }
       else if (race_rider.distance_from_rider_in_front > 0){
         //between 0 and three metres need to drop off - try a linear model
-        level_of_shelter = (1-(level_of_shelter/3));
+        level_of_shelter = (1-(level_of_shelter/settings.shelter_max_distance));
       }
       else if (race_rider.distance_from_rider_in_front == -1){
         //if you have no rider in front of you this distance is set to -1, so you have no shelter
@@ -218,16 +248,14 @@ function moveRace(){
       }
 
 
-
-
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
       let powerv = race_rider.power_out, power_adjustment = 0;
 
       //to stop radical slowing down/speeding up, need to reduce it as the target rider's velocity is approched
       let damping = 1;
-      if (Math.abs(distance_to_cover) < settings.damping_visibility_distance){
-        //damping = (Math.abs(distance_to_cover)/settings.damping_visibility_distance);
-      }
+      // if ((race_rider.velocity > rider_to_follow.velocity) && (Math.abs(race_rider.distance_from_rider_in_front) < settings.damping_visibility_distance)){
+      //   damping = 0.3+0.7*(Math.abs(race_rider.distance_from_rider_in_front)/settings.damping_visibility_distance);
+      // }
 
       if (powerv > target_power){//slowing down
         if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
@@ -246,11 +274,14 @@ function moveRace(){
         }
       }
       powerv+=power_adjustment;
+      let old_velocity = race_rider.velocity; //use to check if rider slows down or speeds up for this step
       race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
 
       //if you are dropping back and get back to the rider in front, go back to a follow state
-      if(race_rider.current_aim =="drop" && race_rider.velocity >= target_velocity){
-        race_rider.current_aim = "follow";
+      if(race_rider.current_aim =="drop"){ //once you are behind the rider_to_follow, you 'follow' again
+         if((race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= (rider_to_follow.distance_covered-rider_to_follow.start_offset)){ //idea is that you are dropping back so long as you are goign slower than the rider you want to follow
+          race_rider.current_aim = "follow";
+        }
       }
 
       //drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
@@ -281,6 +312,12 @@ function moveRace(){
     //may need to break a distance covered down into parts (e.g. going from bend to straight)
     race_rider.distance_this_step_remaining = race_rider.distance_this_step;
 
+    let scale_amount = settings.vis_scale;
+    if (race_rider.current_aim == "drop"){
+        scale_amount += settings.vis_scale_drop_increment;
+
+    }
+
     while(race_rider.distance_this_step_remaining > 0){
       let distance_this_step_segment =   race_rider.distance_this_step_remaining;
       let current_distance =  race_rider.distance_covered;
@@ -288,7 +325,7 @@ function moveRace(){
         if (race_rider.straight_distance_travelled + distance_this_step_segment <= ((settings.track_straight_length/2) + race_rider.start_offset)){
           //can do full step on straight
           race_rider.straight_distance_travelled += distance_this_step_segment;
-          race_rider.current_position_x -= distance_this_step_segment*settings.vis_scale;
+          race_rider.current_position_x -= distance_this_step_segment*scale_amount;
           race_rider.distance_covered+=distance_this_step_segment;
           race_rider.distance_this_step_remaining = 0;
           console.log(race.race_clock + ": " + race_rider.name + "straight 1 (start) full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining = " +   race_rider.distance_this_step_remaining  + " with start offset of " + race_rider.start_offset  )
@@ -296,7 +333,7 @@ function moveRace(){
         else{
           distance_this_step_segment =  (settings.track_straight_length/2 + race_rider.start_offset) - race_rider.straight_distance_travelled;
           race_rider.straight_distance_travelled += distance_this_step_segment;
-          race_rider.current_position_x -= distance_this_step_segment*settings.vis_scale;
+          race_rider.current_position_x -= distance_this_step_segment*scale_amount;
           race_rider.distance_covered+=distance_this_step_segment;
           race_rider.distance_this_step_remaining -= distance_this_step_segment;
           //rest of segment is on the bend
@@ -312,10 +349,10 @@ function moveRace(){
         if ((race_rider.bend_distance_travelled + distance_this_step_segment) <= settings.race_bend_distance){
           //can do whole segment on bend
           race_rider.bend_distance_travelled+=distance_this_step_segment;
-          race_rider.current_bend_angle +=((distance_this_step_segment*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
+          race_rider.current_bend_angle +=((distance_this_step_segment*scale_amount*360)/(2*Math.PI*settings.track_bend_radius*scale_amount));
           race_rider.distance_covered+=distance_this_step_segment;
-          race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
-          race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+          race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
+          race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
           race_rider.distance_this_step_remaining = 0;
           console.log(race.race_clock + ": " + race_rider.name +  " bend 1 full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend_angle "  + race_rider.current_bend_angle  )
         }
@@ -323,12 +360,12 @@ function moveRace(){
           // some distance on the bend then 0 or more on the straight
           let distance_on_bend = settings.race_bend_distance - race_rider.bend_distance_travelled;
 
-          race_rider.current_bend_angle +=((distance_on_bend*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
+          race_rider.current_bend_angle +=((distance_on_bend*scale_amount*360)/(2*Math.PI*settings.track_bend_radius*scale_amount));
         //  rider.bend_distance_travelled+=distance_on_bend;
           race_rider.distance_covered+=distance_on_bend;
           race_rider.distance_this_step_remaining -= distance_on_bend;
-          race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
-          race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+          race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
+          race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
 
           console.log(race.race_clock + ": " + race_rider.name +  " bend 1 partial "+distance_on_bend+" of "+distance_this_step_segment + " to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend_angle " + race_rider.current_bend_angle  )
 
@@ -344,7 +381,7 @@ function moveRace(){
         if (race_rider.straight_distance_travelled + distance_this_step_segment <= (settings.track_straight_length)){
           //can do full step on straight
           race_rider.straight_distance_travelled += distance_this_step_segment;
-          race_rider.current_position_x += distance_this_step_segment*settings.vis_scale;
+          race_rider.current_position_x += distance_this_step_segment*scale_amount;
           race_rider.distance_covered+=distance_this_step_segment;
           race_rider.distance_this_step_remaining = 0;
           console.log(race.race_clock + ": " + race_rider.name + " straight 2 full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   travelled " + race_rider.straight_distance_travelled + " of " + settings.track_straight_length   )
@@ -352,7 +389,7 @@ function moveRace(){
         else{
           distance_this_step_segment =  settings.track_straight_length - race_rider.straight_distance_travelled;
           race_rider.straight_distance_travelled += distance_this_step_segment;
-          race_rider.current_position_x += distance_this_step_segment*settings.vis_scale;
+          race_rider.current_position_x += distance_this_step_segment*scale_amount;
           race_rider.distance_covered+=distance_this_step_segment;
           race_rider.distance_this_step_remaining -= distance_this_step_segment;
           console.log(race.race_clock + ": " +  race_rider.name + " straight 2 partial "+distance_this_step_segment+" of "+race_rider.distance_this_step+" to (" +race_rider.current_position_x + "," + race_rider.current_position_y + ")   travelled " + race_rider.straight_distance_travelled + " distance_this_step_remaining" +   race_rider.distance_this_step_remaining )
@@ -369,21 +406,21 @@ function moveRace(){
         if ((race_rider.bend_distance_travelled + distance_this_step_segment) <= settings.race_bend_distance){
           //can do whole segment on bend
           race_rider.bend_distance_travelled+=distance_this_step_segment;
-          race_rider.current_bend_angle +=((distance_this_step_segment*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
+          race_rider.current_bend_angle +=((distance_this_step_segment*scale_amount*360)/(2*Math.PI*settings.track_bend_radius*scale_amount));
           race_rider.distance_covered+=distance_this_step_segment;
-          race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
-          race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+          race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
+          race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
           race_rider.distance_this_step_remaining = 0;
           console.log(race.race_clock + ": " + race_rider.name + " bend 2 full distance "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend angle " + race_rider.current_bend_angle )
         }
         else{
           // some distance on the bend then 0 or more on the straight
           let distance_on_bend = settings.race_bend_distance - race_rider.bend_distance_travelled;
-          race_rider.current_bend_angle +=((distance_on_bend*settings.vis_scale*360)/(2*Math.PI*settings.track_bend_radius*settings.vis_scale));
+          race_rider.current_bend_angle +=((distance_on_bend*scale_amount*360)/(2*Math.PI*settings.track_bend_radius*scale_amount));
           race_rider.distance_covered+=distance_on_bend;
           race_rider.distance_this_step_remaining -= distance_on_bend;
-          race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
-          race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*settings.vis_scale;
+          race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
+          race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
           console.log(race.race_clock + ": " + race_rider.name +  " bend 2 partial "+distance_on_bend+" of "+distance_this_step_segment + " to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend angle " + race_rider.current_bend_angle  );
 
           //race_rider is now on straight2
@@ -397,7 +434,7 @@ function moveRace(){
             if (race_rider.straight_distance_travelled + distance_this_step_segment <= (settings.track_straight_length)){
             //can do full step on straight
             race_rider.straight_distance_travelled += distance_this_step_segment;
-            race_rider.current_position_x -= distance_this_step_segment*settings.vis_scale;
+            race_rider.current_position_x -= distance_this_step_segment*scale_amount;
             race_rider.distance_covered+=distance_this_step_segment;
             race_rider.distance_this_step_remaining = 0;
             console.log(race.race_clock + ": " + race_rider.name + " straight 1 full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining = " +   race_rider.distance_this_step_remaining   )
@@ -405,7 +442,7 @@ function moveRace(){
           else{
             distance_this_step_segment =  settings.track_straight_length - race_rider.straight_distance_travelled;
             race_rider.straight_distance_travelled += distance_this_step_segment;
-            race_rider.current_position_x -= distance_this_step_segment*settings.vis_scale;
+            race_rider.current_position_x -= distance_this_step_segment*scale_amount;
             race_rider.distance_covered+=distance_this_step_segment;
             race_rider.distance_this_step_remaining -= distance_this_step_segment;
             console.log(race.race_clock + ": " + race_rider.name + " straight 1 partial "+distance_this_step_segment+" of "+race_rider.distance_this_step+" to (" +race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining" +   race_rider.distance_this_step_remaining );
@@ -421,6 +458,10 @@ function moveRace(){
     ctx.beginPath();
     ctx.arc(race_rider.current_position_x, race_rider.current_position_y, 4, 0, 2 * Math.PI);
     ctx.fillStyle = race_rider.colour;
+    if (race_rider.current_aim == "drop"){
+      ctx.strokeStyle = "#000000";
+      ctx.stroke();
+    }
     ctx.fill();
     //work out how much the race_rider can travel in this second
   }
@@ -446,16 +487,11 @@ function moveRace(){
             }
           }
       }
-      //let rif = race.current_order[i-1]
+
       //display_rider.distance_from_rider_in_front = race.riders[rif].distance_covered - display_rider.distance_covered;
       display_rider.distance_from_rider_in_front = min_distance;
-        // if  (Math.abs(display_rider.distance_from_rider_in_front) > 0.05){
-        //   debugger
-        // }
-
 
       //display the rider properties
-
        $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + " " + display_rider.current_aim.toUpperCase() + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + display_rider.endurance_fatigue_level + "</div");
 
     }
@@ -523,6 +559,8 @@ function load_race(){
     load_rider.current_power_effort = load_rider.threshold_power;
     load_rider.endurance_fatigue_level = 0;
     load_rider.burst_fatigue_level = 0;
+    load_rider.accumulated_fatigue = 0;
+    load_rider.output_level=6;
     if (i==0){
       load_rider.current_aim = "lead";
     }
@@ -554,8 +592,8 @@ $(document).ready(function() {
   $("#button_play").on("click", playRace);
   $("#button_stop").on("click", stopRace);
   $("#button_fw").on("click", forwardStep);
-  $(".set_effort").on("click", setEffort);
-  $(".switch_lead").on("click", switchLead);
+  $(".set_effort").on("click", setEffortInstruction);
+  $(".switch_lead").on("click", switchLeadInstruction);
 
 
   load_race();

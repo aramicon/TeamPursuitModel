@@ -1,3 +1,25 @@
+#bikeCanvas{
+  border:1px solid #d3d3d3;
+  position:relative;
+  z-index:20;
+}
+
+.race_canvas{
+  float:left;
+  display:inline-block;
+   margin: 0, auto;
+   background: white;
+   position:relative;
+   border:2px solid #cccccc;
+   border-radius: 10px;
+   box-shadow: 0 5px 10px #333
+}
+
+.canvas_background{
+  position:absolute;
+  z-index:1;
+}
+
 .button {
   background-color: #4CAF50; /* Green */
   border: none;
@@ -15,15 +37,12 @@
   box-sizing: border-box;
   width: 0;
   height: 74px;
-
   border-color: transparent transparent transparent #202020;
   transition: 100ms all ease;
   cursor: pointer;
-
   // play state
   border-style: solid;
   border-width: 37px 0 37px 60px;
-
   &.paused {
     border-style: double;
     border-width: 0px 0 0px 60px;
@@ -33,12 +52,10 @@
     border-color: transparent transparent transparent #404040;
   }
 }
-
 .label1{
   padding:4px;
   color: #333333;
 }
-
 .buttonRed{
   background-color: red;
 }
@@ -52,10 +69,7 @@
   margin: 10px;
   float: left;
 }
-.race_canvas{
-float:left;
 
-}
 .riders_info{
   background-color: #eeeeee;
   padding:10px;

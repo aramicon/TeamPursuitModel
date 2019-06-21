@@ -12,6 +12,7 @@ let settings = {
 "air_density":1.225,
 "draft_power_savings":0.33,
 "drafting_effect_on_drag":0.4,
+"shelter_max_distance":4,
 "temperaturev":22,
 "elevationv":100,
 "bike_weight":9,
@@ -23,8 +24,10 @@ let settings = {
 "headwindv":0,
 "race_move_wait_time":100,
 "frontalArea":0.233,
-"damping_visibility_distance":20,
-"fatigue_failure_level":100
+"damping_visibility_distance":50,
+"fatigue_failure_level":100,
+"velocity_difference_limit":1,
+"velocity_adjustment_dropping_back":0.5,
+"vis_scale_drop_increment":0
 }
-
 export {settings};
