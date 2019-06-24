@@ -64,7 +64,8 @@ function setEffort(effort){
 function switchLeadInstruction(){
   //add an instruction
   let positions_to_drop_back = parseInt(event.target.id.replace("switch_lead_",""));
-  race.live_instructions.push(["drop",positions_to_drop_back]);
+  //race.live_instructions.push(["drop",positions_to_drop_back]);
+  race.drop_instruction = positions_to_drop_back;
 }
 
 function switchLead(positions_to_drop_back){
@@ -102,11 +103,20 @@ function moveRace(){
   //carry out any live_instructions (they are queued)
   while (race.live_instructions.length > 0){
     let instruction = race.live_instructions.pop();
-    if(instruction[0]=="drop"){
-      switchLead(instruction[1]);
-    }
-    else if(instruction[0]=="effort"){
+    if(instruction[0]=="effort"){
       setEffort(instruction[1]);
+    }
+  }
+
+  //also look at the drop instruciton: this can only be done at the beginnings of bends where the track is banked
+  if(race.drop_instruction > 0){
+    if (race.riders.filter(a=>a.current_aim == "drop").length == 0){   //if no  rider is dropping back
+      let lead_rider_distance_on_lap = race.riders[race.current_order[0]].distance_covered % settings.track_length;
+      if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance)){
+        alert("switch now!");
+        switchLead(race.drop_instruction);
+        race.drop_instruction = 0;
+      }
     }
   }
 
@@ -202,7 +212,10 @@ function moveRace(){
         target_velocity =  rider_to_follow.velocity;
       }
       else if((race_rider.velocity - target_velocity > 0) && (distance_to_cover < settings.damping_visibility_distance)){ //if slowing down and target velocity is low but you are close to the target rider, then only slow a little (dropping back)
-          target_velocity =  (rider_to_follow.velocity - settings.velocity_adjustment_dropping_back);
+          //need to weight the adjustment so that it goes closer to zero as they get closer and closer
+          let rider_to_follow_proximity_weighting = ((race_rider.distance_covered-race_rider.start_offset) - (rider_to_follow.distance_covered-rider_to_follow.start_offset)/settings.damping_deceleration_distance)
+
+          target_velocity =  (rider_to_follow.velocity - (settings.velocity_adjustment_dropping_back*rider_to_follow_proximity_weighting));
       }
 
       let tv = target_velocity + settings.headwindv;
@@ -497,7 +510,11 @@ function moveRace(){
     }
 
   //work out the distance covered of the second last rider
-  if (race.riders[race.current_order[race.current_order.length-1]].distance_covered < race.distance && (race_state == "play" || race_state == "resume" )){
+  //get the 2nd last rider (whose time is the one that counts)
+  let second_last_rider = race.riders[race.current_order[race.current_order.length-1]];
+  if (second_last_rider.distance_covered < race.distance && (race_state == "play" || race_state == "resume" )){
+    //update the lap count
+    $("#race_info_lap").text(Math.floor(second_last_rider.distance_covered/settings.track_length)+1);
     setTimeout(
       function(){
         moveRace();
@@ -536,6 +553,15 @@ function load_race(){
   race.current_order = [];
   race.race_clock = 0;
   settings.race_bend_distance = Math.PI * settings.track_bend_radius;
+
+  //set up the switch range points: this is where riders can start to drop back
+  race.bend1_switch_start_distance = settings.track_straight_length/2;
+  race.bend1_switch_end_distance = race.bend1_switch_start_distance + settings.race_bend_distance*(settings.bend_switch_range_angle/180) ;
+  race.bend2_switch_start_distance = (settings.track_straight_length*1.5) + settings.race_bend_distance; //start of second bend
+  race.bend2_switch_end_distance = race.bend2_switch_start_distance + settings.race_bend_distance*(settings.bend_switch_range_angle/180) ;
+
+  //update total number of laps
+  $("#race_info_no_of_laps").text(Math.floor(race.distance/settings.track_length));
 
   console.log("race.start_order.length "+race.start_order.length)
   for(let i = 0;i<race.start_order.length;i++){

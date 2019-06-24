@@ -6,7 +6,12 @@ let race = {
   "race_clock":0,
   "race_instructions":[],
   "current_distance_of_finish_rider":0,
-  "live_instructions":[]
+  "live_instructions":[],
+  "drop_instruction":0,
+  "bend1_switch_start_distance":0,
+  "bend1_switch_end_distance":0,
+  "bend2_switch_start_distance":0,
+  "bend2_switch_end_distance":0,
 }
 
 export {race};

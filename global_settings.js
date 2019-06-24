@@ -1,5 +1,6 @@
 let settings = {
 "radius":100,
+"track_length":250,
 "fixed_test_distance":1,
 "track_bend_radius":22,
 "track_straight_length":55.88496162102456,
@@ -25,9 +26,11 @@ let settings = {
 "race_move_wait_time":100,
 "frontalArea":0.233,
 "damping_visibility_distance":50,
+"damping_deceleration_distance":4,
 "fatigue_failure_level":100,
 "velocity_difference_limit":1,
-"velocity_adjustment_dropping_back":0.5,
-"vis_scale_drop_increment":0
+"velocity_adjustment_dropping_back":1,
+"vis_scale_drop_increment":0,
+"bend_switch_range_angle":30
 }
 export {settings};
