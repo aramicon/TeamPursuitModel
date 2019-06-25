@@ -57,10 +57,6 @@ function setEffort(effort){
   $('#instruction_info').text("Change effort to " + effort);
 }
 
-
-
-
-
 function switchLeadInstruction(){
   //add an instruction
   let positions_to_drop_back = parseInt(event.target.id.replace("switch_lead_",""));
@@ -134,7 +130,20 @@ function moveRace(){
       //push the pace at the front
       //what's the current effort?
       //consider fatigue
-      if(race_rider.endurance_fatigue_level >= settings.fatigue_failure_level){
+      //update the accumulated fatigue. as this rises, the failure rate lowers.
+
+      let accumulated_effect = 1; // 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
+
+      if (race_rider.accumulated_fatigue > settings.accumulated_fatigue_maximum ){
+        accumulated_effect = 0;
+      }
+      else{
+        accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
+      }
+        let failure_level = settings.fatigue_failure_level*accumulated_effect;
+
+
+      if(race_rider.endurance_fatigue_level >= failure_level){
         race_rider.output_level = 5;
       }
       //set the power level based on the effort instruction
@@ -151,7 +160,7 @@ function moveRace(){
       else{
         race_rider.current_power_effort = race_rider.max_power*(race_rider.output_level)/10;
         //add fatigue if going harder than the threshold
-        let fatigue_rise = race_rider.fatigue_rate*( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power);
+        let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
         race_rider.endurance_fatigue_level += fatigue_rise;
         race_rider.accumulated_fatigue += fatigue_rise;
       }
@@ -201,22 +210,24 @@ function moveRace(){
       usable_power = rider_to_follow.power_out;
       // assume we are drafting and try to cover the same distance as the race_rider in front, which will take a certain amount of power
       //need to factor in the original offset
-      let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
+      //let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
+      let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings.target_rider_gap) -  (race_rider.distance_covered-race_rider.start_offset);
       //this is your target velocity, but it might not be possible. assuming 1 s - 1 step
       let target_velocity = distance_to_cover;
       //work out the power needed for this velocity- remember we are drafting
 
-
       //if your velocity is very high and you are approaching the target rider you will speed past, so if within a certain distance and traveling quickly set your target speed to be that of the target rider or very close to it.
       if((race_rider.velocity - rider_to_follow.velocity > settings.velocity_difference_limit) &&  (distance_to_cover < settings.damping_visibility_distance)){
-        target_velocity =  rider_to_follow.velocity;
+        target_velocity =  rider_to_follow.velocity;//assumption that by the time taken to adjust to the same velocity you will have caught them
       }
       else if((race_rider.velocity - target_velocity > 0) && (distance_to_cover < settings.damping_visibility_distance)){ //if slowing down and target velocity is low but you are close to the target rider, then only slow a little (dropping back)
           //need to weight the adjustment so that it goes closer to zero as they get closer and closer
-          let rider_to_follow_proximity_weighting = ((race_rider.distance_covered-race_rider.start_offset) - (rider_to_follow.distance_covered-rider_to_follow.start_offset)/settings.damping_deceleration_distance)
+          let rider_to_follow_proximity_weighting = 1;
+          let current_distance_from_target = Math.abs((race_rider.distance_covered-race_rider.start_offset) - (rider_to_follow.distance_covered-rider_to_follow.velocity-rider_to_follow.start_offset-settings.target_rider_gap));
+          if (current_distance_from_target < settings.damping_deceleration_distance){
+            rider_to_follow_proximity_weighting = (current_distance_from_target/settings.damping_deceleration_distance);          }
 
-          target_velocity =  (rider_to_follow.velocity - (settings.velocity_adjustment_dropping_back*rider_to_follow_proximity_weighting));
-      }
+          target_velocity =  (rider_to_follow.velocity - (settings.velocity_adjustment_dropping_back*rider_to_follow_proximity_weighting));      }
 
       let tv = target_velocity + settings.headwindv;
       //to work out the shelter, distance from the rider in front is needed
@@ -326,10 +337,6 @@ function moveRace(){
     race_rider.distance_this_step_remaining = race_rider.distance_this_step;
 
     let scale_amount = settings.vis_scale;
-    if (race_rider.current_aim == "drop"){
-        scale_amount += settings.vis_scale_drop_increment;
-
-    }
 
     while(race_rider.distance_this_step_remaining > 0){
       let distance_this_step_segment =   race_rider.distance_this_step_remaining;
@@ -505,7 +512,7 @@ function moveRace(){
       display_rider.distance_from_rider_in_front = min_distance;
 
       //display the rider properties
-       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + " " + display_rider.current_aim.toUpperCase() + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + display_rider.endurance_fatigue_level + "</div");
+       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + " " + display_rider.current_aim.toUpperCase() + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div");
 
     }
 
@@ -555,9 +562,10 @@ function load_race(){
   settings.race_bend_distance = Math.PI * settings.track_bend_radius;
 
   //set up the switch range points: this is where riders can start to drop back
-  race.bend1_switch_start_distance = settings.track_straight_length/2;
+  // i added settings.switch_prebend_start_addition to allow the swithc to start before the bend proper (speed up switches)
+  race.bend1_switch_start_distance = settings.track_straight_length/2 - settings.switch_prebend_start_addition;
   race.bend1_switch_end_distance = race.bend1_switch_start_distance + settings.race_bend_distance*(settings.bend_switch_range_angle/180) ;
-  race.bend2_switch_start_distance = (settings.track_straight_length*1.5) + settings.race_bend_distance; //start of second bend
+  race.bend2_switch_start_distance = (settings.track_straight_length*1.5) + settings.race_bend_distance - settings.switch_prebend_start_addition; //start of second bend
   race.bend2_switch_end_distance = race.bend2_switch_start_distance + settings.race_bend_distance*(settings.bend_switch_range_angle/180) ;
 
   //update total number of laps
@@ -644,7 +652,7 @@ function playRace() {
           d3.select("#button_play i").attr('class', "fa fa-pause fa-3x");
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
     }
-    moveRace();
+      moveRace();
     console.log("button play pressed, play was "+race_state);
 }
 
