@@ -23,12 +23,12 @@ function addRiderDisplay(){
   }
 }
 
-function resetRace(){
+function resetRace(){ //reset the race; can be triggered by hitting the STOP button
   console.log("RESETTING RACE")
   load_race()
 }
 
-function newton(aero, hw, tr, tran, p) {        /* Newton's method */
+function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is from bikecalculator.com */
   //from http://www.bikecalculator.com/
 		var vel = 20;       // Initial guess
 		var MAX = 10;       // maximum iterations
@@ -46,21 +46,21 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method */
 }
 
 function setEffortInstruction(){
-  //change the effort of the leading rider
+  //add instruction to change the effort of the leading rider
   let effort = parseInt(event.target.id.replace("set_effort_",""));
   race.live_instructions.push(["effort",effort]);
 }
 
-function setEffort(effort){
+function setEffort(effort){ //actually update the effort level
   let leadingRider = race.riders[race.current_order[0]];
   leadingRider.output_level = effort+1;
   $('#instruction_info').text("Change effort to " + effort);
+  console.log("Effort updated to " + effort);
 }
 
 function switchLeadInstruction(){
-  //add an instruction
+  //add an instruction to change the lead
   let positions_to_drop_back = parseInt(event.target.id.replace("switch_lead_",""));
-  //race.live_instructions.push(["drop",positions_to_drop_back]);
   race.drop_instruction = positions_to_drop_back;
 }
 
@@ -70,19 +70,48 @@ function switchLead(positions_to_drop_back){
   }
 
   let current_leader = race.current_order[0];
-  race.riders[current_leader].current_aim = "drop";
+  race.riders[current_leader].current_aim = "drop"; //separate status whilst dropping back
+  let current_leader_power = race.riders[current_leader].power_out; //try to get the new leader to match this velocity
 
   let new_order = race.current_order.slice(1,positions_to_drop_back+1);
   new_order.push(race.current_order[0]);
   new_order.push(...race.current_order.slice(positions_to_drop_back+1,race.current_order.length));
 
   race.current_order = new_order;
-  //change the rider roles
-  race.riders[new_order[0]].current_aim = "lead";
+  //change other rider roles to lead and follow
+  let new_leader = race.riders[new_order[0]];
+
+  new_leader.current_aim = "lead";
+  new_leader.current_power_effort = 5;
+
+  //update this rider's power Effort
+  new_leader.current_power_effort = current_leader_power;
+  let current_threshold = new_leader.threshold_power;
+
+  if (current_leader_power < current_threshold){
+  new_leader.output_level = (current_leader_power/current_threshold)*10;
+    console.log("new_leader.output_level = "+ new_leader.output_level);
+  }
+  else if(current_leader_power == current_threshold){
+    race_rider.current_power_effort = 5;
+  }
+  else{ //power is over threshold
+    if (current_leader_power >= new_leader.max_power ){
+      new_leader.output_level = 9
+    }
+    else{
+        new_leader.output_level = (current_leader_power/new_leader.max_power)*10;
+    } 
+
+
+  }
+
+
+
   for(let i=1;i<new_order.length;i++){
-    if (new_order[i] != current_leader){ //don't update the drop back rider
+    if (new_order[i] != current_leader){ //don't update the dropping back rider
       race.riders[new_order[i]].current_aim = "follow";
-      //reset their power level
+      //reset their power levels, though chasing riders will always try to follow
       race.riders[new_order[i]].current_power_effort = race.riders[new_order[i]].threshold_power;
     }
   }
@@ -90,11 +119,10 @@ function switchLead(positions_to_drop_back){
 }
 
 function moveRace(){
+  //update the race clock, check for instructions, then move the riders based on the current order
   race.race_clock++;
   $("#race_info_clock").text(race.race_clock);
   ctx.clearRect(0, 0, c.width, c.height);
-  //console.log("race at " + race.race_clock + " seconds / " + race.distance);
-  //move the riders and update the time
 
   //carry out any live_instructions (they are queued)
   while (race.live_instructions.length > 0){
@@ -109,7 +137,6 @@ function moveRace(){
     if (race.riders.filter(a=>a.current_aim == "drop").length == 0){   //if no  rider is dropping back
       let lead_rider_distance_on_lap = race.riders[race.current_order[0]].distance_covered % settings.track_length;
       if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance)){
-        alert("switch now!");
         switchLead(race.drop_instruction);
         race.drop_instruction = 0;
       }
@@ -120,19 +147,19 @@ function moveRace(){
     let race_rider = race.riders[race.current_order[i]];
     //work out how far the race_rider can go in this time step
     //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
-    let drag_watts = 0;
-    let usable_power = 0;
+
     let density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
-    let twt = 9.8 * race_rider.weight + settings.bike_weight;  // total weight in newtons
+    let twt = 9.8 * (race_rider.weight + settings.bike_weight);  // total weight of rider + bike in newtons
     let A2 = 0.5 * settings.frontalArea * density;  // full air resistance parameter
-    let tres = twt * (settings.gradev + settings.rollingRes); // gravity and rolling resistance
+    let tres = twt * (settings.gradev + settings.rollingRes); // total resistance = gravity/grade and rolling resistance
+
+    let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
+
     if (race_rider.current_aim =="lead"){
       //push the pace at the front
       //what's the current effort?
       //consider fatigue
       //update the accumulated fatigue. as this rises, the failure rate lowers.
-
-      let accumulated_effect = 1; // 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
 
       if (race_rider.accumulated_fatigue > settings.accumulated_fatigue_maximum ){
         accumulated_effect = 0;
@@ -152,6 +179,7 @@ function moveRace(){
         //recover if going under the threshold
         if (race_rider.endurance_fatigue_level > 0){
           race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.current_power_effort)/race_rider.threshold_power)
+          if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
         }
       }
       else if(race_rider.output_level == 6){
@@ -165,12 +193,12 @@ function moveRace(){
         race_rider.accumulated_fatigue += fatigue_rise;
       }
 
-      // leadingRider.current_power_effort = new_power;
       let target_power = race_rider.current_power_effort; //try to get to this
       //work out the velocity from the power
 
       let powerv = race_rider.power_out, power_adjustment = 0;
-      if (powerv > target_power){//slowing down
+      //compare power required to previous power and look at how it can increase or decrease
+      if (powerv > target_power){ //slowing down
         if((powerv - target_power) > settings.power_adjustment_step_size_down){
           power_adjustment = settings.power_adjustment_step_size_down;
         }
@@ -178,7 +206,7 @@ function moveRace(){
           power_adjustment = (powerv - target_power);
         }
       }
-      else if(powerv < target_power){//speeding up
+      else if(powerv < target_power){ //speeding up
         if((target_power - powerv) > settings.power_adjustment_step_size_up){
           power_adjustment = settings.power_adjustment_step_size_up;
         }
@@ -187,18 +215,11 @@ function moveRace(){
         }
       }
       powerv+=power_adjustment;
-
       race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
-
-      drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
-      usable_power = powerv; //race_rider.current_power_effort - drag_watts;
-      race_rider.power_out = usable_power;
-      //race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
-      race_rider.acceleration_this_step = 0;//disable old acceleration formula
+      race_rider.power_out = powerv;
     }
     else{
-      //try to follow (travel the same distace as- apply the same power) the race_rider in front of you
-      //rider may be dropping back
+      //rider may be following or dropping back. Either way they will be basing velocity on that of another rider- normally just following the rider in front of you
 
       let rider_to_follow = {};
       if (i==0){
@@ -207,7 +228,7 @@ function moveRace(){
       else{
         rider_to_follow = race.riders[race.current_order[i-1]];
        }
-      usable_power = rider_to_follow.power_out;
+
       // assume we are drafting and try to cover the same distance as the race_rider in front, which will take a certain amount of power
       //need to factor in the original offset
       //let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
@@ -225,8 +246,8 @@ function moveRace(){
           let rider_to_follow_proximity_weighting = 1;
           let current_distance_from_target = Math.abs((race_rider.distance_covered-race_rider.start_offset) - (rider_to_follow.distance_covered-rider_to_follow.velocity-rider_to_follow.start_offset-settings.target_rider_gap));
           if (current_distance_from_target < settings.damping_deceleration_distance){
-            rider_to_follow_proximity_weighting = (current_distance_from_target/settings.damping_deceleration_distance);          }
-
+            rider_to_follow_proximity_weighting = (current_distance_from_target/settings.damping_deceleration_distance);
+          }
           target_velocity =  (rider_to_follow.velocity - (settings.velocity_adjustment_dropping_back*rider_to_follow_proximity_weighting));      }
 
       let tv = target_velocity + settings.headwindv;
@@ -250,37 +271,40 @@ function moveRace(){
 
       //What is the max power that this rider can do for now? Need to consider fatigue
       let current_max_power = race_rider.max_power;
-
-      if(race_rider.endurance_fatigue_level >= settings.fatigue_failure_level){
+      if (race_rider.accumulated_fatigue > settings.accumulated_fatigue_maximum ){
+        accumulated_effect = 0;
+      }
+      else{
+        accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
+      }
+      let failure_level = settings.fatigue_failure_level*accumulated_effect;
+      if(race_rider.endurance_fatigue_level >= failure_level){
         current_max_power = (race_rider.threshold_power*(5/10));
       }
       //can't go over the max power
       if (target_power > current_max_power){
         target_power = current_max_power; //can't go over this (for now)
       }
-
       //fatigue if over the threshold, recover if under
       if (target_power < race_rider.threshold_power ){
         //recover if going under the threshold
         if (race_rider.endurance_fatigue_level > 0){
           race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- target_power)/race_rider.threshold_power)
+          if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;};
         }
       }
       else{
         //add fatigue if going harder than the threshold
-        race_rider.endurance_fatigue_level += race_rider.fatigue_rate*( (target_power - race_rider.threshold_power)/race_rider.max_power);
+        let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (target_power- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
+        race_rider.endurance_fatigue_level += fatigue_rise
+        race_rider.accumulated_fatigue += fatigue_rise;
       }
-
 
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
       let powerv = race_rider.power_out, power_adjustment = 0;
 
       //to stop radical slowing down/speeding up, need to reduce it as the target rider's velocity is approched
       let damping = 1;
-      // if ((race_rider.velocity > rider_to_follow.velocity) && (Math.abs(race_rider.distance_from_rider_in_front) < settings.damping_visibility_distance)){
-      //   damping = 0.3+0.7*(Math.abs(race_rider.distance_from_rider_in_front)/settings.damping_visibility_distance);
-      // }
-
       if (powerv > target_power){//slowing down
         if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
           power_adjustment = settings.power_adjustment_step_size_down * damping;
@@ -307,94 +331,64 @@ function moveRace(){
           race_rider.current_aim = "follow";
         }
       }
-
-      //drag_watts = settings.drag_coefficent*settings.air_density*((Math.pow(race_rider.velocity,2))/2);
-      usable_power = powerv; //race_rider.current_power_effort - drag_watts;
-      race_rider.power_out = usable_power;
-      //race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
-      //race_rider.acceleration_this_step = 0;//disable old acceleration formula
-
-      //let new_power_req = Math.pow((rider_to_follow_distance - race_rider.velocity),2)*(2*race_rider.mass*race.race_clock);
-      //new_power_req -= new_power_req*settings.draft_power_savings;
-      //usable_power = race_rider.power_out + new_power_req;
-      //if (race_rider.current_power_effort < usable_power){
-        //oops, you can't keep up
-        //usable_power = race_rider.current_power_effort;
-        //assume no drafting once you can't keep up?
-        //race_rider.acceleration_this_step = Math.sqrt(usable_power/(2*race_rider.mass*race.race_clock));
-    //  }
-      //else{
-      //  race_rider.acceleration_this_step = (rider_to_follow_distance - race_rider.velocity);
-    //  }
-      //race_rider.power_out = usable_power;
+      race_rider.power_out = powerv;
     }
-    //race_rider.velocity += race_rider.acceleration_this_step;
-    race_rider.distance_this_step = race_rider.velocity; //asssumes we are travelling for 1 second!
-    console.log(race_rider.name + " " + race_rider.current_aim + " at " + race.race_clock + " power " + usable_power + " usable/" + drag_watts + "drag acceleration " + race_rider.acceleration_this_step + " new velocity " + race_rider.velocity);
+
+    race_rider.distance_this_step = race_rider.velocity; //asssumes we are travelling for 1 second: this is the total distance to be travelled on the track
+    //console.log(race_rider.name + " " + race_rider.current_aim + " at " + race.race_clock  +  " new velocity " + race_rider.velocity);
 
     //if on a straight just keep going in that direction
     //may need to break a distance covered down into parts (e.g. going from bend to straight)
     race_rider.distance_this_step_remaining = race_rider.distance_this_step;
-
     let scale_amount = settings.vis_scale;
 
+    //Move the rider along on the track (VISUALS)
     while(race_rider.distance_this_step_remaining > 0){
       let distance_this_step_segment =   race_rider.distance_this_step_remaining;
-      let current_distance =  race_rider.distance_covered;
       if (race_rider.current_track_position == 'start'){
         if (race_rider.straight_distance_travelled + distance_this_step_segment <= ((settings.track_straight_length/2) + race_rider.start_offset)){
           //can do full step on straight
           race_rider.straight_distance_travelled += distance_this_step_segment;
           race_rider.current_position_x -= distance_this_step_segment*scale_amount;
-          race_rider.distance_covered+=distance_this_step_segment;
           race_rider.distance_this_step_remaining = 0;
-          console.log(race.race_clock + ": " + race_rider.name + "straight 1 (start) full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining = " +   race_rider.distance_this_step_remaining  + " with start offset of " + race_rider.start_offset  )
+          //console.log(race.race_clock + ": " + race_rider.name + "straight 1 (start) full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining = " +   race_rider.distance_this_step_remaining  + " with start offset of " + race_rider.start_offset  )
         }
         else{
           distance_this_step_segment =  (settings.track_straight_length/2 + race_rider.start_offset) - race_rider.straight_distance_travelled;
           race_rider.straight_distance_travelled += distance_this_step_segment;
           race_rider.current_position_x -= distance_this_step_segment*scale_amount;
-          race_rider.distance_covered+=distance_this_step_segment;
           race_rider.distance_this_step_remaining -= distance_this_step_segment;
           //rest of segment is on the bend
           race_rider.current_track_position = 'bend1';
-          race_rider.bend_centre_x = race_rider.current_position_x
-          //console.log("race_rider.bend_centre_x="+race_rider.bend_centre_x);
-          console.log(race.race_clock + ": " + race_rider.name + " straight 1 (start) partial "+distance_this_step_segment+" of "+race_rider.distance_this_step+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining " +   race_rider.distance_this_step_remaining + " start offset " + race_rider.start_offset  )
+          race_rider.bend_centre_x = race_rider.current_position_x;
+          //console.log(race.race_clock + ": " + race_rider.name + " straight 1 (start) partial "+distance_this_step_segment+" of "+race_rider.distance_this_step+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining " +   race_rider.distance_this_step_remaining + " start offset " + race_rider.start_offset  )
           race_rider.current_bend_angle=90;
         }
       }
       else if (  race_rider.current_track_position == 'bend1') {
-        console.log(race.race_clock + ": " + race_rider.name +  " race_rider.bend_distance_travelled = " + race_rider.bend_distance_travelled + " distance_this_step_segment = " + distance_this_step_segment + " settings.race_bend_distance = " + settings.race_bend_distance);
+        //console.log(race.race_clock + ": " + race_rider.name +  " race_rider.bend_distance_travelled = " + race_rider.bend_distance_travelled + " distance_this_step_segment = " + distance_this_step_segment + " settings.race_bend_distance = " + settings.race_bend_distance);
         if ((race_rider.bend_distance_travelled + distance_this_step_segment) <= settings.race_bend_distance){
           //can do whole segment on bend
           race_rider.bend_distance_travelled+=distance_this_step_segment;
           race_rider.current_bend_angle +=((distance_this_step_segment*scale_amount*360)/(2*Math.PI*settings.track_bend_radius*scale_amount));
-          race_rider.distance_covered+=distance_this_step_segment;
           race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
           race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
           race_rider.distance_this_step_remaining = 0;
-          console.log(race.race_clock + ": " + race_rider.name +  " bend 1 full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend_angle "  + race_rider.current_bend_angle  )
+          //console.log(race.race_clock + ": " + race_rider.name +  " bend 1 full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend_angle "  + race_rider.current_bend_angle  );
         }
         else{
           // some distance on the bend then 0 or more on the straight
           let distance_on_bend = settings.race_bend_distance - race_rider.bend_distance_travelled;
-
           race_rider.current_bend_angle +=((distance_on_bend*scale_amount*360)/(2*Math.PI*settings.track_bend_radius*scale_amount));
-        //  rider.bend_distance_travelled+=distance_on_bend;
-          race_rider.distance_covered+=distance_on_bend;
           race_rider.distance_this_step_remaining -= distance_on_bend;
           race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
           race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
-
-          console.log(race.race_clock + ": " + race_rider.name +  " bend 1 partial "+distance_on_bend+" of "+distance_this_step_segment + " to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend_angle " + race_rider.current_bend_angle  )
-
+          //console.log(race.race_clock + ": " + race_rider.name +  " bend 1 partial "+distance_on_bend+" of "+distance_this_step_segment + " to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend_angle " + race_rider.current_bend_angle  );
           //rider is now on straight2
           race_rider.current_bend_angle = 0;
           race_rider.current_track_position = 'straight2';
           race_rider.straight_distance_travelled = 0;
           race_rider.bend_distance_travelled = 0;
-
         }
       }
       else if (race_rider.current_track_position == 'straight2') {
@@ -402,47 +396,40 @@ function moveRace(){
           //can do full step on straight
           race_rider.straight_distance_travelled += distance_this_step_segment;
           race_rider.current_position_x += distance_this_step_segment*scale_amount;
-          race_rider.distance_covered+=distance_this_step_segment;
           race_rider.distance_this_step_remaining = 0;
-          console.log(race.race_clock + ": " + race_rider.name + " straight 2 full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   travelled " + race_rider.straight_distance_travelled + " of " + settings.track_straight_length   )
+          //console.log(race.race_clock + ": " + race_rider.name + " straight 2 full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   travelled " + race_rider.straight_distance_travelled + " of " + settings.track_straight_length   )
         }
         else{
           distance_this_step_segment =  settings.track_straight_length - race_rider.straight_distance_travelled;
           race_rider.straight_distance_travelled += distance_this_step_segment;
           race_rider.current_position_x += distance_this_step_segment*scale_amount;
-          race_rider.distance_covered+=distance_this_step_segment;
           race_rider.distance_this_step_remaining -= distance_this_step_segment;
-          console.log(race.race_clock + ": " +  race_rider.name + " straight 2 partial "+distance_this_step_segment+" of "+race_rider.distance_this_step+" to (" +race_rider.current_position_x + "," + race_rider.current_position_y + ")   travelled " + race_rider.straight_distance_travelled + " distance_this_step_remaining" +   race_rider.distance_this_step_remaining )
+          //console.log(race.race_clock + ": " +  race_rider.name + " straight 2 partial "+distance_this_step_segment+" of "+race_rider.distance_this_step+" to (" +race_rider.current_position_x + "," + race_rider.current_position_y + ")   travelled " + race_rider.straight_distance_travelled + " distance_this_step_remaining" +   race_rider.distance_this_step_remaining )
           //rest of segment goes on to bend 2
-
           race_rider.current_track_position = 'bend2';
-          race_rider.bend_centre_x = race_rider.current_position_x
-          //console.log("race_rider.bend_centre_x="+race_rider.bend_centre_x);
+          race_rider.bend_centre_x = race_rider.current_position_x;
           race_rider.current_bend_angle=270;
         }
       }
       else if (race_rider.current_track_position == 'bend2') {
-        console.log(race.race_clock + ": " + race_rider.name +  " bend 2 bend_distance_travelled = " + race_rider.bend_distance_travelled + "distance_this_step_segment = " + distance_this_step_segment + " settings.race_bend_distance = " + settings.race_bend_distance);
+        //console.log(race.race_clock + ": " + race_rider.name +  " bend 2 bend_distance_travelled = " + race_rider.bend_distance_travelled + "distance_this_step_segment = " + distance_this_step_segment + " settings.race_bend_distance = " + settings.race_bend_distance);
         if ((race_rider.bend_distance_travelled + distance_this_step_segment) <= settings.race_bend_distance){
           //can do whole segment on bend
           race_rider.bend_distance_travelled+=distance_this_step_segment;
           race_rider.current_bend_angle +=((distance_this_step_segment*scale_amount*360)/(2*Math.PI*settings.track_bend_radius*scale_amount));
-          race_rider.distance_covered+=distance_this_step_segment;
           race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
           race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
           race_rider.distance_this_step_remaining = 0;
-          console.log(race.race_clock + ": " + race_rider.name + " bend 2 full distance "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend angle " + race_rider.current_bend_angle )
+          //console.log(race.race_clock + ": " + race_rider.name + " bend 2 full distance "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend angle " + race_rider.current_bend_angle );
         }
         else{
           // some distance on the bend then 0 or more on the straight
           let distance_on_bend = settings.race_bend_distance - race_rider.bend_distance_travelled;
           race_rider.current_bend_angle +=((distance_on_bend*scale_amount*360)/(2*Math.PI*settings.track_bend_radius*scale_amount));
-          race_rider.distance_covered+=distance_on_bend;
           race_rider.distance_this_step_remaining -= distance_on_bend;
           race_rider.current_position_x = race_rider.bend_centre_x + Math.cos((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
           race_rider.current_position_y = settings.track_centre_y - Math.sin((race_rider.current_bend_angle*Math.PI)/180)*settings.track_bend_radius*scale_amount;
-          console.log(race.race_clock + ": " + race_rider.name +  " bend 2 partial "+distance_on_bend+" of "+distance_this_step_segment + " to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend angle " + race_rider.current_bend_angle  );
-
+          //console.log(race.race_clock + ": " + race_rider.name +  " bend 2 partial "+distance_on_bend+" of "+distance_this_step_segment + " to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ") bend angle " + race_rider.current_bend_angle  );
           //race_rider is now on straight2
           race_rider.current_bend_angle = 0;
           race_rider.bend_distance_travelled= 0;
@@ -455,26 +442,24 @@ function moveRace(){
             //can do full step on straight
             race_rider.straight_distance_travelled += distance_this_step_segment;
             race_rider.current_position_x -= distance_this_step_segment*scale_amount;
-            race_rider.distance_covered+=distance_this_step_segment;
             race_rider.distance_this_step_remaining = 0;
-            console.log(race.race_clock + ": " + race_rider.name + " straight 1 full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining = " +   race_rider.distance_this_step_remaining   )
+            //console.log(race.race_clock + ": " + race_rider.name + " straight 1 full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining = " +   race_rider.distance_this_step_remaining   )
           }
           else{
             distance_this_step_segment =  settings.track_straight_length - race_rider.straight_distance_travelled;
             race_rider.straight_distance_travelled += distance_this_step_segment;
             race_rider.current_position_x -= distance_this_step_segment*scale_amount;
-            race_rider.distance_covered+=distance_this_step_segment;
             race_rider.distance_this_step_remaining -= distance_this_step_segment;
-            console.log(race.race_clock + ": " + race_rider.name + " straight 1 partial "+distance_this_step_segment+" of "+race_rider.distance_this_step+" to (" +race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining" +   race_rider.distance_this_step_remaining );
-
+            //console.log(race.race_clock + ": " + race_rider.name + " straight 1 partial "+distance_this_step_segment+" of "+race_rider.distance_this_step+" to (" +race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining" +   race_rider.distance_this_step_remaining );
             //rest of segment goes on to bend 2
             race_rider.current_track_position = 'bend1';
-            race_rider.bend_centre_x = race_rider.current_position_x
-            //console.log("race_rider.bend_centre_x="+race_rider.bend_centre_x);
+            race_rider.bend_centre_x = race_rider.current_position_x;
             race_rider.current_bend_angle=90;
           }
       }
     }
+    race_rider.distance_covered+=race_rider.velocity;
+    //draw the rider's circle
     ctx.beginPath();
     ctx.arc(race_rider.current_position_x, race_rider.current_position_y, 4, 0, 2 * Math.PI);
     ctx.fillStyle = race_rider.colour;
@@ -485,9 +470,8 @@ function moveRace(){
     ctx.fill();
     //work out how much the race_rider can travel in this second
   }
-
-  //update each rider's distance value for the rider in front of them (lead is zero)
-    //race.riders[race.current_order[0]].distance_from_rider_in_front = 0;
+  // After all riders have moved
+  // Update each rider's distance value for the rider in front of them (lead is zero)
     for(let i=0;i<race.current_order.length;i++){
       let ri = race.current_order[i];
       let display_rider = race.riders[ri];
@@ -507,13 +491,9 @@ function moveRace(){
             }
           }
       }
-
-      //display_rider.distance_from_rider_in_front = race.riders[rif].distance_covered - display_rider.distance_covered;
       display_rider.distance_from_rider_in_front = min_distance;
-
       //display the rider properties
        $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + " " + display_rider.current_aim.toUpperCase() + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div");
-
     }
 
   //work out the distance covered of the second last rider
@@ -529,7 +509,7 @@ function moveRace(){
   }
   else{
     //stopRace();
-    console.log("race complete");
+    console.log("Race Complete");
     d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x");
   }
 }
@@ -561,17 +541,19 @@ function load_race(){
   race.race_clock = 0;
   settings.race_bend_distance = Math.PI * settings.track_bend_radius;
 
-  //set up the switch range points: this is where riders can start to drop back
-  // i added settings.switch_prebend_start_addition to allow the swithc to start before the bend proper (speed up switches)
+  // Set up the switch range points: this is where riders can start to drop back
+  // I added settings.switch_prebend_start_addition to allow the swithc to start before the bend proper (speed up switches)
   race.bend1_switch_start_distance = settings.track_straight_length/2 - settings.switch_prebend_start_addition;
   race.bend1_switch_end_distance = race.bend1_switch_start_distance + settings.race_bend_distance*(settings.bend_switch_range_angle/180) ;
   race.bend2_switch_start_distance = (settings.track_straight_length*1.5) + settings.race_bend_distance - settings.switch_prebend_start_addition; //start of second bend
   race.bend2_switch_end_distance = race.bend2_switch_start_distance + settings.race_bend_distance*(settings.bend_switch_range_angle/180) ;
 
-  //update total number of laps
+  // Update total number of laps
   $("#race_info_no_of_laps").text(Math.floor(race.distance/settings.track_length));
 
   console.log("race.start_order.length "+race.start_order.length)
+
+  //Reset rider properties that change during the race
   for(let i = 0;i<race.start_order.length;i++){
     let load_rider = riders[race.start_order[i]];
     load_rider.start_offset = i*settings.start_position_offset;
@@ -583,7 +565,6 @@ function load_race(){
     load_rider.current_bend_angle=0;
     load_rider.bend_centre_x = 0;
     load_rider.distance_this_step = 0;
-    load_rider.acceleration_this_step = 0;
     load_rider.distance_covered = 0;
     load_rider.straight_distance_travelled=0;
     load_rider.bend_distance_travelled=0;
@@ -614,22 +595,17 @@ function load_race(){
 }
 
 $(document).ready(function() {
-
-
   c = document.getElementById("bikeCanvas");
   ctx =c.getContext("2d");
   $('#input_race_length').val(race.distance);
   $('#frontalArea').val(settings.frontalArea);
   $('#teamorder').val(race.start_order.map(a=>a).join(","));
-
-  //attache events
+  //attach events
   $("#button_play").on("click", playRace);
   $("#button_stop").on("click", stopRace);
   $("#button_fw").on("click", forwardStep);
   $(".set_effort").on("click", setEffortInstruction);
   $(".switch_lead").on("click", switchLeadInstruction);
-
-
   load_race();
 }
 );
@@ -673,5 +649,4 @@ function forwardStep() {
         setTimeout(function(){  d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x "); }, 200);
         moveRace();
       }
-
 }
