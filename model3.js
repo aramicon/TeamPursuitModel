@@ -567,6 +567,8 @@ function load_race(){
   race.current_order = [];
   race.race_clock = 0;
   settings.race_bend_distance = Math.PI * settings.track_bend_radius;
+  race.instructions = [];
+  race.instructions_t = [];
 
   // Set up the switch range points: this is where riders can start to drop back
   // I added settings.switch_prebend_start_addition to allow the swithc to start before the bend proper (speed up switches)
