@@ -89,20 +89,19 @@ function switchLead(positions_to_drop_back){
   let current_threshold = new_leader.threshold_power;
 
   if (current_leader_power < current_threshold){
-  new_leader.output_level = (current_leader_power/current_threshold)*10;
+    new_leader.output_level = (current_leader_power/current_threshold)*10;
     console.log("new_leader.output_level = "+ new_leader.output_level);
   }
   else if(current_leader_power == current_threshold){
-    race_rider.current_power_effort = 5;
+    new_leader.current_power_effort = 5;
   }
   else{ //power is over threshold
     if (current_leader_power >= new_leader.max_power ){
-      new_leader.output_level = 9
+      new_leader.output_level = 9;
     }
     else{
         new_leader.output_level = (current_leader_power/new_leader.max_power)*10;
-    } 
-
+    }
 
   }
 
@@ -123,6 +122,23 @@ function moveRace(){
   race.race_clock++;
   $("#race_info_clock").text(race.race_clock);
   ctx.clearRect(0, 0, c.width, c.height);
+
+  //add any stored instructions if found
+  let new_instructions = race.race_instructions_r.filter(a=>parseInt(a[0]) == race.race_clock);
+  if(new_instructions.length > 0){
+    for(let i=0;i<new_instructions.length;i++){
+      let inst = new_instructions[i][1].split("=");
+      if (inst.length=2){
+        if(inst[0]=="effort"){
+          race.live_instructions.push(["effort",parseInt(inst[1])]);
+        }
+        else if(inst[0]=="drop"){
+          race.drop_instruction = parseInt(inst[1]);
+        }
+      }
+    }
+  }
+
 
   //carry out any live_instructions (they are queued)
   while (race.live_instructions.length > 0){
@@ -253,7 +269,15 @@ function moveRace(){
       let tv = target_velocity + settings.headwindv;
       //to work out the shelter, distance from the rider in front is needed
 
-      let level_of_shelter = 1;//maximum shelter
+      let level_of_shelter = 1;//maximum shelte
+      let shelter_effect_strength = settings.drafting_effect_on_drag;
+      if (race_rider.number_of_riders_in_front == 2){
+        shelter_effect_strength += settings.two_riders_in_front_extra_shelter;
+      }
+      else if (race_rider.number_of_riders_in_front > 2){
+        shelter_effect_strength += settings.more_than_two_riders_in_front_extra_shelter;
+      }
+
       if (race_rider.distance_from_rider_in_front > settings.shelter_max_distance){
         level_of_shelter = 0; //after 3m assume no shelter: this is a hardcoded guess
       }
@@ -265,7 +289,7 @@ function moveRace(){
         //if you have no rider in front of you this distance is set to -1, so you have no shelter
         level_of_shelter = 0;
       }
-      A2 -= A2*(settings.drafting_effect_on_drag*level_of_shelter);
+      A2 -= A2*(shelter_effect_strength*level_of_shelter);
       let A2Eff = (tv > 0.0) ? A2 : -A2; // wind in face, must reverse effect
       let target_power = (target_velocity * tres + target_velocity * tv * tv * A2Eff) / settings.transv;
 
@@ -478,10 +502,12 @@ function moveRace(){
       //is there a rider in front, i.e. who has covered more distance? find the closest rider that is in front of you and use this gap to work out your shelter
       let rif = -1;
       let min_distance = -1;
+      let number_of_riders_in_front = 0;
       for(let j=0;j<race.current_order.length;j++){
           if(i!==j){ //ignore distance to self
             let distance_to_rider = (race.riders[race.current_order[j]].distance_covered - race.riders[race.current_order[j]].start_offset ) - (display_rider.distance_covered - display_rider.start_offset);
             if(distance_to_rider >= 0){//ignore riders behind you, who will have negative distance
+              number_of_riders_in_front++;
               if(min_distance==-1){
                 min_distance = distance_to_rider;
               }
@@ -492,6 +518,7 @@ function moveRace(){
           }
       }
       display_rider.distance_from_rider_in_front = min_distance;
+      display_rider.number_of_riders_in_front = number_of_riders_in_front;
       //display the rider properties
        $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + " " + display_rider.current_aim.toUpperCase() + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div");
     }
@@ -589,6 +616,16 @@ function load_race(){
     ctx.fill();
     race.riders.push(load_rider);
     console.log("loading rider " + load_rider.name + " at position " + race.start_order[i] + " with start offset of " + load_rider.start_offset);
+
+    let instructions_t = [];
+    let new_instructions = $('#instructions').val();
+    if(new_instructions.length > 5){
+      instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+    }
+    if (instructions_t.length > 0){
+      race.race_instructions_r = instructions_t;
+    }
+
   }
 
   addRiderDisplay();

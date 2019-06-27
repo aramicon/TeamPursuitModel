@@ -34,6 +34,8 @@ let settings = {
 "damping_deceleration_distance":10,
 "velocity_adjustment_dropping_back":4,
 "bend_switch_range_angle":30,
-"switch_prebend_start_addition":5
+"switch_prebend_start_addition":5,
+"two_riders_in_front_extra_shelter":0.1,
+"more_than_two_riders_in_front_extra_shelter":0.12
 }
 export {settings};
