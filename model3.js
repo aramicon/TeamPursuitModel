@@ -622,7 +622,8 @@ function load_race(){
     let instructions_t = [];
     let new_instructions = $('#instructions').val();
     if(new_instructions.length > 5){
-      instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+      //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+      instructions_t = JSON.parse(new_instructions);
     }
     if (instructions_t.length > 0){
       race.race_instructions_r = instructions_t;

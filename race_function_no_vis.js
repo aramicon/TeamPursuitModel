@@ -22,16 +22,102 @@ function run_track_race(){
   let instructions_t = [];
   let new_instructions = $('#instructions').val();
   if(new_instructions.length > 5){
-    instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+    //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+    instructions_t = JSON.parse(new_instructions);
+    console.log(instructions_t);
   }
   console.log(instructions_t);
   if (instructions_t.length > 0){
     race.race_instructions_r = instructions_t;
+    console.log(race.race_instructions_r)
   }
   let time_taken = run_race(settings,race,riders);
 
   console.log(time_taken);
   $("#race_result").text('Finish Time = ' + time_taken);
+}
+
+function shuffleArray(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+
+
+function run_track_race_ga(){
+  //generate a set of instructions
+
+  let max_timestep = 400;
+  let probability_of_instruciton_per_timestep = 0.1;
+  let probability_of_effort_instruction = 0.8;
+  let population_size = 100;
+  let population = [];
+  let team_size = 4;
+
+  //create a starting population
+  for (let p=0;p<population_size;p++){
+    //create a random starting order
+    let new_race = {};
+
+    let start_order = [];
+
+    for(let i = 0;i<team_size;i++){
+      start_order.push(i);
+    }
+     shuffleArray(start_order);
+    new_race.start_order =start_order;
+    let instructions = [];
+    //create a set of random instructions
+    for(let i=0;i<max_timestep;i++){
+      //add a new instruction, maybe
+      let rand = Math.random();
+      if(rand <= probability_of_instruciton_per_timestep){
+        //add an insruction, but whaich type?
+        let new_instruction = [];
+        new_instruction[0] = i;
+        let rand2 = Math.random();
+        if(rand2 <= probability_of_effort_instruction){
+          //add an effort instruction. but what level?
+          let rand_effort = Math.round(Math.random()*1000)/100;
+          new_instruction[1] = "effort="+rand_effort;
+
+        }else{
+          //try fixing all drops to 3 (go to back)
+          new_instruction[1] = "drop=3";
+        }
+        instructions.push(new_instruction);
+      }
+    }
+    new_race.instructions = instructions;
+    population.push(new_race);
+
+  }
+
+  //run each race and track the scores.
+  for(let i = 0;i<population_size;i++){
+    let load_race_properties = population[i];
+    race.race_instructions_r = load_race_properties.instructions;
+    race.start_order = load_race_properties.start_order;
+    load_race_properties.time_taken = run_race(settings,race,riders);
+  }
+
+  //find the best instructions
+
+  let best_race_properties_index = 0;
+  let best_race_properties = population[0];
+
+
+  for(let i = 0; i< population_size;i++){
+    if(population[i].time_taken < best_race_properties.time_taken){
+      best_race_properties_index = i;
+      best_race_properties = population[i];
+    }
+  }
+
+  console.log(population);
+  $("#generated_instructions").val(JSON.stringify(best_race_properties.instructions));
+  $("#race_result").text("best result = race # " + best_race_properties_index + " with Finish Time = " + best_race_properties.time_taken);
 }
 
 function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is from bikecalculator.com */
@@ -445,6 +531,7 @@ $(document).ready(function() {
 
   //attach events
   $("#button_play_race").on("click", run_track_race);
+  $("#button_evolve_instructions").on("click", run_track_race_ga);
   $('#starting_order').val(race.start_order.map(a=>a).join(","));
 
 }
