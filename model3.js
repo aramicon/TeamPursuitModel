@@ -130,7 +130,7 @@ function moveRace(){
       let inst = new_instructions[i][1].split("=");
       if (inst.length=2){
         if(inst[0]=="effort"){
-          race.live_instructions.push(["effort",parseInt(inst[1])]);
+          race.live_instructions.push(["effort",parseFloat(inst[1])]);
         }
         else if(inst[0]=="drop"){
           race.drop_instruction = parseInt(inst[1]);
@@ -145,6 +145,7 @@ function moveRace(){
     let instruction = race.live_instructions.pop();
     if(instruction[0]=="effort"){
       setEffort(instruction[1]);
+      $("#instruction_info_text").text(race.race_clock + " - Effort updated to " + instruction[1]);
     }
   }
 
@@ -154,6 +155,7 @@ function moveRace(){
       let lead_rider_distance_on_lap = race.riders[race.current_order[0]].distance_covered % settings.track_length;
       if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance)){
         switchLead(race.drop_instruction);
+        $("#instruction_info_text").text(race.race_clock + " - DROP back " + race.drop_instruction);
         race.drop_instruction = 0;
       }
     }
@@ -520,12 +522,12 @@ function moveRace(){
       display_rider.distance_from_rider_in_front = min_distance;
       display_rider.number_of_riders_in_front = number_of_riders_in_front;
       //display the rider properties
-       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + " " + display_rider.current_aim.toUpperCase() + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div");
+       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div");
     }
 
   //work out the distance covered of the second last rider
   //get the 2nd last rider (whose time is the one that counts)
-  let second_last_rider = race.riders[race.current_order[race.current_order.length-1]];
+  let second_last_rider = race.riders[race.current_order[race.current_order.length-2]];
   if (second_last_rider.distance_covered < race.distance && (race_state == "play" || race_state == "resume" )){
     //update the lap count
     $("#race_info_lap").text(Math.floor(second_last_rider.distance_covered/settings.track_length)+1);
@@ -569,6 +571,10 @@ function load_race(){
   settings.race_bend_distance = Math.PI * settings.track_bend_radius;
   race.instructions = [];
   race.instructions_t = [];
+  race.drop_instruction = 0;
+  race.live_instructions = [];
+  race.race_instructions = [];
+  race.race_instructions_r = [];
 
   // Set up the switch range points: this is where riders can start to drop back
   // I added settings.switch_prebend_start_addition to allow the swithc to start before the bend proper (speed up switches)

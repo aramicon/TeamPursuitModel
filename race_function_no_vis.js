@@ -19,6 +19,12 @@ function run_track_race(){
     race.start_order = input_teamOrder;
     console.log("updated race.start_order " + race.start_order )
   }
+
+  race.drop_instruction = 0;
+  race.live_instructions = [];
+  race.race_instructions = [];
+  race.race_instructions_r = [];
+
   let instructions_t = [];
   let new_instructions = $('#instructions').val();
   if(new_instructions.length > 5){
@@ -44,23 +50,104 @@ function shuffleArray(array) {
     }
 }
 
+function mutate_race(r){
+  let new_race = {};
+
+  let p_shuffle_start = 0.2;
+  let p_add_instruction = 0.005;
+  let p_delete_instruction = 0.2;
+  let p_change_effort = 0.2;
+  let p_move_instruction = 0.2;
+
+  let range_to_move_instruction = 20;
+
+  let time_taken_old = r.time_taken;
+
+  new_race.start_order = [r.start_order];
+  new_race.instructions = [];
+  new_race.time_taken = 0;
+
+  if(Math.random() < p_shuffle_start){
+    shuffleArray(new_race.start_order);
+  }
+
+  for(let i = 0;i<time_taken_old;i++){
+    if(r.instructions.filter(a => a[0] == i).length == 0){
+      //no instruction here- add a new one?
+      if(Math.random() < p_add_instruction){
+        new_race.instructions.push(new_random_instruction(i));
+      }
+      else{
+        //there is an instruction here. assume only 1 per timestep
+        let current_instruction = r.instructions.filter(a => a[0] == i)[0];
+        if(Math.random() > p_delete_instruction){//if deleting, just ignore it
+          if((current_instruction[1].indexOf("effort") != -1) && (math.random() < p_change_effort)){
+            let current_effort = current_instruction[1].split("=")[1];
+            let new_effort = current_effort + (-2 + (Math.random()*4));
+            if(current_effort < 0){
+              current_effort = 0;
+            }
+            else if(current_effort > 9){
+              current_effort = 9;
+            }
+            current_instruction[1] = ":effort=" + current_effort;
+          }
+          //also might move the timestep a bit
+          if(Math.random() < p_move_instruction){
+              current_instruction[0] = current_instruction[0] + (-20 + Math.random(0*40));
+              if(current_instruction[0] < 0){
+                current_instruction[0] = 0;
+              }
+          }
+          new_race.instructions.push(current_instruction)
+        }
+
+      }
+
+    }
+
+  }
+
+
+  return new_race;
+}
+
+function new_random_instruction(timestep){
+  let probability_of_effort_instruction = 0.8;
+  let new_instruction = [];
+  new_instruction[0] = timestep;
+  let rand2 = Math.random();
+  if(rand2 <= probability_of_effort_instruction){
+    //add an effort instruction. but what level?
+    let rand_effort = Math.round(Math.random()*1000)/100;
+    new_instruction[1] = "effort="+rand_effort;
+  }else{
+    //try fixing all drops to 3 (go to back)
+    new_instruction[1] = "drop=3";
+  }
+  return new_instruction;
+}
 
 function run_track_race_ga(){
   //generate a set of instructions
 
   let max_timestep = 400;
-  let probability_of_instruciton_per_timestep = 0.1;
-  let probability_of_effort_instruction = 0.8;
+  let probability_of_instruction_per_timestep_lower = 0.02;
+  let probability_of_instruction_per_timestep_upper = 0.1;
+
   let population_size = 100;
   let population = [];
   let team_size = 4;
+  let number_of_generations = 2;
+
+
 
   //create a starting population
   for (let p=0;p<population_size;p++){
     //create a random starting order
     let new_race = {};
-
     let start_order = [];
+    let probability_of_instruction_per_timestep = probability_of_instruction_per_timestep_lower + Math.random()*(probability_of_instruction_per_timestep_upper-probability_of_instruction_per_timestep_lower);
 
     for(let i = 0;i<team_size;i++){
       start_order.push(i);
@@ -72,52 +159,89 @@ function run_track_race_ga(){
     for(let i=0;i<max_timestep;i++){
       //add a new instruction, maybe
       let rand = Math.random();
-      if(rand <= probability_of_instruciton_per_timestep){
+      if(rand <= probability_of_instruction_per_timestep){
         //add an insruction, but whaich type?
-        let new_instruction = [];
-        new_instruction[0] = i;
-        let rand2 = Math.random();
-        if(rand2 <= probability_of_effort_instruction){
-          //add an effort instruction. but what level?
-          let rand_effort = Math.round(Math.random()*1000)/100;
-          new_instruction[1] = "effort="+rand_effort;
 
-        }else{
-          //try fixing all drops to 3 (go to back)
-          new_instruction[1] = "drop=3";
-        }
-        instructions.push(new_instruction);
+        instructions.push(new_random_instruction(i));
       }
     }
     new_race.instructions = instructions;
     population.push(new_race);
+  }
+
+  for(let g=0;g<number_of_generations;g++){
+    //run each race and track the scores.
+    for(let i = 0;i<population_size;i++){
+      //reset any race properties
+
+      race.drop_instruction = 0;
+      race.live_instructions = [];
+      race.race_instructions = [];
+      race.race_instructions_r = [];
+
+      let load_race_properties = population[i];
+      race.race_instructions_r = load_race_properties.instructions;
+      race.start_order = load_race_properties.start_order;
+      load_race_properties.time_taken = run_race(settings,race,riders);
+    }
+
+    //find the best instructions
+    // find the squre root of the total popualtion, so that a new population can be generated from these
+    let parent_population = [];
+    let pop_square_root = Math.floor(Math.sqrt(population_size));
+    //get the max time to use as an imitial comparison
+    let max_time_index = 0;
+    let max_time_properties = {};
+    let max_time = 0;
+    for(let i = 0; i< population_size;i++){
+      if(population[i].time_taken > max_time){
+        max_time = population[i].time_taken;
+        max_time_index = i;
+        max_time_properties = population[i];
+      }
+    }
+
+    for(let i = 0; i< pop_square_root;i++){
+      let best_race_properties_index = max_time_index;
+      let best_race_properties = max_time_properties;
+
+      for(let i = 0; i< population_size;i++){
+        if(population[i].time_taken < best_race_properties.time_taken){
+          //if this has NOT already been added use it
+          if(parent_population.indexOf(i)==-1){
+            best_race_properties_index = i;
+            best_race_properties = population[i];
+          }
+        }
+      }
+      parent_population.push(i);
+    }
+
+    //make a new population using the best of the last generation
+    let new_population = [];
+    for(let i = 0;i < parent_population.length;i++){
+      for(let k = 0;k < parent_population.length;k++){
+        //create a new set of instructions
+        new_population.push(mutate_race(population[parent_population[i]]))
+      }
+    }
+    population = new_population;
 
   }
 
-  //run each race and track the scores.
-  for(let i = 0;i<population_size;i++){
-    let load_race_properties = population[i];
-    race.race_instructions_r = load_race_properties.instructions;
-    race.start_order = load_race_properties.start_order;
-    load_race_properties.time_taken = run_race(settings,race,riders);
-  }
-
-  //find the best instructions
-
-  let best_race_properties_index = 0;
-  let best_race_properties = population[0];
-
+  let final_best_race_properties_index = 0;
+  let final_best_race_properties = population[0];
 
   for(let i = 0; i< population_size;i++){
-    if(population[i].time_taken < best_race_properties.time_taken){
-      best_race_properties_index = i;
-      best_race_properties = population[i];
+    if(population[i].time_taken < final_best_race_properties.time_taken){
+      final_best_race_properties_index = i;
+      final_best_race_properties = population[i];
     }
   }
 
   console.log(population);
-  $("#generated_instructions").val(JSON.stringify(best_race_properties.instructions));
-  $("#race_result").text("best result = race # " + best_race_properties_index + " with Finish Time = " + best_race_properties.time_taken);
+  $("#generated_instructions").val(JSON.stringify(final_best_race_properties.instructions));
+  $("#race_result").text("best result = race # " + final_best_race_properties_index + " with Finish Time = " + final_best_race_properties.time_taken);
 }
 
 function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is from bikecalculator.com */
@@ -259,7 +383,7 @@ function run_race(settings_r,race_r,riders_r){
         let inst = new_instructions[i][1].split("=");
         if (inst.length=2){
           if(inst[0]=="effort"){
-            race.live_instructions.push(["effort",parseInt(inst[1])]);
+            race.live_instructions.push(["effort",parseFloat(inst[1])]);
           }
           else if(inst[0]=="drop"){
             race.drop_instruction = parseInt(inst[1]);
@@ -516,7 +640,7 @@ function run_race(settings_r,race_r,riders_r){
 
     //work out the distance covered of the second last rider
     //get the 2nd last rider (whose time is the one that counts)
-    let second_last_rider = race_r.riders_r[race_r.current_order[race_r.current_order.length-1]];
+    let second_last_rider = race_r.riders_r[race_r.current_order[race_r.current_order.length-2]];
 
     if (second_last_rider.distance_covered > race_r.distance ){
       continue_racing = false;
