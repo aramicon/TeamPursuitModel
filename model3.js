@@ -119,7 +119,7 @@ function switchLead(positions_to_drop_back){
 
 function moveRace(){
   //update the race clock, check for instructions, then move the riders based on the current order
-  race.race_clock++;
+
   $("#race_info_clock").text(race.race_clock);
   ctx.clearRect(0, 0, c.width, c.height);
 
@@ -494,10 +494,11 @@ function moveRace(){
       ctx.stroke();
     }
     ctx.fill();
-    //work out how much the race_rider can travel in this second
   }
   // After all riders have moved
   // Update each rider's distance value for the rider in front of them (lead is zero)
+  let logMessage = "";
+
     for(let i=0;i<race.current_order.length;i++){
       let ri = race.current_order[i];
       let display_rider = race.riders[ri];
@@ -523,8 +524,16 @@ function moveRace(){
       display_rider.number_of_riders_in_front = number_of_riders_in_front;
       //display the rider properties
        $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div");
+
+      if(settings.log_each_step){
+        logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
+      }
+    }
+    if(settings.log_each_step){
+      console.log(logMessage);
     }
 
+    race.race_clock++;
   //work out the distance covered of the second last rider
   //get the 2nd last rider (whose time is the one that counts)
   let second_last_rider = race.riders[race.current_order[race.current_order.length-2]];

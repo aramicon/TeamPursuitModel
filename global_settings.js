@@ -36,6 +36,21 @@ let settings = {
 "bend_switch_range_angle":30,
 "switch_prebend_start_addition":5,
 "two_riders_in_front_extra_shelter":0.1,
-"more_than_two_riders_in_front_extra_shelter":0.12
+"more_than_two_riders_in_front_extra_shelter":0.12,
+"log_each_step":0,
+"ga_max_timestep":400,
+"ga_probability_of_instruction_per_timestep_lower":0.01,
+"ga_probability_of_instruction_per_timestep_upper":0.02,
+"ga_population_size":100,
+"ga_team_size":4,
+"ga_number_of_generations":10,
+"ga_p_shuffle_start":0,
+"ga_p_add_instruction":0,
+"ga_p_delete_instruction":0,
+"ga_p_change_effort":0,
+"ga_p_move_instruction":0,
+"ga_range_to_move_instruction":20,
+"ga_range_to_change_effort":2,
+"ga_log_each_step":0,
 }
 export {settings};

@@ -53,17 +53,16 @@ function shuffleArray(array) {
 function mutate_race(r){
   let new_race = {};
 
-  let p_shuffle_start = 0.2;
-  let p_add_instruction = 0.005;
-  let p_delete_instruction = 0.2;
-  let p_change_effort = 0.2;
-  let p_move_instruction = 0.2;
-
-  let range_to_move_instruction = 20;
-
+  let p_shuffle_start = settings.ga_p_shuffle_start;
+  let p_add_instruction = settings.ga_p_add_instruction;
+  let p_delete_instruction = settings.ga_p_delete_instruction;
+  let p_change_effort = settings.ga_p_change_effort;
+  let p_move_instruction = settings.ga_p_move_instruction;
+  let range_to_move_instruction = settings.ga_range_to_move_instruction;
+  let range_to_change_effort = settings.ga_range_to_change_effort;
   let time_taken_old = r.time_taken;
 
-  new_race.start_order = [r.start_order];
+  new_race.start_order = r.start_order;
   new_race.instructions = [];
   new_race.time_taken = 0;
 
@@ -72,43 +71,50 @@ function mutate_race(r){
   }
 
   for(let i = 0;i<time_taken_old;i++){
-    if(r.instructions.filter(a => a[0] == i).length == 0){
+    if((r.instructions.filter(a => a[0] == i).length == 0)){
       //no instruction here- add a new one?
-      if(Math.random() < p_add_instruction){
+      if (Math.random() < p_add_instruction){
         new_race.instructions.push(new_random_instruction(i));
       }
-      else{
-        //there is an instruction here. assume only 1 per timestep
-        let current_instruction = r.instructions.filter(a => a[0] == i)[0];
-        if(Math.random() > p_delete_instruction){//if deleting, just ignore it
-          if((current_instruction[1].indexOf("effort") != -1) && (math.random() < p_change_effort)){
-            let current_effort = current_instruction[1].split("=")[1];
-            let new_effort = current_effort + (-2 + (Math.random()*4));
-            if(current_effort < 0){
-              current_effort = 0;
-            }
-            else if(current_effort > 9){
-              current_effort = 9;
-            }
-            current_instruction[1] = ":effort=" + current_effort;
-          }
-          //also might move the timestep a bit
-          if(Math.random() < p_move_instruction){
-              current_instruction[0] = current_instruction[0] + (-20 + Math.random(0*40));
-              if(current_instruction[0] < 0){
-                current_instruction[0] = 0;
-              }
-          }
-          new_race.instructions.push(current_instruction)
-        }
-
-      }
-
     }
+    else{
+      //there is an instruction here. assume only 1 per timestep
+      let current_instruction = [...r.instructions.filter(a => a[0] == i)[0]];
+      if(Math.random() > p_delete_instruction){//if deleting, just ignore it
+        if((current_instruction[1].indexOf("effort") != -1)){
+          if((Math.random() < p_change_effort)){
 
+          let current_effort = parseFloat(current_instruction[1].split("=")[1]);
+          let new_effort = Math.floor((current_effort + ((range_to_change_effort*-1) + (Math.random()*(range_to_change_effort*2))))*100)/100;
+          if(new_effort < 0){
+            new_effort = 0;
+          }
+          else if(new_effort > 9){
+            new_effort = 9;
+          }
+          current_instruction[1] = "effort=" + new_effort;
+          }
+        }
+        //also might move the timestep a bit
+        if(Math.random() < p_move_instruction){
+            let new_location = current_instruction[0] + Math.floor((range_to_move_instruction*-1) + (Math.random()*(range_to_move_instruction*2)));
+            if(new_location < 0){
+              new_location = 0;
+            }
+            if(new_location > time_taken_old){
+              new_location = time_taken_old;
+            }
+            //only move it there is NOT an instruciton already there
+            if(r.instructions.filter(a => a[0] == new_location).length==0 && new_race.instructions.filter(a => a[0] == new_location).length==0){
+              current_instruction[0] = new_location;
+            }
+
+
+        }
+        new_race.instructions.push(current_instruction)
+      }
+    }
   }
-
-
   return new_race;
 }
 
@@ -130,15 +136,16 @@ function new_random_instruction(timestep){
 
 function run_track_race_ga(){
   //generate a set of instructions
+  $("#race_result").html("");
 
-  let max_timestep = 400;
-  let probability_of_instruction_per_timestep_lower = 0.02;
-  let probability_of_instruction_per_timestep_upper = 0.1;
+  let max_timestep = settings.ga_max_timestep;
+  let probability_of_instruction_per_timestep_lower = settings.ga_probability_of_instruction_per_timestep_lower;
+  let probability_of_instruction_per_timestep_upper =settings.ga_probability_of_instruction_per_timestep_upper;
 
-  let population_size = 100;
+  let population_size = settings.ga_population_size;
   let population = [];
-  let team_size = 4;
-  let number_of_generations = 2;
+  let team_size = settings.ga_team_size;
+  let number_of_generations = settings.ga_number_of_generations;
 
 
 
@@ -183,65 +190,71 @@ function run_track_race_ga(){
       race.race_instructions_r = load_race_properties.instructions;
       race.start_order = load_race_properties.start_order;
       load_race_properties.time_taken = run_race(settings,race,riders);
+      //console.log(load_race_properties.time_taken);
     }
 
     //find the best instructions
-    // find the squre root of the total popualtion, so that a new population can be generated from these
-    let parent_population = [];
-    let pop_square_root = Math.floor(Math.sqrt(population_size));
-    //get the max time to use as an imitial comparison
-    let max_time_index = 0;
-    let max_time_properties = {};
-    let max_time = 0;
+
+    //first, display the best time from this generation
+    let final_best_race_properties_index = 0;
+    let final_best_race_properties = population[0];
+
     for(let i = 0; i< population_size;i++){
-      if(population[i].time_taken > max_time){
-        max_time = population[i].time_taken;
-        max_time_index = i;
-        max_time_properties = population[i];
+      if(population[i].time_taken < final_best_race_properties.time_taken){
+        final_best_race_properties_index = i;
+        final_best_race_properties = population[i];
       }
     }
 
-    for(let i = 0; i< pop_square_root;i++){
-      let best_race_properties_index = max_time_index;
-      let best_race_properties = max_time_properties;
+    $("#generated_instructions").val(JSON.stringify(final_best_race_properties.instructions));
+    $("#race_result").append("<li>Generation " + g + " best result = race # " + final_best_race_properties_index + " with Finish Time = " + final_best_race_properties.time_taken+ ". Instructions " + JSON.stringify(final_best_race_properties.instructions) + "</li>");
 
+    if(g<(number_of_generations-1)){ //don't create a new population for the last generation
+      // find the squre root of the total popualtion, so that a new population can be generated from these
+      let parent_population = [];
+      let pop_square_root = Math.floor(Math.sqrt(population_size));
+      //get the max time to use as an imitial comparison
+      let max_time_index = 0;
+      let max_time_properties = {};
+      let max_time = 0;
       for(let i = 0; i< population_size;i++){
-        if(population[i].time_taken < best_race_properties.time_taken){
-          //if this has NOT already been added use it
-          if(parent_population.indexOf(i)==-1){
-            best_race_properties_index = i;
-            best_race_properties = population[i];
-          }
+        if(population[i].time_taken > max_time){
+          max_time = population[i].time_taken;
+          max_time_index = i;
+          max_time_properties = population[i];
         }
       }
-      parent_population.push(i);
-    }
 
-    //make a new population using the best of the last generation
-    let new_population = [];
-    for(let i = 0;i < parent_population.length;i++){
-      for(let k = 0;k < parent_population.length;k++){
-        //create a new set of instructions
-        new_population.push(mutate_race(population[parent_population[i]]))
+      for(let i = 0; i< pop_square_root;i++){
+        let best_race_properties_index = max_time_index;
+        let best_race_properties = max_time_properties;
+
+        for(let i = 0; i< population_size;i++){
+          if(population[i].time_taken < best_race_properties.time_taken){
+            //if this has NOT already been added use it
+            if(parent_population.indexOf(i)==-1){
+              best_race_properties_index = i;
+              best_race_properties = population[i];
+            }
+          }
+        }
+        parent_population.push(i);
       }
-    }
-    population = new_population;
 
+      //make a new population using the best of the last generation
+      let new_population = [];
+      for(let i = 0;i < parent_population.length;i++){
+        for(let k = 0;k < parent_population.length;k++){
+          //create a new set of instructions
+          new_population.push(mutate_race(population[parent_population[i]]))
+        }
+      }
+      population = new_population;
+      console.log("Generation " + g);
+      console.log(population);
+    }
   }
 
-  let final_best_race_properties_index = 0;
-  let final_best_race_properties = population[0];
-
-  for(let i = 0; i< population_size;i++){
-    if(population[i].time_taken < final_best_race_properties.time_taken){
-      final_best_race_properties_index = i;
-      final_best_race_properties = population[i];
-    }
-  }
-
-  console.log(population);
-  $("#generated_instructions").val(JSON.stringify(final_best_race_properties.instructions));
-  $("#race_result").text("best result = race # " + final_best_race_properties_index + " with Finish Time = " + final_best_race_properties.time_taken);
 }
 
 function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is from bikecalculator.com */
@@ -265,7 +278,7 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is 
 function setEffort(settings_r, race_r,riders_r, effort){ //actually update the effort level
   let leadingRider = race_r.riders_r[race_r.current_order[0]];
   leadingRider.output_level = effort+1;
-  console.log("Effort updated to " + effort);
+  //console.log("Effort updated to " + effort);
 }
 
 function switchLead(settings_r, race_r,riders_r, positions_to_drop_back){
@@ -294,7 +307,7 @@ function switchLead(settings_r, race_r,riders_r, positions_to_drop_back){
 
   if (current_leader_power < current_threshold){
     new_leader.output_level = (current_leader_power/current_threshold)*10;
-    console.log("new_leader.output_level = "+ new_leader.output_level);
+    //console.log("new_leader.output_level = "+ new_leader.output_level);
   }
   else if(current_leader_power == current_threshold){
     new_leader.current_power_effort = 5;
@@ -316,12 +329,13 @@ function switchLead(settings_r, race_r,riders_r, positions_to_drop_back){
       race_r.riders_r[new_order[i]].current_power_effort = race_r.riders_r[new_order[i]].threshold_power;
     }
   }
-  console.log("Move lead rider back " + positions_to_drop_back + " positions in order, new order " + new_order);
+  //console.log("Move lead rider back " + positions_to_drop_back + " positions in order, new order " + new_order);
 }
 
 function run_race(settings_r,race_r,riders_r){
   //run the race and return the finish time
   race_r.riders = [];
+  race_r.riders_r = [];
   race_r.current_order = [];
   race_r.race_clock = 0;
   settings_r.race_bend_distance = Math.PI * settings_r.track_bend_radius;
@@ -335,7 +349,7 @@ function run_race(settings_r,race_r,riders_r){
   race_r.bend2_switch_start_distance = (settings_r.track_straight_length*1.5) + settings_r.race_bend_distance - settings_r.switch_prebend_start_addition; //start of second bend
   race_r.bend2_switch_end_distance = race_r.bend2_switch_start_distance + settings_r.race_bend_distance*(settings_r.bend_switch_range_angle/180) ;
 
-  console.log("race_r.start_order.length "+race_r.start_order.length)
+  //console.log("race_r.start_order.length "+race_r.start_order.length)
 
   //Reset rider properties that change during the race
   for(let i = 0;i<race_r.start_order.length;i++){
@@ -368,13 +382,12 @@ function run_race(settings_r,race_r,riders_r){
     }
     race_r.current_order.push(race_r.start_order[i]);
     race_r.riders_r.push(load_rider);
-    console.log("loading rider " + load_rider.name + " at position " + race_r.start_order[i] + " with start offset of " + load_rider.start_offset);
+    //console.log("loading rider " + load_rider.name + " at position " + race_r.start_order[i] + " with start offset of " + load_rider.start_offset);
   }
 
   let continue_racing = true;
   while(continue_racing){
     //update the race clock, check for instructions, then move the riders based on the current order
-    race_r.race_clock++;
 
     //add any new instructions if found
     let new_instructions = race.race_instructions_r.filter(a=>parseInt(a[0]) == race_r.race_clock);
@@ -615,6 +628,7 @@ function run_race(settings_r,race_r,riders_r){
     // After all riders have moved
 
     // Update each rider's distance value for the rider in front of them (lead is zero)
+    let logMessage = "";
       for(let i=0;i<race_r.current_order.length;i++){
         let ri = race_r.current_order[i];
         let display_rider = race_r.riders_r[ri];
@@ -622,6 +636,7 @@ function run_race(settings_r,race_r,riders_r){
         let rif = -1;
         let min_distance = -1;
         let number_of_riders_in_front = 0;
+
         for(let j=0;j<race_r.current_order.length;j++){
             if(i!==j){ //ignore distance to self
               let distance_to_rider = (race_r.riders_r[race_r.current_order[j]].distance_covered - race_r.riders_r[race_r.current_order[j]].start_offset ) - (display_rider.distance_covered - display_rider.start_offset);
@@ -636,8 +651,13 @@ function run_race(settings_r,race_r,riders_r){
               }
             }
         }
+      if(settings.ga_log_each_step){
+        logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
+      }
     }
+      if(settings.ga_log_each_step){console.log(logMessage);}
 
+    race_r.race_clock++;
     //work out the distance covered of the second last rider
     //get the 2nd last rider (whose time is the one that counts)
     let second_last_rider = race_r.riders_r[race_r.current_order[race_r.current_order.length-2]];
@@ -645,6 +665,8 @@ function run_race(settings_r,race_r,riders_r){
     if (second_last_rider.distance_covered > race_r.distance ){
       continue_racing = false;
     }
+
+
   }
   //return the final finish time (seconds)
   return race_r.race_clock;
