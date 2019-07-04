@@ -108,8 +108,6 @@ function mutate_race(r){
             if(r.instructions.filter(a => a[0] == new_location).length==0 && new_race.instructions.filter(a => a[0] == new_location).length==0){
               current_instruction[0] = new_location;
             }
-
-
         }
         new_race.instructions.push(current_instruction)
       }
@@ -147,8 +145,6 @@ function run_track_race_ga(){
   let team_size = settings.ga_team_size;
   let number_of_generations = settings.ga_number_of_generations;
 
-
-
   //create a starting population
   for (let p=0;p<population_size;p++){
     //create a random starting order
@@ -178,6 +174,9 @@ function run_track_race_ga(){
 
   for(let g=0;g<number_of_generations;g++){
     //run each race and track the scores.
+    console.log("Generation " + g + " before racing ");
+    console.log(population);
+
     for(let i = 0;i<population_size;i++){
       //reset any race properties
 
@@ -187,10 +186,10 @@ function run_track_race_ga(){
       race.race_instructions_r = [];
 
       let load_race_properties = population[i];
-      race.race_instructions_r = load_race_properties.instructions;
-      race.start_order = load_race_properties.start_order;
+      race.race_instructions_r = [...load_race_properties.instructions];
+      race.start_order = [...load_race_properties.start_order];
       load_race_properties.time_taken = run_race(settings,race,riders);
-      //console.log(load_race_properties.time_taken);
+      console.log("race " + i + " time taken " + load_race_properties.time_taken);
     }
 
     //find the best instructions
@@ -205,6 +204,8 @@ function run_track_race_ga(){
         final_best_race_properties = population[i];
       }
     }
+
+      console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " time taken " + final_best_race_properties.time_taken);
 
     $("#generated_instructions").val(JSON.stringify(final_best_race_properties.instructions));
     $("#race_result").append("<li>Generation " + g + " best result = race # " + final_best_race_properties_index + " with Finish Time = " + final_best_race_properties.time_taken+ ". Instructions " + JSON.stringify(final_best_race_properties.instructions) + "</li>");
@@ -250,8 +251,9 @@ function run_track_race_ga(){
         }
       }
       population = new_population;
-      console.log("Generation " + g);
+      console.log("Generation " + g + " after mutations ");
       console.log(population);
+
     }
   }
 
