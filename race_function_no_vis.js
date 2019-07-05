@@ -17,7 +17,7 @@ function run_track_race(){
   let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
   if(input_teamOrder.length > 0){
     race.start_order = input_teamOrder;
-    console.log("updated race.start_order " + race.start_order )
+    //console.log("updated race.start_order " + race.start_order )
   }
 
   race.drop_instruction = 0;
@@ -53,13 +53,14 @@ function shuffleArray(array) {
 function mutate_race(r){
   let new_race = {};
 
-  let p_shuffle_start = settings.ga_p_shuffle_start;
-  let p_add_instruction = settings.ga_p_add_instruction;
-  let p_delete_instruction = settings.ga_p_delete_instruction;
-  let p_change_effort = settings.ga_p_change_effort;
-  let p_move_instruction = settings.ga_p_move_instruction;
-  let range_to_move_instruction = settings.ga_range_to_move_instruction;
-  let range_to_change_effort = settings.ga_range_to_change_effort;
+  const p_shuffle_start = settings.ga_p_shuffle_start;
+  const p_add_instruction = settings.ga_p_add_instruction;
+  const p_delete_instruction = settings.ga_p_delete_instruction;
+  const p_change_effort = settings.ga_p_change_effort;
+  const p_change_drop = settings.ga_p_change_drop;
+  const p_move_instruction = settings.ga_p_move_instruction;
+  const range_to_move_instruction = settings.ga_range_to_move_instruction;
+  const range_to_change_effort = settings.ga_range_to_change_effort;
   let time_taken_old = r.time_taken;
 
   new_race.start_order = r.start_order;
@@ -86,14 +87,17 @@ function mutate_race(r){
 
           let current_effort = parseFloat(current_instruction[1].split("=")[1]);
           let new_effort = Math.floor((current_effort + ((range_to_change_effort*-1) + (Math.random()*(range_to_change_effort*2))))*100)/100;
-          if(new_effort < 0){
-            new_effort = 0;
+          if(new_effort < settings.minimum_power_output){
+            new_effort = settings.minimum_power_output;
           }
           else if(new_effort > 9){
             new_effort = 9;
           }
           current_instruction[1] = "effort=" + new_effort;
           }
+        }
+        else if((Math.random() < p_change_drop)){
+            current_instruction[1] = "drop=" + (1 + Math.floor(Math.random()*(settings.ga_team_size-1)))
         }
         //also might move the timestep a bit
         if(Math.random() < p_move_instruction){
@@ -123,11 +127,10 @@ function new_random_instruction(timestep){
   let rand2 = Math.random();
   if(rand2 <= probability_of_effort_instruction){
     //add an effort instruction. but what level?
-    let rand_effort = Math.round(Math.random()*1000)/100;
+    let rand_effort = settings.minimum_power_output + (Math.round(Math.random()*(10-settings.minimum_power_output)*100)/100);
     new_instruction[1] = "effort="+rand_effort;
   }else{
-    //try fixing all drops to 3 (go to back)
-    new_instruction[1] = "drop=3";
+    new_instruction[1] = "drop="+(1 + Math.floor(Math.random()*(settings.ga_team_size-1)));
   }
   return new_instruction;
 }
@@ -136,14 +139,14 @@ function run_track_race_ga(){
   //generate a set of instructions
   $("#race_result").html("");
 
-  let max_timestep = settings.ga_max_timestep;
-  let probability_of_instruction_per_timestep_lower = settings.ga_probability_of_instruction_per_timestep_lower;
-  let probability_of_instruction_per_timestep_upper =settings.ga_probability_of_instruction_per_timestep_upper;
+  const max_timestep = settings.ga_max_timestep;
+  const probability_of_instruction_per_timestep_lower = settings.ga_probability_of_instruction_per_timestep_lower;
+  const probability_of_instruction_per_timestep_upper =settings.ga_probability_of_instruction_per_timestep_upper;
+  const population_size = settings.ga_population_size;
+  const team_size = settings.ga_team_size;
+  const number_of_generations = settings.ga_number_of_generations;
 
-  let population_size = settings.ga_population_size;
   let population = [];
-  let team_size = settings.ga_team_size;
-  let number_of_generations = settings.ga_number_of_generations;
 
   //create a starting population
   for (let p=0;p<population_size;p++){
@@ -174,8 +177,8 @@ function run_track_race_ga(){
 
   for(let g=0;g<number_of_generations;g++){
     //run each race and track the scores.
-    console.log("Generation " + g + " before racing ");
-    console.log(population);
+    //console.log("Generation " + g + " before racing ");
+    //console.log(population);
 
     for(let i = 0;i<population_size;i++){
       //reset any race properties
@@ -189,7 +192,7 @@ function run_track_race_ga(){
       race.race_instructions_r = [...load_race_properties.instructions];
       race.start_order = [...load_race_properties.start_order];
       load_race_properties.time_taken = run_race(settings,race,riders);
-      console.log("race " + i + " time taken " + load_race_properties.time_taken);
+      //console.log("race " + i + " time taken " + load_race_properties.time_taken + " instructions " + JSON.stringify(race.race_instructions_r));
     }
 
     //find the best instructions
@@ -205,10 +208,10 @@ function run_track_race_ga(){
       }
     }
 
-      console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " time taken " + final_best_race_properties.time_taken);
+      //console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " time taken " + final_best_race_properties.time_taken);
 
     $("#generated_instructions").val(JSON.stringify(final_best_race_properties.instructions));
-    $("#race_result").append("<li>Generation " + g + " best result = race # " + final_best_race_properties_index + " with Finish Time = " + final_best_race_properties.time_taken+ ". Instructions " + JSON.stringify(final_best_race_properties.instructions) + "</li>");
+    $("#race_result").append("<li>Generation " + g + " best result = race " + final_best_race_properties_index + "time taken = " + final_best_race_properties.time_taken+ ". Start order [" + final_best_race_properties.start_order + "] Instructions " + JSON.stringify(final_best_race_properties.instructions) + "</li>");
 
     if(g<(number_of_generations-1)){ //don't create a new population for the last generation
       // find the squre root of the total popualtion, so that a new population can be generated from these
@@ -239,7 +242,7 @@ function run_track_race_ga(){
             }
           }
         }
-        parent_population.push(i);
+        parent_population.push(best_race_properties_index);
       }
 
       //make a new population using the best of the last generation
@@ -251,8 +254,8 @@ function run_track_race_ga(){
         }
       }
       population = new_population;
-      console.log("Generation " + g + " after mutations ");
-      console.log(population);
+      //console.log("Generation " + g + " after mutations ");
+      //console.log(population);
 
     }
   }
@@ -261,15 +264,15 @@ function run_track_race_ga(){
 
 function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is from bikecalculator.com */
   //from http://www.bikecalculator.com/
-		var vel = 20;       // Initial guess
-		var MAX = 10;       // maximum iterations
-		var TOL = 0.05;     // tolerance
+		let vel = 20;       // Initial guess
+		let MAX = 10;       // maximum iterations
+		let TOL = 0.05;     // tolerance
 		for(let i_n=1; i_n < MAX; i_n++) {
-			var tv = vel + hw;
-			var aeroEff = (tv > 0.0) ? aero : -aero; // wind in face, must reverse effect
-			var f = vel * (aeroEff * tv * tv + tr) - tran * p; // the function
-			var fp = aeroEff * (3.0 * vel + hw) * tv + tr;     // the derivative
-			var vNew = vel - f / fp;
+			let tv = vel + hw;
+			let aeroEff = (tv > 0.0) ? aero : -aero; // wind in face, must reverse effect
+			let f = vel * (aeroEff * tv * tv + tr) - tran * p; // the function
+			let fp = aeroEff * (3.0 * vel + hw) * tv + tr;     // the derivative
+			let vNew = vel - f / fp;
 			if (Math.abs(vNew - vel) < TOL) return vNew;  // success
 			vel = vNew;
 		}
@@ -279,7 +282,7 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is 
 
 function setEffort(settings_r, race_r,riders_r, effort){ //actually update the effort level
   let leadingRider = race_r.riders_r[race_r.current_order[0]];
-  leadingRider.output_level = effort+1;
+  leadingRider.output_level = effort;
   //console.log("Effort updated to " + effort);
 }
 
@@ -383,9 +386,10 @@ function run_race(settings_r,race_r,riders_r){
       load_rider.current_aim = "follow";
     }
     race_r.current_order.push(race_r.start_order[i]);
-    race_r.riders_r.push(load_rider);
     //console.log("loading rider " + load_rider.name + " at position " + race_r.start_order[i] + " with start offset of " + load_rider.start_offset);
   }
+  //race will siply refer to the set of riders
+  race_r.riders_r =  riders_r;
 
   let continue_racing = true;
   while(continue_racing){
@@ -457,6 +461,7 @@ function run_race(settings_r,race_r,riders_r){
           race_rider.output_level = 5;
         }
         //set the power level based on the effort instruction
+
         if (race_rider.output_level < 6){
           race_rider.current_power_effort = race_rider.threshold_power*(race_rider.output_level)/10;
           //recover if going under the threshold
@@ -653,6 +658,9 @@ function run_race(settings_r,race_r,riders_r){
               }
             }
         }
+        display_rider.distance_from_rider_in_front = min_distance;
+        display_rider.number_of_riders_in_front = number_of_riders_in_front;
+
       if(settings.ga_log_each_step){
         logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
       }
@@ -663,11 +671,18 @@ function run_race(settings_r,race_r,riders_r){
     //work out the distance covered of the second last rider
     //get the 2nd last rider (whose time is the one that counts)
     let second_last_rider = race_r.riders_r[race_r.current_order[race_r.current_order.length-2]];
-
     if (second_last_rider.distance_covered > race_r.distance ){
-      continue_racing = false;
+      //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on...
+      let all_riders_ahead = true;
+      for (let x = 0;x<race_r.current_order.length-2;x++ ){
+        if(race_r.riders_r[race_r.current_order[x]].distance_covered < second_last_rider.distance_covered){
+          all_riders_ahead = false;
+        }
+      }
+      if(all_riders_ahead){
+        continue_racing = false;
+      }
     }
-
 
   }
   //return the final finish time (seconds)

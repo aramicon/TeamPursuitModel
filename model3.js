@@ -48,12 +48,12 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is 
 function setEffortInstruction(){
   //add instruction to change the effort of the leading rider
   let effort = parseInt(event.target.id.replace("set_effort_",""));
-  race.live_instructions.push(["effort",effort]);
+  race.live_instructions.push(["effort",effort+1]);
 }
 
 function setEffort(effort){ //actually update the effort level
   let leadingRider = race.riders[race.current_order[0]];
-  leadingRider.output_level = effort+1;
+  leadingRider.output_level = effort;
   $('#instruction_info').text("Change effort to " + effort);
   console.log("Effort updated to " + effort);
 }
@@ -102,10 +102,7 @@ function switchLead(positions_to_drop_back){
     else{
         new_leader.output_level = (current_leader_power/new_leader.max_power)*10;
     }
-
   }
-
-
 
   for(let i=1;i<new_order.length;i++){
     if (new_order[i] != current_leader){ //don't update the dropping back rider
@@ -537,13 +534,32 @@ function moveRace(){
   //work out the distance covered of the second last rider
   //get the 2nd last rider (whose time is the one that counts)
   let second_last_rider = race.riders[race.current_order[race.current_order.length-2]];
-  if (second_last_rider.distance_covered < race.distance && (race_state == "play" || race_state == "resume" )){
-    //update the lap count
+
+  let continue_racing = true;
+
+  if (second_last_rider.distance_covered > race.distance ){
+    //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on...
+    let all_riders_ahead = true;
+
+    for (let x = 0;x<race.current_order.length-2;x++ ){
+      if(race.riders[race.current_order[x]].distance_covered < second_last_rider.distance_covered){
+        all_riders_ahead = false;
+      }
+    }
+
+    if(all_riders_ahead){ //race is finished right? you have done the distance and the others are still in front
+      continue_racing = false;
+    }
+  }
+
+  if (continue_racing && (race_state == "play" || race_state == "resume" )){
+    //update the lap coun
     $("#race_info_lap").text(Math.floor(second_last_rider.distance_covered/settings.track_length)+1);
-    setTimeout(
-      function(){
-        moveRace();
-    },settings.race_move_wait_time);
+      setTimeout(
+        function(){
+          moveRace();
+      },settings.race_move_wait_time);
+
   }
   else{
     //stopRace();
@@ -631,7 +647,7 @@ function load_race(){
     ctx.arc(load_rider.current_position_x, load_rider.current_position_y, 4, 0, 2 * Math.PI);
     ctx.fillStyle = load_rider.colour;
     ctx.fill();
-    race.riders.push(load_rider);
+
     console.log("loading rider " + load_rider.name + " at position " + race.start_order[i] + " with start offset of " + load_rider.start_offset);
 
     let instructions_t = [];
@@ -645,6 +661,8 @@ function load_race(){
     }
 
   }
+
+  race.riders = riders;
 
   addRiderDisplay();
 }
