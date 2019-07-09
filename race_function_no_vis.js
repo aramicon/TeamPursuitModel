@@ -207,11 +207,10 @@ function run_track_race_ga(){
         final_best_race_properties = population[i];
       }
     }
-
       //console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " time taken " + final_best_race_properties.time_taken);
 
     $("#generated_instructions").val(JSON.stringify(final_best_race_properties.instructions));
-    $("#race_result").append("<li>Generation " + g + " best result = race " + final_best_race_properties_index + "time taken = " + final_best_race_properties.time_taken+ ". Start order [" + final_best_race_properties.start_order + "] Instructions " + JSON.stringify(final_best_race_properties.instructions) + "</li>");
+    $("#race_result").append("<li>Generation " + g + " best race " + final_best_race_properties_index + " at " + final_best_race_properties.time_taken+ " s. Start_order [" + final_best_race_properties.start_order + "] instructions " + JSON.stringify(final_best_race_properties.instructions) + " <a  target='_blank' href = 'model3.html?startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></li>");
 
     if(g<(number_of_generations-1)){ //don't create a new population for the last generation
       // find the squre root of the total popualtion, so that a new population can be generated from these
@@ -250,16 +249,117 @@ function run_track_race_ga(){
       for(let i = 0;i < parent_population.length;i++){
         for(let k = 0;k < parent_population.length;k++){
           //create a new set of instructions
-          new_population.push(mutate_race(population[parent_population[i]]))
+          //merge two parent instructions sets, choose a starting order, then mutate it
+          if(i==k){
+            new_population.push(mutate_race(population[parent_population[i]]));
+          }
+          else{
+            let new_race_details = crossover(population[parent_population[i]],population[parent_population[k]]);
+            new_population.push(mutate_race(new_race_details));
+          }
+
         }
       }
       population = new_population;
-      //console.log("Generation " + g + " after mutations ");
-      //console.log(population);
+    //  console.log("Generation " + g + " after mutations ");
+    //  console.log(population);
 
     }
   }
+}
 
+function crossover(parent1,parent2){
+  let new_race_details = {};
+  new_race_details.start_order = parent1.start_order;
+  if(Math.random() > 0.5){
+    new_race_details.start_order = parent2.start_order;
+  }
+  //let instruction_1_locations = parent1.instructions.map(a=>a[0]);
+//  let instruction_2_locations = parent2.instructions.map(a=>a[0]);
+  //make sure these are sorted
+  parent1.instructions.sort((a,b)=>a[0]-b[0]);
+  parent2.instructions.sort((a,b)=>a[0]-b[0]);
+
+  let inst_1_counter = 0;
+  let inst_2_counter = 0;
+
+  let new_instructions = [];
+
+  //handle if the instructions are empty in a parent
+  if(parent1.instructions.length == 0){
+    new_instructions = parent2.instructions;
+  }
+  else if(parent2.instructions.length == 0){
+    new_instructions = parent1.instructions;
+  }
+  else{
+    while((inst_1_counter < (parent1.instructions.length)) || (inst_2_counter < (parent2.instructions.length))){
+      if(inst_1_counter == (parent1.instructions.length)){
+        new_instructions.push(parent2.instructions[inst_2_counter]);
+      //  console.log("inst 1 done adding inst 2 " + parent2.instructions[inst_2_counter][0] + " " + parent2.instructions[inst_2_counter][1]);
+        inst_2_counter++;
+
+      }
+      else if(inst_2_counter == (parent2.instructions.length)){
+        new_instructions.push(parent1.instructions[inst_1_counter])
+      //  console.log("inst 2 done adding inst 1 " + parent1.instructions[inst_1_counter][0] + " " + parent1.instructions[inst_1_counter][1]);
+        inst_1_counter++;
+
+      }
+      else{
+        if(parent1.instructions[inst_1_counter][0] < parent2.instructions[inst_2_counter][0]){
+          new_instructions.push(parent1.instructions[inst_1_counter]);
+          //console.log("inst 1 smaller " + parent1.instructions[inst_1_counter][0] + " " + parent1.instructions[inst_1_counter][1]);
+          inst_1_counter++;
+        }
+        else if (parent1.instructions[inst_1_counter][0] > parent2.instructions[inst_2_counter][0]){
+          new_instructions.push(parent2.instructions[inst_2_counter]);
+          //console.log("inst 2 smaller " + parent2.instructions[inst_2_counter][0] + " " + parent2.instructions[inst_2_counter][1]);
+          inst_2_counter++;
+        }
+        else{
+          //they are ont he same timestep, so randomly choose one and ignore d'other
+          if(Math.random() < 0.5){
+              new_instructions.push(parent1.instructions[inst_1_counter]);
+              //console.log("inst 1 duplicate selection " + parent1.instructions[inst_1_counter][0] + " " + parent1.instructions[inst_1_counter][1]);
+          }
+          else{
+              new_instructions.push(parent2.instructions[inst_2_counter]);
+              //console.log("inst 2 duplicate selection " + parent2.instructions[inst_2_counter][0] + " " + parent2.instructions[inst_2_counter][1]);
+          }
+            inst_1_counter++;
+            inst_2_counter++;
+
+        }
+      }
+    }
+    //console.log("new_instructions " + JSON.stringify(new_instructions));
+
+    //need to reduce the number of instructions
+    let total_size_of_arrays = (parent1.instructions.length + parent2.instructions.length);
+    let random_array = [];
+    for(let i=0;i<new_instructions.length;i++){
+      random_array.push(i);
+    }
+    shuffleArray(random_array);
+    //console.log("random array " + random_array);
+
+    let random_array_ordered_and_halved = random_array.slice(0,Math.round(total_size_of_arrays/2)).sort((a,b)=>a-b);
+    //console.log("random_array_ordered_and_halved " + random_array_ordered_and_halved);
+
+    let new_instructions_reduced = [];
+    for(let i =0;i<random_array_ordered_and_halved.length;i++){
+      new_instructions_reduced.push(new_instructions[random_array_ordered_and_halved[i]])
+    }
+  //  console.log("new_instructions_reduced " +JSON.stringify(new_instructions_reduced));
+    new_instructions = new_instructions_reduced;
+
+  }
+  new_race_details.instructions = new_instructions;
+  //set the time taken or the mutation resets the whole thing tp []
+  new_race_details.time_taken = parseInt(new_race_details.instructions[new_race_details.instructions.length-1][0]) + 10 //10 is arbitrary;
+  //console.log("time taken " + new_race_details.time_taken);
+  return new_race_details;
 }
 
 function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is from bikecalculator.com */
