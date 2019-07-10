@@ -679,6 +679,11 @@ $(document).ready(function() {
   $("#button_fw").on("click", forwardStep);
   $(".set_effort").on("click", setEffortInstruction);
   $(".switch_lead").on("click", switchLeadInstruction);
+
+  load_details_from_url();
+
+  update_race_settings();
+
   load_race();
 }
 );
@@ -722,4 +727,23 @@ function forwardStep() {
         setTimeout(function(){  d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x "); }, 200);
         moveRace();
       }
+}
+
+function load_details_from_url(){
+  let url = new URL(window.location);
+  if(url.search.length > 0){
+    let start_order = url.searchParams.get("startorder");
+    let instructions = url.searchParams.get("instructions");
+    if(start_order.length > 0){
+      console.log(start_order);
+      $("#teamorder").val(start_order);
+    }
+    if(instructions.length > 0){
+      console.log(instructions);
+      $("#instructions").val(instructions);
+    }
+  }
+
+
+
 }
