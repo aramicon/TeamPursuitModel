@@ -44,7 +44,7 @@ let settings = {
 "ga_probability_of_instruction_per_timestep_upper":0.03,
 "ga_population_size":3600,
 "ga_team_size":4,
-"ga_number_of_generations":50,
+"ga_number_of_generations":20,
 "ga_p_shuffle_start":0.02,
 "ga_p_add_instruction":0.01,
 "ga_p_delete_instruction":0.2,
