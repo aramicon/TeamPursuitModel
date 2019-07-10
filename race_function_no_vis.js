@@ -12,6 +12,8 @@ import {riders} from './riders.js';
 
 let newton_lookup = []; //used to store newton() function calculations to avoid tons of needless calls
 
+settings.stats.crossover_instruction_sizes = [];
+
 function run_track_race(){
 
   //update settings
@@ -139,11 +141,17 @@ function new_random_instruction(timestep){
 function run_track_race_ga(){
   //generate a set of instructions
   $("#race_result").html("");
+  update_race_settings();
+
 
   const max_timestep = settings.ga_max_timestep;
   const probability_of_instruction_per_timestep_lower = settings.ga_probability_of_instruction_per_timestep_lower;
   const probability_of_instruction_per_timestep_upper =settings.ga_probability_of_instruction_per_timestep_upper;
   const population_size = settings.ga_population_size;
+  //warn user if the population_size is not an even square
+  if(!Number.isInteger(Math.sqrt(population_size))){
+    alert("Warning: ga_population_size of " + population_size + " should be a product of an integer squared, e.g. 9,25,36,3600")
+  }
   const team_size = settings.ga_team_size;
   const number_of_generations = settings.ga_number_of_generations;
 
@@ -176,6 +184,7 @@ function run_track_race_ga(){
     population.push(new_race);
   }
 
+  let table_text_info = "<table class='results_table'><tr><th>GEN</th><th>RACE</th><th>TIME</th><th>START</th><th>INSTRUCTIONS</th><th>VISUALISE</th></tr>";
   for(let g=0;g<number_of_generations;g++){
     //run each race and track the scores.
     //console.log("Generation " + g + " before racing ");
@@ -210,8 +219,8 @@ function run_track_race_ga(){
     }
       //console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " time taken " + final_best_race_properties.time_taken);
 
-    $("#generated_instructions").val(JSON.stringify(final_best_race_properties.instructions));
-    $("#race_result").append("<li>Generation " + g + " best race " + final_best_race_properties_index + " at " + final_best_race_properties.time_taken+ " s. Start_order [" + final_best_race_properties.start_order + "] instructions " + JSON.stringify(final_best_race_properties.instructions) + " <a  target='_blank' href = 'model3.html?startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></li>");
+    table_text_info += "<tr><td>" + g + "</td><td> " + final_best_race_properties_index + "</td><td>" + final_best_race_properties.time_taken+ " </td><td> [" + final_best_race_properties.start_order + "]</td><td>" + JSON.stringify(final_best_race_properties.instructions) + "</td><td><a  target='_blank' href = 'model3.html?startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td></tr>"
+
 
     if(g<(number_of_generations-1)){ //don't create a new population for the last generation
       // find the squre root of the total popualtion, so that a new population can be generated from these
@@ -255,8 +264,15 @@ function run_track_race_ga(){
             new_population.push(mutate_race(population[parent_population[i]]));
           }
           else{
-            let new_race_details = crossover(population[parent_population[i]],population[parent_population[k]]);
-            new_population.push(mutate_race(new_race_details));
+            if (Math.random() < settings.ga_p_crossover){
+              let new_race_details = crossover(population[parent_population[i]],population[parent_population[k]]);
+              new_population.push(mutate_race(new_race_details));
+            }
+            else{
+              new_population.push(mutate_race(population[parent_population[i]]));
+            }
+
+
           }
 
         }
@@ -267,6 +283,19 @@ function run_track_race_ga(){
 
     }
   }
+  //draw results
+  d3.select("#current_activity").html('class', "fas fa-cog fa-2x ");
+  table_text_info += "</table>";
+  $("#race_result").html(table_text_info);
+
+
+  if(settings.stats.crossover_instruction_sizes.length > 0){
+    let stats_text = "settings.stats.crossover_instruction_sizes " + settings.stats.crossover_instruction_sizes.length + " " + settings.stats.crossover_instruction_sizes.reduce((a, b) => parseInt(a) + parseInt(b))/settings.stats.crossover_instruction_sizes.length + " " + JSON.stringify(settings.stats.crossover_instruction_sizes);
+    $("#race_result_stats").html(stats_text);
+
+  }
+
+
 }
 
 function crossover(parent1,parent2){
@@ -297,13 +326,13 @@ function crossover(parent1,parent2){
     while((inst_1_counter < (parent1.instructions.length)) || (inst_2_counter < (parent2.instructions.length))){
       if(inst_1_counter == (parent1.instructions.length)){
         new_instructions.push(parent2.instructions[inst_2_counter]);
-      //  console.log("inst 1 done adding inst 2 " + parent2.instructions[inst_2_counter][0] + " " + parent2.instructions[inst_2_counter][1]);
+        //console.log("inst 1 done adding inst 2 " + parent2.instructions[inst_2_counter][0] + " " + parent2.instructions[inst_2_counter][1]);
         inst_2_counter++;
 
       }
       else if(inst_2_counter == (parent2.instructions.length)){
         new_instructions.push(parent1.instructions[inst_1_counter])
-      //  console.log("inst 2 done adding inst 1 " + parent1.instructions[inst_1_counter][0] + " " + parent1.instructions[inst_1_counter][1]);
+        //console.log("inst 2 done adding inst 1 " + parent1.instructions[inst_1_counter][0] + " " + parent1.instructions[inst_1_counter][1]);
         inst_1_counter++;
 
       }
@@ -322,7 +351,7 @@ function crossover(parent1,parent2){
           //they are ont he same timestep, so randomly choose one and ignore d'other
           if(Math.random() < 0.5){
               new_instructions.push(parent1.instructions[inst_1_counter]);
-              //console.log("inst 1 duplicate selection " + parent1.instructions[inst_1_counter][0] + " " + parent1.instructions[inst_1_counter][1]);
+            //  console.log("inst 1 duplicate selection " + parent1.instructions[inst_1_counter][0] + " " + parent1.instructions[inst_1_counter][1]);
           }
           else{
               new_instructions.push(parent2.instructions[inst_2_counter]);
@@ -338,27 +367,36 @@ function crossover(parent1,parent2){
 
     //need to reduce the number of instructions
     let total_size_of_arrays = (parent1.instructions.length + parent2.instructions.length);
-    let random_array = [];
-    for(let i=0;i<new_instructions.length;i++){
-      random_array.push(i);
-    }
-    shuffleArray(random_array);
-    //console.log("random array " + random_array);
+    if(total_size_of_arrays > 1){
+      let random_array = [];
+      for(let i=0;i<new_instructions.length;i++){
+        random_array.push(i);
+      }
+      shuffleArray(random_array);
+      //console.log("random array " + random_array);
 
-    let random_array_ordered_and_halved = random_array.slice(0,Math.round(total_size_of_arrays/2)).sort((a,b)=>a-b);
-    //console.log("random_array_ordered_and_halved " + random_array_ordered_and_halved);
+      let random_array_ordered_and_halved = random_array.slice(0,Math.round(total_size_of_arrays/2)).sort((a,b)=>a-b);
+      //settings.stats.crossover_instruction_sizes.push(random_array_ordered_and_halved.length);
+      //console.log("random_array_ordered_and_halved " + random_array_ordered_and_halved);
 
-    let new_instructions_reduced = [];
-    for(let i =0;i<random_array_ordered_and_halved.length;i++){
-      new_instructions_reduced.push(new_instructions[random_array_ordered_and_halved[i]])
+      let new_instructions_reduced = [];
+      for(let i =0;i<random_array_ordered_and_halved.length;i++){
+        new_instructions_reduced.push(new_instructions[random_array_ordered_and_halved[i]])
+      }
+      //console.log("new_instructions_reduced " +JSON.stringify(new_instructions_reduced));
+      new_instructions = new_instructions_reduced;
     }
-  //  console.log("new_instructions_reduced " +JSON.stringify(new_instructions_reduced));
-    new_instructions = new_instructions_reduced;
 
   }
   new_race_details.instructions = new_instructions;
   //set the time taken or the mutation resets the whole thing tp []
-  new_race_details.time_taken = parseInt(new_race_details.instructions[new_race_details.instructions.length-1][0]) + 10 //10 is arbitrary;
+  if(new_race_details.instructions.length > 0){
+      new_race_details.time_taken = parseInt(new_race_details.instructions[new_race_details.instructions.length-1][0]) + 10 //10 is arbitrary;
+  }
+  else{
+    new_race_details.time_taken = settings.ga_max_timestep;
+  }
+
   //console.log("time taken " + new_race_details.time_taken);
   return new_race_details;
 }
@@ -863,13 +901,128 @@ function run_race(settings_r,race_r,riders_r){
   return race_r.race_clock;
 }
 
+
+function update_race_settings(){
+  let input_race_length = parseInt($('#input_race_length').val());
+  if(Number.isInteger(input_race_length)){
+    race.distance = input_race_length;
+  }
+  //frontalArea (drag)
+  let input_frontalArea = parseFloat($('#frontalArea').val());
+  if(!Number.isNaN(input_frontalArea)){
+    settings.frontalArea = input_frontalArea;
+    console.log("updated settings.frontalArea to " + settings.frontalArea )
+  }
+  let input_ga_probability_of_instruction_per_timestep_lower = parseFloat($('#ga_probability_of_instruction_per_timestep_lower').val());
+  if(!Number.isNaN(input_ga_probability_of_instruction_per_timestep_lower)){
+  	settings.ga_probability_of_instruction_per_timestep_lower = input_ga_probability_of_instruction_per_timestep_lower;
+  }
+
+  let ga_probability_of_instruction_per_timestep_upper = parseFloat($('#ga_probability_of_instruction_per_timestep_upper').val());
+  if(!Number.isNaN(ga_probability_of_instruction_per_timestep_upper)){
+  	settings.ga_probability_of_instruction_per_timestep_upper = ga_probability_of_instruction_per_timestep_upper;
+  }
+
+  let ga_population_size = parseInt($('#ga_population_size').val());
+  if(!Number.isNaN(ga_population_size)){
+  	settings.ga_population_size = ga_population_size;
+  }
+
+  let ga_team_size = parseInt($('#ga_team_size').val());
+  if(!Number.isNaN(ga_team_size)){
+  	settings.ga_team_size = ga_team_size;
+  }
+
+  let ga_number_of_generations = parseInt($('#ga_number_of_generations').val());
+  if(!Number.isNaN(ga_number_of_generations)){
+  	settings.ga_number_of_generations = ga_number_of_generations;
+  }
+
+  let ga_p_shuffle_start = parseFloat($('#ga_p_shuffle_start').val());
+  if(!Number.isNaN(ga_p_shuffle_start)){
+  	settings.ga_p_shuffle_start = ga_p_shuffle_start;
+  }
+
+  let ga_p_add_instruction = parseFloat($('#ga_p_add_instruction').val());
+  if(!Number.isNaN(ga_p_add_instruction)){
+  	settings.ga_p_add_instruction = ga_p_add_instruction;
+  }
+
+  let ga_p_delete_instruction = parseFloat($('#ga_p_delete_instruction').val());
+  if(!Number.isNaN(ga_p_delete_instruction)){
+  	settings.ga_p_delete_instruction = ga_p_delete_instruction;
+  }
+
+  let ga_p_crossover = parseFloat($('#ga_p_crossover').val());
+  if(!Number.isNaN(ga_p_crossover)){
+  	settings.ga_p_crossover = ga_p_crossover;
+  }
+
+
+  let ga_p_change_effort = parseFloat($('#ga_p_change_effort').val());
+  if(!Number.isNaN(ga_p_change_effort)){
+  	settings.ga_p_change_effort = ga_p_change_effort;
+  }
+
+  let ga_p_change_drop = parseFloat($('#ga_p_change_drop').val());
+  if(!Number.isNaN(ga_p_change_drop)){
+  	settings.ga_p_change_drop = ga_p_change_drop;
+  }
+
+  let ga_p_move_instruction = parseFloat($('#ga_p_move_instruction').val());
+  if(!Number.isNaN(ga_p_move_instruction)){
+  	settings.ga_p_move_instruction = ga_p_move_instruction;
+  }
+
+
+  let ga_range_to_move_instruction = parseInt($('#ga_range_to_move_instruction').val());
+  if(!Number.isNaN(ga_range_to_move_instruction)){
+  	settings.ga_range_to_move_instruction = ga_range_to_move_instruction;
+  }
+
+  let ga_range_to_change_effort = parseFloat($('#ga_range_to_change_effort').val());
+  if(!Number.isNaN(ga_range_to_change_effort)){
+  	settings.ga_range_to_change_effort = ga_range_to_change_effort;
+  }
+
+  let ga_log_each_step = parseInt($('#ga_log_each_step').val());
+  if(!Number.isNaN(ga_log_each_step)){
+  	settings.ga_log_each_step = ga_log_each_step;
+  }
+
+  let input_ga_max_timestep = parseInt($('#ga_max_timestep').val());
+    if(!Number.isNaN(input_ga_max_timestep)){
+      settings.ga_max_timestep = input_ga_max_timestep;
+    }
+
+
+
+}
+
 $(document).ready(function() {
-
-
   //attach events
   $("#button_play_race").on("click", run_track_race);
   $("#button_evolve_instructions").on("click", run_track_race_ga);
-  $('#starting_order').val(race.start_order.map(a=>a).join(","));
+
+
+  $('#input_race_length').val(race.distance);
+  $('#frontalArea').val(settings.frontalArea);
+  $('#ga_max_timestep').val(settings.ga_max_timestep);
+  $('#ga_probability_of_instruction_per_timestep_lower').val(settings.ga_probability_of_instruction_per_timestep_lower);
+  $('#ga_probability_of_instruction_per_timestep_upper').val(settings.ga_probability_of_instruction_per_timestep_upper);
+  $('#ga_population_size').val(settings.ga_population_size);
+  $('#ga_team_size').val(settings.ga_team_size);
+  $('#ga_number_of_generations').val(settings.ga_number_of_generations);
+  $('#ga_p_shuffle_start').val(settings.ga_p_shuffle_start);
+  $('#ga_p_add_instruction').val(settings.ga_p_add_instruction);
+  $('#ga_p_delete_instruction').val(settings.ga_p_delete_instruction);
+  $('#ga_p_change_effort').val(settings.ga_p_change_effort);
+  $('#ga_p_crossover').val(settings.ga_p_crossover);
+  $('#ga_p_change_drop').val(settings.ga_p_change_drop);
+  $('#ga_p_move_instruction').val(settings.ga_p_move_instruction);
+  $('#ga_range_to_move_instruction').val(settings.ga_range_to_move_instruction);
+  $('#ga_range_to_change_effort').val(settings.ga_range_to_change_effort);
+  $('#ga_log_each_step').val(settings.ga_log_each_step);
 
 }
 );

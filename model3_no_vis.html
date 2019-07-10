@@ -14,33 +14,140 @@
   <body>
     <div class="container-fluid">
         <h1>Team Pursuit Model (no visualisation)</h1>
-        <p> click button to run race and return result</p>
-        <div class="form-group">
-          <label for="starting_order">Starting Order:</label>
-          <input type="text" class="form-control" id="starting_order">
-        </div>
-        <div class="form-group">
-          <label for="instructions">Instructions:</label>
-          <textarea class="form-control" rows="5" id="instructions"></textarea>
-        </div>
-        <div class="race_actions" id = "race_actions">
-          <div>
-          <button type="button" id="button_play_race" class="btn">
-            <i class="fa fa-play fa-3x"></i>
-          </button>
-          <button type="button" id="button_evolve_instructions" class="btn">
-            <i class="far fa-play-circle fa-3x"></i>
-          </button>
-          <div class="form-group">
-            <label for="generated_instructions">Instructions:</label>
-            <textarea class="form-control" rows="5" id="generated_instructions"></textarea>
-          </div>
+        <p> <a href="model3.html" target='_blank'>Visual Model</a></p>
+        <div>
+          <div class="race_info">
+            <div id="accordion">
+              <div class="card">
+                <div class="card-header" id="headingTwo">
+                  <h5 class="mb-0">
+                    <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#raceSettings" aria-expanded="false" aria-controls="raceSettings">
+                      Race Settings
+                    </button>
+                  </h5>
+                </div>
+                <div id="raceSettings" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label for="race_length">Race Length</label>
+                      <input type="text" class="form-control" id="input_race_length">
+                    </div>
 
-          <div class="current_activity" id = "current_activity"> <i class="fas fa-cog fa-2x" style="color:#999999"></i></span>
+                    <div class="form-group">
+                      <label for="frontalArea">Frontal Area (all riders)</label>
+                      <input type="text" class="form-control" id="frontalArea">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_max_timestep">ga_max_timestep</label>
+                    	<input type="text" class="form-control" id="ga_max_timestep">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_probability_of_instruction_per_timestep_lower">ga_probability_of_instruction_per_timestep_lower</label>
+                    	<input type="text" class="form-control" id="ga_probability_of_instruction_per_timestep_lower">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_probability_of_instruction_per_timestep_upper">ga_probability_of_instruction_per_timestep_upper</label>
+                    	<input type="text" class="form-control" id="ga_probability_of_instruction_per_timestep_upper">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_population_size">ga_population_size</label>
+                    	<input type="text" class="form-control" id="ga_population_size">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_team_size">ga_team_size</label>
+                    	<input type="text" class="form-control" id="ga_team_size">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_number_of_generations">ga_number_of_generations</label>
+                    	<input type="text" class="form-control" id="ga_number_of_generations">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_p_shuffle_start">ga_p_shuffle_start</label>
+                    	<input type="text" class="form-control" id="ga_p_shuffle_start">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_p_add_instruction">ga_p_add_instruction</label>
+                    	<input type="text" class="form-control" id="ga_p_add_instruction">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_p_delete_instruction">ga_p_delete_instruction</label>
+                    	<input type="text" class="form-control" id="ga_p_delete_instruction">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_p_change_effort">ga_p_change_effort</label>
+                    	<input type="text" class="form-control" id="ga_p_change_effort">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_p_crossover">ga_p_crossover</label>
+                    	<input type="text" class="form-control" id="ga_p_crossover">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_p_change_drop">ga_p_change_drop</label>
+                    	<input type="text" class="form-control" id="ga_p_change_drop">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_p_move_instruction">ga_p_move_instruction</label>
+                    	<input type="text" class="form-control" id="ga_p_move_instruction">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_range_to_move_instruction">ga_range_to_move_instruction</label>
+                    	<input type="text" class="form-control" id="ga_range_to_move_instruction">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_range_to_change_effort">ga_range_to_change_effort</label>
+                    	<input type="text" class="form-control" id="ga_range_to_change_effort">
+                    </div>
+
+                    <div class="form-group">
+                    	<label for="ga_log_each_step">ga_log_each_step</label>
+                    	<input type="text" class="form-control" id="ga_log_each_step">
+                    </div>
+                  </div>
+                </div>
+              </div>
+          </div>
+        </div>
+          <button type="button" id="button_evolve_instructions" class="btn">
+            <strong>RUN GA</strong> <i class="far fa-play-circle fa-3x"></i>
+          </button>
+        </div>
+
+          <div class="current_activity" id = "current_activity"> <i class="fas fa-cog fa-2x" style="color:#999999"></i></span></div>
 
           <div id = "race_result">Play race to get result time</div>
 
-        </div>
+          <div id = "race_result_stats"></div>
+
+          <div class="form-group">
+            <label for="starting_order">Starting Order:</label>
+            <input type="text" class="form-control" id="starting_order">
+          </div>
+          <div class="form-group">
+            <label for="instructions">Instructions:</label>
+            <textarea class="form-control" rows="5" id="instructions"></textarea>
+          </div>
+          <div class="race_actions" id = "race_actions">
+            <div>
+            <button type="button" id="button_play_race" class="btn">
+              <i class="fa fa-play fa-3x"></i>
+            </button>
+
+          </div>
 
 
 </body>

@@ -68,6 +68,8 @@
   border: 2px solid #444444;
   margin: 10px;
   float: left;
+  max-height: 400px;
+  overflow: auto;
 }
 
 .riders_info{
@@ -111,4 +113,20 @@
   //flex-basis: 100%;
   flex: 0 0 20em;
   padding:4px;
+}
+.results_table td{
+  border:1px solid #666666;
+  padding:2px;
+}
+.results_table tr:nth-child(even) {
+  background-color: #dddddd;
+}
+#race_result{
+  max-height:400px;
+  overflow: auto;
+}
+#race_result_stats{
+  max-height:400px;
+  max-width:100%;
+  overflow: auto;
 }

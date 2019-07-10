@@ -168,7 +168,7 @@ function moveRace(){
 
     let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
     race_rider.aero_A2 = Math.round((0.5 * settings.frontalArea * race_rider.aero_density)*10000)/10000;   // full air resistance parameter
-      
+
     if (race_rider.current_aim =="lead"){
       //push the pace at the front
       //what's the current effort?
