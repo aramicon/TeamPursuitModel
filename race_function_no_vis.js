@@ -12,7 +12,6 @@ import {riders} from './riders.js';
 
 let newton_lookup = []; //used to store newton() function calculations to avoid tons of needless calls
 
-
 function run_track_race(){
 
   //update settings
@@ -547,6 +546,7 @@ function run_race(settings_r,race_r,riders_r){
       //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
 
       let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
+      race_rider.aero_A2 = Math.round((0.5 * settings.frontalArea * race_rider.aero_density)*10000)/10000;   // full air resistance parameter
 
       if (race_rider.current_aim =="lead"){
         //push the pace at the front
