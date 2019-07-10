@@ -124,11 +124,11 @@ function mutate_race(r){
 }
 
 function new_random_instruction(timestep){
-  let probability_of_effort_instruction = 0.8;
+  let probability_of_drop_instruction = settings.ga_probability_of_drop_instruction;
   let new_instruction = [];
   new_instruction[0] = timestep;
   let rand2 = Math.random();
-  if(rand2 <= probability_of_effort_instruction){
+  if(rand2 > probability_of_drop_instruction){
     //add an effort instruction. but what level?
     let rand_effort = settings.minimum_power_output + (Math.round(Math.random()*(10-settings.minimum_power_output)*100)/100);
     new_instruction[1] = "effort="+rand_effort;
@@ -974,6 +974,11 @@ function update_race_settings(){
   	settings.ga_p_move_instruction = ga_p_move_instruction;
   }
 
+  let ga_probability_of_drop_instruction = parseFloat($('#ga_probability_of_drop_instruction').val());
+  if(!Number.isNaN(ga_probability_of_drop_instruction)){
+  	settings.ga_probability_of_drop_instruction = ga_probability_of_drop_instruction;
+  }
+
 
   let ga_range_to_move_instruction = parseInt($('#ga_range_to_move_instruction').val());
   if(!Number.isNaN(ga_range_to_move_instruction)){
@@ -1020,6 +1025,7 @@ $(document).ready(function() {
   $('#ga_p_crossover').val(settings.ga_p_crossover);
   $('#ga_p_change_drop').val(settings.ga_p_change_drop);
   $('#ga_p_move_instruction').val(settings.ga_p_move_instruction);
+  $('#ga_probability_of_drop_instruction').val(settings.ga_probability_of_drop_instruction);
   $('#ga_range_to_move_instruction').val(settings.ga_range_to_move_instruction);
   $('#ga_range_to_change_effort').val(settings.ga_range_to_change_effort);
   $('#ga_log_each_step').val(settings.ga_log_each_step);
