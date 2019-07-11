@@ -6,45 +6,30 @@
 //import global, race, and rider setting data
 
 
-import {settings} from './global_settings.js';
-import {race} from './race_settings.js';
-import {riders} from './riders.js';
+onmessage = function(e) {
+  console.log('Message received from main script ');
+  let messageType = (e.data[0]);
+  let result = "";
+  console.log('Type ' + messageType);
+  if(messageType == "run_single_race"){
+    //run a single race and return the time taken
+    result = run_track_race(e.data[1], e.data[2], e.data[3]);
+  }
+  else if(messageType == "run_ga"){
+    result = run_track_race_ga(e.data[1], e.data[2], e.data[3]);
+  }
+  else{
+    console.log("Unknown request type " + messageType);
+  }
+
+  postMessage(result);
+}
+
 
 let newton_lookup = []; //used to store newton() function calculations to avoid tons of needless calls
 
-settings.stats.crossover_instruction_sizes = [];
+//settings_r.stats.crossover_instruction_sizes = [];
 
-function run_track_race(){
-
-  //update settings
-  let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
-  if(input_teamOrder.length > 0){
-    race.start_order = input_teamOrder;
-    //console.log("updated race.start_order " + race.start_order )
-  }
-
-  race.drop_instruction = 0;
-  race.live_instructions = [];
-  race.race_instructions = [];
-  race.race_instructions_r = [];
-
-  let instructions_t = [];
-  let new_instructions = $('#instructions').val();
-  if(new_instructions.length > 5){
-    //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
-    instructions_t = JSON.parse(new_instructions);
-    console.log(instructions_t);
-  }
-  console.log(instructions_t);
-  if (instructions_t.length > 0){
-    race.race_instructions_r = instructions_t;
-    console.log(race.race_instructions_r)
-  }
-  let time_taken = run_race(settings,race,riders);
-
-  console.log(time_taken);
-  $("#race_result").text('Finish Time = ' + time_taken);
-}
 
 function shuffleArray(array) {
     for (let i = array.length - 1; i > 0; i--) {
@@ -53,17 +38,17 @@ function shuffleArray(array) {
     }
 }
 
-function mutate_race(r){
+function mutate_race(r, settings_r){
   let new_race = {};
 
-  const p_shuffle_start = settings.ga_p_shuffle_start;
-  const p_add_instruction = settings.ga_p_add_instruction;
-  const p_delete_instruction = settings.ga_p_delete_instruction;
-  const p_change_effort = settings.ga_p_change_effort;
-  const p_change_drop = settings.ga_p_change_drop;
-  const p_move_instruction = settings.ga_p_move_instruction;
-  const range_to_move_instruction = settings.ga_range_to_move_instruction;
-  const range_to_change_effort = settings.ga_range_to_change_effort;
+  const p_shuffle_start = settings_r.ga_p_shuffle_start;
+  const p_add_instruction = settings_r.ga_p_add_instruction;
+  const p_delete_instruction = settings_r.ga_p_delete_instruction;
+  const p_change_effort = settings_r.ga_p_change_effort;
+  const p_change_drop = settings_r.ga_p_change_drop;
+  const p_move_instruction = settings_r.ga_p_move_instruction;
+  const range_to_move_instruction = settings_r.ga_range_to_move_instruction;
+  const range_to_change_effort = settings_r.ga_range_to_change_effort;
   let time_taken_old = r.time_taken;
 
   new_race.start_order = r.start_order;
@@ -78,7 +63,7 @@ function mutate_race(r){
     if((r.instructions.filter(a => a[0] == i).length == 0)){
       //no instruction here- add a new one?
       if (Math.random() < p_add_instruction){
-        new_race.instructions.push(new_random_instruction(i));
+        new_race.instructions.push(new_random_instruction(i,settings_r));
       }
     }
     else{
@@ -90,8 +75,8 @@ function mutate_race(r){
 
           let current_effort = parseFloat(current_instruction[1].split("=")[1]);
           let new_effort = Math.floor((current_effort + ((range_to_change_effort*-1) + (Math.random()*(range_to_change_effort*2))))*100)/100;
-          if(new_effort < settings.minimum_power_output){
-            new_effort = settings.minimum_power_output;
+          if(new_effort < settings_r.minimum_power_output){
+            new_effort = settings_r.minimum_power_output;
           }
           else if(new_effort > 9){
             new_effort = 9;
@@ -100,7 +85,7 @@ function mutate_race(r){
           }
         }
         else if((Math.random() < p_change_drop)){
-            current_instruction[1] = "drop=" + (1 + Math.floor(Math.random()*(settings.ga_team_size-1)))
+            current_instruction[1] = "drop=" + (1 + Math.floor(Math.random()*(settings_r.ga_team_size-1)))
         }
         //also might move the timestep a bit
         if(Math.random() < p_move_instruction){
@@ -123,37 +108,40 @@ function mutate_race(r){
   return new_race;
 }
 
-function new_random_instruction(timestep){
-  let probability_of_drop_instruction = settings.ga_probability_of_drop_instruction;
+function new_random_instruction(timestep, settings_r){
+  let probability_of_drop_instruction = settings_r.ga_probability_of_drop_instruction;
   let new_instruction = [];
   new_instruction[0] = timestep;
   let rand2 = Math.random();
   if(rand2 > probability_of_drop_instruction){
     //add an effort instruction. but what level?
-    let rand_effort = settings.minimum_power_output + (Math.round(Math.random()*(10-settings.minimum_power_output)*100)/100);
+    let rand_effort = settings_r.minimum_power_output + (Math.round(Math.random()*(10-settings_r.minimum_power_output)*100)/100);
     new_instruction[1] = "effort="+rand_effort;
   }else{
-    new_instruction[1] = "drop="+(1 + Math.floor(Math.random()*(settings.ga_team_size-1)));
+    new_instruction[1] = "drop="+(1 + Math.floor(Math.random()*(settings_r.ga_team_size-1)));
   }
   return new_instruction;
 }
 
-function run_track_race_ga(){
+function run_track_race(settings_r, race_r, riders_r){
+
+  return run_race(settings_r,race_r,riders_r);
+
+  //$("#race_result").text('Finish Time = ' + time_taken);
+}
+
+function run_track_race_ga(settings_r, race_r, riders_r){
   //generate a set of instructions
-  $("#race_result").html("");
-  update_race_settings();
-
-
-  const max_timestep = settings.ga_max_timestep;
-  const probability_of_instruction_per_timestep_lower = settings.ga_probability_of_instruction_per_timestep_lower;
-  const probability_of_instruction_per_timestep_upper =settings.ga_probability_of_instruction_per_timestep_upper;
-  const population_size = settings.ga_population_size;
+  const max_timestep = settings_r.ga_max_timestep;
+  const probability_of_instruction_per_timestep_lower = settings_r.ga_probability_of_instruction_per_timestep_lower;
+  const probability_of_instruction_per_timestep_upper =settings_r.ga_probability_of_instruction_per_timestep_upper;
+  const population_size = settings_r.ga_population_size;
   //warn user if the population_size is not an even square
   if(!Number.isInteger(Math.sqrt(population_size))){
     alert("Warning: ga_population_size of " + population_size + " should be a product of an integer squared, e.g. 9,25,36,3600")
   }
-  const team_size = settings.ga_team_size;
-  const number_of_generations = settings.ga_number_of_generations;
+  const team_size = settings_r.ga_team_size;
+  const number_of_generations = settings_r.ga_number_of_generations;
 
   let population = [];
 
@@ -176,8 +164,7 @@ function run_track_race_ga(){
       let rand = Math.random();
       if(rand <= probability_of_instruction_per_timestep){
         //add an insruction, but whaich type?
-
-        instructions.push(new_random_instruction(i));
+        instructions.push(new_random_instruction(i,settings_r));
       }
     }
     new_race.instructions = instructions;
@@ -193,16 +180,16 @@ function run_track_race_ga(){
     for(let i = 0;i<population_size;i++){
       //reset any race properties
 
-      race.drop_instruction = 0;
-      race.live_instructions = [];
-      race.race_instructions = [];
-      race.race_instructions_r = [];
+      race_r.drop_instruction = 0;
+      race_r.live_instructions = [];
+      race_r.race_instructions = [];
+      race_r.race_instructions_r = [];
 
       let load_race_properties = population[i];
-      race.race_instructions_r = [...load_race_properties.instructions];
-      race.start_order = [...load_race_properties.start_order];
-      load_race_properties.time_taken = run_race(settings,race,riders);
-      //console.log("race " + i + " time taken " + load_race_properties.time_taken + " instructions " + JSON.stringify(race.race_instructions_r));
+      race_r.race_instructions_r = [...load_race_properties.instructions];
+      race_r.start_order = [...load_race_properties.start_order];
+      load_race_properties.time_taken = run_race(settings_r,race_r,riders_r);
+      //console.log("race " + i + " time taken " + load_race_properties.time_taken + " instructions " + JSON.stringify(race_r.race_instructions_r));
     }
 
     //find the best instructions
@@ -219,8 +206,7 @@ function run_track_race_ga(){
     }
       //console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " time taken " + final_best_race_properties.time_taken);
 
-    table_text_info += "<tr><td>" + g + "</td><td> " + final_best_race_properties_index + "</td><td>" + final_best_race_properties.time_taken+ " </td><td> [" + final_best_race_properties.start_order + "]</td><td>" + JSON.stringify(final_best_race_properties.instructions) + "</td><td><a  target='_blank' href = 'model3.html?startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td></tr>"
-
+    table_text_info += "<tr><td>" + g + "</td><td> " + final_best_race_properties_index + "</td><td>" + final_best_race_properties.time_taken+ " </td><td> [" + final_best_race_properties.start_order + "]</td><td>" + JSON.stringify(final_best_race_properties.instructions) + "</td><td><a  target='_blank' href = 'model3.html?startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td></tr>";
 
     if(g<(number_of_generations-1)){ //don't create a new population for the last generation
       // find the squre root of the total popualtion, so that a new population can be generated from these
@@ -261,18 +247,16 @@ function run_track_race_ga(){
           //create a new set of instructions
           //merge two parent instructions sets, choose a starting order, then mutate it
           if(i==k){
-            new_population.push(mutate_race(population[parent_population[i]]));
+            new_population.push(mutate_race(population[parent_population[i]], settings_r));
           }
           else{
-            if (Math.random() < settings.ga_p_crossover){
-              let new_race_details = crossover(population[parent_population[i]],population[parent_population[k]]);
-              new_population.push(mutate_race(new_race_details));
+            if (Math.random() < settings_r.ga_p_crossover){
+              let new_race_details = crossover(population[parent_population[i]],population[parent_population[k]],settings_r);
+              new_population.push(mutate_race(new_race_details, settings_r));
             }
             else{
-              new_population.push(mutate_race(population[parent_population[i]]));
+              new_population.push(mutate_race(population[parent_population[i]], settings_r));
             }
-
-
           }
 
         }
@@ -280,25 +264,20 @@ function run_track_race_ga(){
       population = new_population;
     //  console.log("Generation " + g + " after mutations ");
     //  console.log(population);
-
     }
   }
-  //draw results
-  d3.select("#current_activity").html('class', "fas fa-cog fa-2x ");
+
   table_text_info += "</table>";
-  $("#race_result").html(table_text_info);
+  return table_text_info;
 
-
-  if(settings.stats.crossover_instruction_sizes.length > 0){
-    let stats_text = "settings.stats.crossover_instruction_sizes " + settings.stats.crossover_instruction_sizes.length + " " + settings.stats.crossover_instruction_sizes.reduce((a, b) => parseInt(a) + parseInt(b))/settings.stats.crossover_instruction_sizes.length + " " + JSON.stringify(settings.stats.crossover_instruction_sizes);
-    $("#race_result_stats").html(stats_text);
-
-  }
-
+  // if(settings_r.stats.crossover_instruction_sizes.length > 0){
+  //   let stats_text = "settings_r.stats.crossover_instruction_sizes " + settings_r.stats.crossover_instruction_sizes.length + " " + settings_r.stats.crossover_instruction_sizes.reduce((a, b) => parseInt(a) + parseInt(b))/settings_r.stats.crossover_instruction_sizes.length + " " + JSON.stringify(settings_r.stats.crossover_instruction_sizes);
+  //   $("#race_result_stats").html(stats_text);
+  //}
 
 }
 
-function crossover(parent1,parent2){
+function crossover(parent1,parent2,settings_r){
   let new_race_details = {};
   new_race_details.start_order = parent1.start_order;
   if(Math.random() > 0.5){
@@ -376,7 +355,7 @@ function crossover(parent1,parent2){
       //console.log("random array " + random_array);
 
       let random_array_ordered_and_halved = random_array.slice(0,Math.round(total_size_of_arrays/2)).sort((a,b)=>a-b);
-      //settings.stats.crossover_instruction_sizes.push(random_array_ordered_and_halved.length);
+      //settings_r.stats.crossover_instruction_sizes.push(random_array_ordered_and_halved.length);
       //console.log("random_array_ordered_and_halved " + random_array_ordered_and_halved);
 
       let new_instructions_reduced = [];
@@ -394,7 +373,7 @@ function crossover(parent1,parent2){
       new_race_details.time_taken = parseInt(new_race_details.instructions[new_race_details.instructions.length-1][0]) + 10 //10 is arbitrary;
   }
   else{
-    new_race_details.time_taken = settings.ga_max_timestep;
+    new_race_details.time_taken = settings_r.ga_max_timestep;
   }
 
   //console.log("time taken " + new_race_details.time_taken);
@@ -544,16 +523,16 @@ function run_race(settings_r,race_r,riders_r){
     //update the race clock, check for instructions, then move the riders based on the current order
 
     //add any new instructions if found
-    let new_instructions = race.race_instructions_r.filter(a=>parseInt(a[0]) == race_r.race_clock);
+    let new_instructions = race_r.race_instructions_r.filter(a=>parseInt(a[0]) == race_r.race_clock);
     if(new_instructions.length > 0){
       for(let i=0;i<new_instructions.length;i++){
         let inst = new_instructions[i][1].split("=");
         if (inst.length=2){
           if(inst[0]=="effort"){
-            race.live_instructions.push(["effort",parseFloat(inst[1])]);
+            race_r.live_instructions.push(["effort",parseFloat(inst[1])]);
           }
           else if(inst[0]=="drop"){
-            race.drop_instruction = parseInt(inst[1]);
+            race_r.drop_instruction = parseInt(inst[1]);
           }
         }
       }
@@ -584,7 +563,7 @@ function run_race(settings_r,race_r,riders_r){
       //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
 
       let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
-      race_rider.aero_A2 = Math.round((0.5 * settings.frontalArea * race_rider.aero_density)*10000)/10000;   // full air resistance parameter
+      race_rider.aero_A2 = Math.round((0.5 * settings_r.frontalArea * race_rider.aero_density)*10000)/10000;   // full air resistance parameter
 
       if (race_rider.current_aim =="lead"){
         //push the pace at the front
@@ -873,11 +852,11 @@ function run_race(settings_r,race_r,riders_r){
         display_rider.distance_from_rider_in_front = min_distance;
         display_rider.number_of_riders_in_front = number_of_riders_in_front;
 
-      if(settings.ga_log_each_step){
+      if(settings_r.ga_log_each_step){
         logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
       }
     }
-      if(settings.ga_log_each_step){console.log(logMessage);}
+      if(settings_r.ga_log_each_step){console.log(logMessage);}
 
     race_r.race_clock++;
     //work out the distance covered of the second last rider
@@ -900,135 +879,3 @@ function run_race(settings_r,race_r,riders_r){
   //return the final finish time (seconds)
   return race_r.race_clock;
 }
-
-
-function update_race_settings(){
-  let input_race_length = parseInt($('#input_race_length').val());
-  if(Number.isInteger(input_race_length)){
-    race.distance = input_race_length;
-  }
-  //frontalArea (drag)
-  let input_frontalArea = parseFloat($('#frontalArea').val());
-  if(!Number.isNaN(input_frontalArea)){
-    settings.frontalArea = input_frontalArea;
-    console.log("updated settings.frontalArea to " + settings.frontalArea )
-  }
-  let input_ga_probability_of_instruction_per_timestep_lower = parseFloat($('#ga_probability_of_instruction_per_timestep_lower').val());
-  if(!Number.isNaN(input_ga_probability_of_instruction_per_timestep_lower)){
-  	settings.ga_probability_of_instruction_per_timestep_lower = input_ga_probability_of_instruction_per_timestep_lower;
-  }
-
-  let ga_probability_of_instruction_per_timestep_upper = parseFloat($('#ga_probability_of_instruction_per_timestep_upper').val());
-  if(!Number.isNaN(ga_probability_of_instruction_per_timestep_upper)){
-  	settings.ga_probability_of_instruction_per_timestep_upper = ga_probability_of_instruction_per_timestep_upper;
-  }
-
-  let ga_population_size = parseInt($('#ga_population_size').val());
-  if(!Number.isNaN(ga_population_size)){
-  	settings.ga_population_size = ga_population_size;
-  }
-
-  let ga_team_size = parseInt($('#ga_team_size').val());
-  if(!Number.isNaN(ga_team_size)){
-  	settings.ga_team_size = ga_team_size;
-  }
-
-  let ga_number_of_generations = parseInt($('#ga_number_of_generations').val());
-  if(!Number.isNaN(ga_number_of_generations)){
-  	settings.ga_number_of_generations = ga_number_of_generations;
-  }
-
-  let ga_p_shuffle_start = parseFloat($('#ga_p_shuffle_start').val());
-  if(!Number.isNaN(ga_p_shuffle_start)){
-  	settings.ga_p_shuffle_start = ga_p_shuffle_start;
-  }
-
-  let ga_p_add_instruction = parseFloat($('#ga_p_add_instruction').val());
-  if(!Number.isNaN(ga_p_add_instruction)){
-  	settings.ga_p_add_instruction = ga_p_add_instruction;
-  }
-
-  let ga_p_delete_instruction = parseFloat($('#ga_p_delete_instruction').val());
-  if(!Number.isNaN(ga_p_delete_instruction)){
-  	settings.ga_p_delete_instruction = ga_p_delete_instruction;
-  }
-
-  let ga_p_crossover = parseFloat($('#ga_p_crossover').val());
-  if(!Number.isNaN(ga_p_crossover)){
-  	settings.ga_p_crossover = ga_p_crossover;
-  }
-
-
-  let ga_p_change_effort = parseFloat($('#ga_p_change_effort').val());
-  if(!Number.isNaN(ga_p_change_effort)){
-  	settings.ga_p_change_effort = ga_p_change_effort;
-  }
-
-  let ga_p_change_drop = parseFloat($('#ga_p_change_drop').val());
-  if(!Number.isNaN(ga_p_change_drop)){
-  	settings.ga_p_change_drop = ga_p_change_drop;
-  }
-
-  let ga_p_move_instruction = parseFloat($('#ga_p_move_instruction').val());
-  if(!Number.isNaN(ga_p_move_instruction)){
-  	settings.ga_p_move_instruction = ga_p_move_instruction;
-  }
-
-  let ga_probability_of_drop_instruction = parseFloat($('#ga_probability_of_drop_instruction').val());
-  if(!Number.isNaN(ga_probability_of_drop_instruction)){
-  	settings.ga_probability_of_drop_instruction = ga_probability_of_drop_instruction;
-  }
-
-
-  let ga_range_to_move_instruction = parseInt($('#ga_range_to_move_instruction').val());
-  if(!Number.isNaN(ga_range_to_move_instruction)){
-  	settings.ga_range_to_move_instruction = ga_range_to_move_instruction;
-  }
-
-  let ga_range_to_change_effort = parseFloat($('#ga_range_to_change_effort').val());
-  if(!Number.isNaN(ga_range_to_change_effort)){
-  	settings.ga_range_to_change_effort = ga_range_to_change_effort;
-  }
-
-  let ga_log_each_step = parseInt($('#ga_log_each_step').val());
-  if(!Number.isNaN(ga_log_each_step)){
-  	settings.ga_log_each_step = ga_log_each_step;
-  }
-
-  let input_ga_max_timestep = parseInt($('#ga_max_timestep').val());
-    if(!Number.isNaN(input_ga_max_timestep)){
-      settings.ga_max_timestep = input_ga_max_timestep;
-    }
-
-
-
-}
-
-$(document).ready(function() {
-  //attach events
-  $("#button_play_race").on("click", run_track_race);
-  $("#button_evolve_instructions").on("click", run_track_race_ga);
-
-
-  $('#input_race_length').val(race.distance);
-  $('#frontalArea').val(settings.frontalArea);
-  $('#ga_max_timestep').val(settings.ga_max_timestep);
-  $('#ga_probability_of_instruction_per_timestep_lower').val(settings.ga_probability_of_instruction_per_timestep_lower);
-  $('#ga_probability_of_instruction_per_timestep_upper').val(settings.ga_probability_of_instruction_per_timestep_upper);
-  $('#ga_population_size').val(settings.ga_population_size);
-  $('#ga_team_size').val(settings.ga_team_size);
-  $('#ga_number_of_generations').val(settings.ga_number_of_generations);
-  $('#ga_p_shuffle_start').val(settings.ga_p_shuffle_start);
-  $('#ga_p_add_instruction').val(settings.ga_p_add_instruction);
-  $('#ga_p_delete_instruction').val(settings.ga_p_delete_instruction);
-  $('#ga_p_change_effort').val(settings.ga_p_change_effort);
-  $('#ga_p_crossover').val(settings.ga_p_crossover);
-  $('#ga_p_change_drop').val(settings.ga_p_change_drop);
-  $('#ga_p_move_instruction').val(settings.ga_p_move_instruction);
-  $('#ga_probability_of_drop_instruction').val(settings.ga_probability_of_drop_instruction);
-  $('#ga_range_to_move_instruction').val(settings.ga_range_to_move_instruction);
-  $('#ga_range_to_change_effort').val(settings.ga_range_to_change_effort);
-  $('#ga_log_each_step').val(settings.ga_log_each_step);
-
-}
-);
