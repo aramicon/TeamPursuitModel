@@ -59,11 +59,8 @@ function run_ga(){
         //get rid of the thread
         gaWorker.terminate();
       }
-
       gaWorker.postMessage(["run_ga",settings,race,riders]);
       console.log('GA Message posted to worker');
-
-
     }
     else{
       console.log("Worker cannot be created, maybe not supported by this browser?");
@@ -145,7 +142,6 @@ function update_race_settings(){
   	settings.ga_probability_of_drop_instruction = ga_probability_of_drop_instruction;
   }
 
-
   let ga_range_to_move_instruction = parseInt($('#ga_range_to_move_instruction').val());
   if(!Number.isNaN(ga_range_to_move_instruction)){
   	settings.ga_range_to_move_instruction = ga_range_to_move_instruction;
@@ -165,9 +161,7 @@ function update_race_settings(){
     if(!Number.isNaN(input_ga_max_timestep)){
       settings.ga_max_timestep = input_ga_max_timestep;
   }
-
 }
-
 
 $(document).ready(function() {
   //attach events
