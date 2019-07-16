@@ -136,6 +136,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   const probability_of_instruction_per_timestep_lower = settings_r.ga_probability_of_instruction_per_timestep_lower;
   const probability_of_instruction_per_timestep_upper =settings_r.ga_probability_of_instruction_per_timestep_upper;
   const population_size = settings_r.ga_population_size;
+  const ga_population_size_first_generation = settings_r.ga_population_size_first_generation;
   //warn user if the population_size is not an even square
   if(!Number.isInteger(Math.sqrt(population_size))){
     alert("Warning: ga_population_size of " + population_size + " should be a product of an integer squared, e.g. 9,25,36,3600")
@@ -145,8 +146,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
   let population = [];
 
-  //create a starting population
-  for (let p=0;p<population_size;p++){
+  //create a starting population: use ga_population_size_first_generation so that a larger set can be used to create the initial set
+  for (let p=0;p<ga_population_size_first_generation;p++){
     //create a random starting order
     let new_race = {};
     let start_order = [];
@@ -171,13 +172,18 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     population.push(new_race);
   }
 
-  let table_text_info = "<table class='results_table'><tr><th>GEN</th><th>RACE</th><th>TIME</th><th>START</th><th>INSTRUCTIONS</th><th>VISUALISE</th></tr>";
+  let table_text_info = "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>RACE</th><th>TIME</th><th>START</th><th>INSTRUCTIONS</th><th>VISUALISE</th></tr>";
   for(let g=0;g<number_of_generations;g++){
     //run each race and track the scores.
     //console.log("Generation " + g + " before racing ");
     //console.log(population);
 
-    for(let i = 0;i<population_size;i++){
+    let stats_total_time = 0;
+    let stats_average_time = 0;
+    let stats_total_number_of_instructions = 0;
+    let stats_average_number_of_instructions = 0;
+
+    for(let i = 0;i<population.length;i++){
       //reset any race properties
 
       race_r.drop_instruction = 0;
@@ -189,8 +195,13 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       race_r.race_instructions_r = [...load_race_properties.instructions];
       race_r.start_order = [...load_race_properties.start_order];
       load_race_properties.time_taken = run_race(settings_r,race_r,riders_r);
+      stats_total_time += load_race_properties.time_taken;
+      stats_total_number_of_instructions += load_race_properties.instructions.length;
+
       //console.log("race " + i + " time taken " + load_race_properties.time_taken + " instructions " + JSON.stringify(race_r.race_instructions_r));
     }
+    stats_average_time = stats_total_time/population.length;
+    stats_average_number_of_instructions = stats_total_number_of_instructions/population.length;
 
     //find the best instructions
 
@@ -206,7 +217,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     }
       //console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " time taken " + final_best_race_properties.time_taken);
 
-    table_text_info += "<tr><td>" + g + "</td><td> " + final_best_race_properties_index + "</td><td>" + final_best_race_properties.time_taken+ " </td><td> [" + final_best_race_properties.start_order + "]</td><td>" + JSON.stringify(final_best_race_properties.instructions) + "</td><td><a  target='_blank' href = 'model3.html?startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td></tr>";
+    table_text_info += "<tr><td>" + g + "</td><td> " + stats_average_time + "</td><td>" + stats_average_number_of_instructions + "</td><td>" + final_best_race_properties_index + "</td><td>" + final_best_race_properties.time_taken+ " </td><td> [" + final_best_race_properties.start_order + "]</td><td>" + JSON.stringify(final_best_race_properties.instructions) + "</td><td><a  target='_blank' href = 'model3.html?startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td></tr>";
 
     if(g<(number_of_generations-1)){ //don't create a new population for the last generation
       // find the squre root of the total popualtion, so that a new population can be generated from these
@@ -239,6 +250,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
         }
         parent_population.push(best_race_properties_index);
       }
+
+    // for(let x = 0; x < population.length;x++){
+    //   console.log("race " + x + ", time taken " + population[x].time_taken);
+    // }
+    //   console.log(parent_population);
 
       //make a new population using the best of the last generation
       let new_population = [];
@@ -445,6 +461,11 @@ function switchLead(settings_r, race_r,riders_r, positions_to_drop_back){
 
   }
 
+  if (new_leader.output_level < 0){
+    console.log("new_leader.output_level < 0");
+    debugger;
+  }
+
   for(let i=1;i<new_order.length;i++){
     if (new_order[i] != current_leader){ //don't update the dropping back rider
       race_r.riders_r[new_order[i]].current_aim = "follow";
@@ -610,7 +631,7 @@ function run_race(settings_r,race_r,riders_r){
         let powerv = race_rider.power_out, power_adjustment = 0;
         //compare power required to previous power and look at how it can increase or decrease
         if (powerv > target_power){ //slowing down
-          if((powerv - target_power) > settings_r.power_adjustment_step_size_down){
+          if((powerv - target_power) > Math.abs(settings_r.power_adjustment_step_size_down)){
             power_adjustment = settings_r.power_adjustment_step_size_down;
           }
           else{
@@ -625,7 +646,15 @@ function run_race(settings_r,race_r,riders_r){
             power_adjustment = (target_power - powerv);
           }
         }
+
+        if((powerv+power_adjustment) < 0){
+          console.log("crap! powerv 1 = " + powerv, " power_adjustment = " + power_adjustment);
+          debugger;
+        }
+
         powerv+=power_adjustment;
+
+
 
         //round power output to 2 decimal places
         powerv = Math.round((powerv)*100)/100;
@@ -659,7 +688,12 @@ function run_race(settings_r,race_r,riders_r){
         else{
           race_rider.velocity = lookup_velocity;
         }
+        if(powerv < 0){
+          console.log("crap! powerv 2 = " + powerv);
+          debugger;
+        }
         race_rider.power_out = powerv;
+
       }
       else{
         //rider may be following or dropping back. Either way they will be basing velocity on that of another rider- normally just following the rider in front of you
@@ -720,6 +754,10 @@ function run_race(settings_r,race_r,riders_r){
         let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
         let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings_r.transv;
 
+        //target power cannot be <= 0; riders do not stop; need a predefined lowest limit?
+        if (target_power <= 0){
+          target_power = settings_r.minimum_power_output_limit;
+        }
         //What is the max power that this rider can do for now? Need to consider fatigue
         let current_max_power = race_rider.max_power;
         if (race_rider.accumulated_fatigue > settings_r.accumulated_fatigue_maximum ){
@@ -773,8 +811,6 @@ function run_race(settings_r,race_r,riders_r){
           }
         }
 
-
-
         let old_velocity = race_rider.velocity; //use to check if rider slows down or speeds up for this step
 
         //as with the lead rider, need to check the lookup table to avoid lots of duplicate newton() calls
@@ -819,6 +855,10 @@ function run_race(settings_r,race_r,riders_r){
           }
         }
         race_rider.power_out = powerv;
+        if(race_rider.power_out < 0){
+          console.log("crap! race_rider.power_out = " + race_rider.power_out);
+          debugger;
+        }
       }
 
       race_rider.distance_covered+=race_rider.velocity;

@@ -1,0 +1,8 @@
+snag notes
+
+bug: 16/07 race breaks for these settings.
+
+instructions: [[137,"drop=3"],[144,"effort=6.16"],[155,"drop=2"],[200,"drop=1"],[260,"drop=3"],[357,"effort=4.33"],[372,"effort=6.37"],[376,"effort=1.22"]]
+start order: 1, 2, 0, 3
+
+behaviour: order of riders changes and last rider gets velocity < 0. mad.
