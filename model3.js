@@ -209,15 +209,19 @@ function moveRace(){
 
       let target_power = race_rider.current_power_effort; //try to get to this
       //work out the velocity from the power
+      //target power cannot be <= 0; riders do not stop; need a predefined lowest limit?
+      if (target_power < 0){
+        target_power = 0;
+      }
 
       let powerv = race_rider.power_out, power_adjustment = 0;
       //compare power required to previous power and look at how it can increase or decrease
       if (powerv > target_power){ //slowing down
-        if((powerv - target_power) > settings.power_adjustment_step_size_down){
+        if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
           power_adjustment = settings.power_adjustment_step_size_down;
         }
         else{
-          power_adjustment = (powerv - target_power);
+          power_adjustment = (target_power - powerv);
         }
       }
       else if(powerv < target_power){ //speeding up
@@ -321,6 +325,11 @@ function moveRace(){
       race_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter_effect_strength*level_of_shelter))*10000)/10000;
       let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
       let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings.transv;
+
+      //can't go below zero : otherwise riders can go backwards!
+      if (target_power < 0){
+        target_power = 0;
+      }
 
       //What is the max power that this rider can do for now? Need to consider fatigue
       let current_max_power = race_rider.max_power;

@@ -13,7 +13,7 @@ let race = {
   "bend1_switch_start_distance":0,
   "bend1_switch_end_distance":0,
   "bend2_switch_start_distance":0,
-  "bend2_switch_end_distance":0,
+  "bend2_switch_end_distance":0   
 }
 
 export {race};

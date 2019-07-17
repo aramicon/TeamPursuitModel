@@ -32,14 +32,18 @@ function run_single_race(){
   //create a web worker and send it the details for the race
   if (window.Worker){
     let singleRaceWorker = new Worker("race_function_no_vis.js");
+    let start_time = 0;
     singleRaceWorker.onmessage = function(e) {
+      let end_time = new Date().getTime();
       let result = e.data;
-      console.log('Single race result = ' + result);
+      console.log('Single race result = ' + result + ' at ' + end_time);
       //get rid of the thread
+      $("#single_race_result").html("Race Time: <strong>" + result + "</strong>. Test Duration " + (end_time - start_time)/1000 + " seconds.");
       singleRaceWorker.terminate();
     }
     singleRaceWorker.postMessage(["run_single_race",settings,race,riders]);
-    console.log('Single race message posted to worker');
+    start_time =  new Date().getTime();
+    console.log('Single race message posted to worker at ' + start_time);
   }
   else{
     console.log("Worker cannot be created, maybe not supported by this browser?");
@@ -47,19 +51,24 @@ function run_single_race(){
 }
 
 function run_ga(){
+  let start_time = 0;
+
     console.log("Run GA");
     update_race_settings();
     $("#race_result").html("");
+
     if (window.Worker){
       var gaWorker = new Worker("race_function_no_vis.js");
       gaWorker.onmessage = function(e) {
+        let end_time = new Date().getTime();
         let result_data = e.data;
-        console.log('Single race result = ' + result_data);
+        $("#race_result_stats").html("Test Duration " + (end_time - start_time)/1000 + " seconds.");
         $("#race_result").html(result_data);
         //get rid of the thread
         gaWorker.terminate();
       }
       gaWorker.postMessage(["run_ga",settings,race,riders]);
+      start_time =  new Date().getTime();
       console.log('GA Message posted to worker');
     }
     else{
