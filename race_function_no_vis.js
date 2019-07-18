@@ -52,6 +52,7 @@ function mutate_race(r, settings_r){
   let time_taken_old = r.time_taken;
 
   new_race.start_order = r.start_order;
+  new_race.variant_id = r.variant_id;
   new_race.instructions = [];
   new_race.time_taken = 0;
   new_race.stats = {};
@@ -195,10 +196,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       }
     }
     new_race.instructions = instructions;
+    new_race.variant_id = p;
     population.push(new_race);
   }
 
-  let table_text_info = "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>RACE</th><th>TIME</th><th>START</th><th>INSTRUCTIONS</th><th>VISUALISE</th> <th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th> </tr>";
+  let table_text_info = "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>RACE</th><th>TIME</th><th>START</th><th>INSTRUCTIONS</th><th>VISUALISE</th> <th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
 
   for(let g=0;g<number_of_generations;g++){
     //run each race and track the scores.
@@ -294,6 +296,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let number_of_drop_instructions_total = 0;
       let number_of_crossovers_total = 0;
       let total_number_of_instructions = 0;
+      let variants = [];
 
 
       let new_population = [];
@@ -328,6 +331,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
           }
 
           new_population.push(new_race);
+          if(variants.indexOf(""+new_race.variant_id) == -1){
+          //  debugger;
+            variants.push(""+new_race.variant_id);
+          }
+
           number_of_instructions_added_total += new_race.stats.number_of_instructions_added;
           number_of_instructions_removed_total += new_race.stats.number_of_instructions_removed;
           number_of_instructions_moved_total += new_race.stats.number_of_instructions_moved;
@@ -344,7 +352,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       population = new_population;
 
 
-      table_text_info +="<td>" + number_of_crossovers_total + "/" + population.length + "</td><td>" + (number_of_instructions_added_total/population.length) + "</td><td>" + number_of_instructions_removed_total/population.length + "</td><td>" + number_of_instructions_moved_total/population.length + "</td><td>" + number_of_effort_instructions_changed_total/population.length + "</td><td>" + number_of_drop_instructions_changed_total/population.length + "</td><td>" + number_of_start_order_shuffles_total/population.length  + "</td><td>" + number_of_drop_instructions_total + "/" + total_number_of_instructions + "</td>";
+      table_text_info +="<td>" + number_of_crossovers_total + "/" + population.length + "</td><td>" + (number_of_instructions_added_total/population.length) + "</td><td>" + number_of_instructions_removed_total/population.length + "</td><td>" + number_of_instructions_moved_total/population.length + "</td><td>" + number_of_effort_instructions_changed_total/population.length + "</td><td>" + number_of_drop_instructions_changed_total/population.length + "</td><td>" + number_of_start_order_shuffles_total/population.length  + "</td><td>" + number_of_drop_instructions_total + "/" + total_number_of_instructions + "</td><td>" + variants.length+"</td>";
     //  console.log("Generation " + g + " after mutations ");
     //  console.log(population);
     table_text_info += "</tr>";
@@ -352,6 +360,14 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   }
 
   table_text_info += "</table>";
+
+  //also add the variant_ids of the final generation
+  table_text_info += "<div class = 'variants'>";
+  for(let i = 0;i< population.length;i++){
+    table_text_info +=i + ": <strong>" + population[i].variant_id + "</strong> ("+population[i].time_taken+"), "
+  }
+  table_text_info += "</div>";
+
   return table_text_info;
 
   // if(settings_r.stats.crossover_instruction_sizes.length > 0){
@@ -367,6 +383,9 @@ function crossover(parent1,parent2,settings_r){
   if(Math.random() > 0.5){
     new_race_details.start_order = parent2.start_order;
   }
+  //set the variant id
+  new_race_details.variant_id = ""+parent1.variant_id+"_"+parent2.variant_id;
+
   //let instruction_1_locations = parent1.instructions.map(a=>a[0]);
 //  let instruction_2_locations = parent2.instructions.map(a=>a[0]);
   //make sure these are sorted
