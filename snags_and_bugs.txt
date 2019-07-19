@@ -11,3 +11,5 @@ behaviour: order of riders changes and last rider gets velocity < 0. mad.
 BUG 18/7
 
 If I have one mad strong sprinter, e.g. max watts 2000, and put it at the front and set the effort to anything over 6, e.g. [[2,"effort=6.002"]], it immediately drops the other riders: so there is some problem with how it maps effort to watts!
+
+-- looked at this for the vis model only

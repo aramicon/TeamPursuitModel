@@ -1,4 +1,6 @@
 let settings = {
+"threshold_power_effort_level":5,
+"recovery_effort_level_reduction":1,
 "radius":100,
 "track_length":250,
 "fixed_test_distance":1,

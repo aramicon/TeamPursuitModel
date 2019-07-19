@@ -50,7 +50,7 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is 
 function setEffortInstruction(){
   //add instruction to change the effort of the leading rider
   let effort = parseInt(event.target.id.replace("set_effort_",""));
-  race.live_instructions.push(["effort",effort+1]);
+  race.live_instructions.push(["effort",effort]);
 }
 
 function setEffort(effort){ //actually update the effort level
@@ -185,10 +185,10 @@ function moveRace(){
 
 
       if(race_rider.endurance_fatigue_level >= failure_level){
-        race_rider.output_level = 5;
+        race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
       }
       //set the power level based on the effort instruction
-      if (race_rider.output_level < 6){
+      if (race_rider.output_level < settings.threshold_power_effort_level){
         race_rider.current_power_effort = race_rider.threshold_power*(race_rider.output_level)/10;
         //recover if going under the threshold
         if (race_rider.endurance_fatigue_level > 0){
@@ -196,11 +196,11 @@ function moveRace(){
           if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
         }
       }
-      else if(race_rider.output_level == 6){
+      else if(race_rider.output_level == settings.threshold_power_effort_level){
         race_rider.current_power_effort = race_rider.threshold_power;
       }
       else{
-        race_rider.current_power_effort = race_rider.max_power*(race_rider.output_level)/10;
+        race_rider.current_power_effort = race_rider.threshold_power + (race_rider.max_power - race_rider.threshold_power) *((race_rider.output_level-settings.threshold_power_effort_level)/(9-settings.threshold_power_effort_level));
         //add fatigue if going harder than the threshold
         let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
         race_rider.endurance_fatigue_level += fatigue_rise;
@@ -705,7 +705,7 @@ function load_race(){
     load_rider.endurance_fatigue_level = 0;
     load_rider.burst_fatigue_level = 0;
     load_rider.accumulated_fatigue = 0;
-    load_rider.output_level=6;
+    load_rider.output_level=settings.threshold_power_effort_level;
 
     //set up the aero properties so they don't have to be recalculated
     load_rider.aero_density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
