@@ -91,20 +91,24 @@ function switchLead(positions_to_drop_back){
   let current_threshold = new_leader.threshold_power;
 
   if (current_leader_power < current_threshold){
-    new_leader.output_level = (current_leader_power/current_threshold)*10;
-    console.log("new_leader.output_level = "+ new_leader.output_level);
+    new_leader.output_level = ((current_leader_power*settings.threshold_power_effort_level)/current_threshold);
+
   }
   else if(current_leader_power == current_threshold){
-    new_leader.current_power_effort = 5;
+    new_leader.current_power_effort = settings.threshold_power_effort_level;
   }
   else{ //power is over threshold
     if (current_leader_power >= new_leader.max_power ){
       new_leader.output_level = 9;
     }
     else{
-        new_leader.output_level = (current_leader_power/new_leader.max_power)*10;
+      //reverse how power is worked out when over the threshold
+      new_leader.output_level = ((current_leader_power - new_leader.threshold_power )*(9-settings.threshold_power_effort_level))/(new_leader.max_power - new_leader.threshold_power) + settings.threshold_power_effort_level;
+
+        //new_leader.output_level = (current_leader_power/new_leader.max_power)*10;
     }
   }
+  console.log("new_leader.output_level = "+ new_leader.output_level);
 
   for(let i=1;i<new_order.length;i++){
     if (new_order[i] != current_leader){ //don't update the dropping back rider
@@ -201,6 +205,8 @@ function moveRace(){
       }
       else{
         race_rider.current_power_effort = race_rider.threshold_power + (race_rider.max_power - race_rider.threshold_power) *((race_rider.output_level-settings.threshold_power_effort_level)/(9-settings.threshold_power_effort_level));
+
+
         //add fatigue if going harder than the threshold
         let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
         race_rider.endurance_fatigue_level += fatigue_rise;
@@ -633,7 +639,7 @@ function moveRace(){
   }
   else{
     //stopRace();
-    console.log("Race Complete");
+    console.log("Race Complete/paused");
     d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x");
   }
 }

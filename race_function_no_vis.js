@@ -532,18 +532,20 @@ function switchLead(settings_r, race_r,riders_r, positions_to_drop_back){
   let current_threshold = new_leader.threshold_power;
 
   if (current_leader_power < current_threshold){
-    new_leader.output_level = (current_leader_power/current_threshold)*10;
+    //new_leader.output_level = (current_leader_power/current_threshold)*10;
+    new_leader.output_level = ((current_leader_power*settings_r.threshold_power_effort_level)/current_threshold);
     //console.log("new_leader.output_level = "+ new_leader.output_level);
   }
   else if(current_leader_power == current_threshold){
-    new_leader.current_power_effort = 5;
+    new_leader.current_power_effort = settings_r.threshold_power_effort_level;
   }
   else{ //power is over threshold
     if (current_leader_power >= new_leader.max_power ){
       new_leader.output_level = 9;
     }
     else{
-        new_leader.output_level = (current_leader_power/new_leader.max_power)*10;
+      //reverse how power is worked out when over the threshold
+      new_leader.output_level = ((current_leader_power - new_leader.threshold_power )*(9-settings_r.threshold_power_effort_level))/(new_leader.max_power - new_leader.threshold_power) + settings_r.threshold_power_effort_level;
     }
 
   }
@@ -689,11 +691,11 @@ function run_race(settings_r,race_r,riders_r){
 
 
         if(race_rider.endurance_fatigue_level >= failure_level){
-          race_rider.output_level = 5;
+          race_rider.output_level = (settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction);
         }
         //set the power level based on the effort instruction
 
-        if (race_rider.output_level < 6){
+        if (race_rider.output_level < settings_r.threshold_power_effort_level){
           race_rider.current_power_effort = race_rider.threshold_power*(race_rider.output_level)/10;
           //recover if going under the threshold
           if (race_rider.endurance_fatigue_level > 0){
@@ -701,11 +703,12 @@ function run_race(settings_r,race_r,riders_r){
             if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
           }
         }
-        else if(race_rider.output_level == 6){
+        else if(race_rider.output_level == settings_r.threshold_power_effort_level){
           race_rider.current_power_effort = race_rider.threshold_power;
         }
         else{
-          race_rider.current_power_effort = race_rider.max_power*(race_rider.output_level)/10;
+          //race_rider.current_power_effort = race_rider.max_power*(race_rider.output_level)/10;
+          race_rider.current_power_effort = race_rider.threshold_power + (race_rider.max_power - race_rider.threshold_power) *((race_rider.output_level-settings_r.threshold_power_effort_level)/(9-settings_r.threshold_power_effort_level));
           //add fatigue if going harder than the threshold
           let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power),settings_r.fatigue_power_rate);
           race_rider.endurance_fatigue_level += fatigue_rise;
