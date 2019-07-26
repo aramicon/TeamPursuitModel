@@ -38,6 +38,43 @@ function shuffleArray(array) {
     }
 }
 
+function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold, rider_max ){
+  let power_from_effort = 0;
+
+  if (rider_effort < threshold_effort_level){
+    power_from_effort = rider_threshold*(rider_effort)/10;
+  }
+  else if(rider_effort == threshold_effort_level){
+    power_from_effort = rider_threshold;
+  }
+  else{
+    power_from_effort = rider_threshold + (rider_max - rider_threshold) *((rider_effort-threshold_effort_level)/(9-threshold_effort_level));
+  }
+  //console.log("mapped effort " + rider_effort + " to power " + power_from_effort);
+  return power_from_effort;
+}
+function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, rider_max ){
+  let effort_level = 0;
+  if (rider_power < rider_threshold){
+    effort_level = ((rider_power*threshold_effort_level)/rider_threshold);
+
+  }
+  else if(rider_power == rider_threshold){
+    effort_level = threshold_effort_level;
+  }
+  else{ //power is over threshold
+    if (rider_power >= rider_max ){
+      effort_level = 9;
+    }
+    else{
+      //reverse how power is worked out when over the threshold
+      effort_level = ((rider_power - rider_threshold )*(9-threshold_effort_level))/(rider_max - rider_threshold) + threshold_effort_level;
+    }
+  }
+  //console.log("mapped power " + rider_power + " to effort " + effort_level);
+  return effort_level;
+}
+
 function mutate_race(r, settings_r){
   let new_race = {};
 
@@ -525,30 +562,14 @@ function switchLead(settings_r, race_r,riders_r, positions_to_drop_back){
   let new_leader = race_r.riders_r[new_order[0]];
 
   new_leader.current_aim = "lead";
-  new_leader.current_power_effort = 5;
+  new_leader.current_power_effort = settings_r.threshold_power_effort_level;
 
   //update this rider's power Effort
   new_leader.current_power_effort = current_leader_power;
   let current_threshold = new_leader.threshold_power;
 
-  if (current_leader_power < current_threshold){
-    //new_leader.output_level = (current_leader_power/current_threshold)*10;
-    new_leader.output_level = ((current_leader_power*settings_r.threshold_power_effort_level)/current_threshold);
-    //console.log("new_leader.output_level = "+ new_leader.output_level);
-  }
-  else if(current_leader_power == current_threshold){
-    new_leader.current_power_effort = settings_r.threshold_power_effort_level;
-  }
-  else{ //power is over threshold
-    if (current_leader_power >= new_leader.max_power ){
-      new_leader.output_level = 9;
-    }
-    else{
-      //reverse how power is worked out when over the threshold
-      new_leader.output_level = ((current_leader_power - new_leader.threshold_power )*(9-settings_r.threshold_power_effort_level))/(new_leader.max_power - new_leader.threshold_power) + settings_r.threshold_power_effort_level;
-    }
+  new_leader.output_level = mapPowerToEffort(settings_r.threshold_power_effort_level, current_leader_power, new_leader.threshold_power, new_leader.max_power)
 
-  }
 
   if (new_leader.output_level < 0){
     console.log("new_leader.output_level < 0");
@@ -606,7 +627,7 @@ function run_race(settings_r,race_r,riders_r){
     load_rider.endurance_fatigue_level = 0;
     load_rider.burst_fatigue_level = 0;
     load_rider.accumulated_fatigue = 0;
-    load_rider.output_level=6;
+    load_rider.output_level=settings_r.threshold_power_effort_level;
     if (i==0){
       load_rider.current_aim = "lead";
     }
@@ -695,25 +716,7 @@ function run_race(settings_r,race_r,riders_r){
         }
         //set the power level based on the effort instruction
 
-        if (race_rider.output_level < settings_r.threshold_power_effort_level){
-          race_rider.current_power_effort = race_rider.threshold_power*(race_rider.output_level)/10;
-          //recover if going under the threshold
-          if (race_rider.endurance_fatigue_level > 0){
-            race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.current_power_effort)/race_rider.threshold_power)
-            if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
-          }
-        }
-        else if(race_rider.output_level == settings_r.threshold_power_effort_level){
-          race_rider.current_power_effort = race_rider.threshold_power;
-        }
-        else{
-          //race_rider.current_power_effort = race_rider.max_power*(race_rider.output_level)/10;
-          race_rider.current_power_effort = race_rider.threshold_power + (race_rider.max_power - race_rider.threshold_power) *((race_rider.output_level-settings_r.threshold_power_effort_level)/(9-settings_r.threshold_power_effort_level));
-          //add fatigue if going harder than the threshold
-          let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power),settings_r.fatigue_power_rate);
-          race_rider.endurance_fatigue_level += fatigue_rise;
-          race_rider.accumulated_fatigue += fatigue_rise;
-        }
+        race_rider.current_power_effort = mapEffortToPower(settings_r.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power );
 
         let target_power = race_rider.current_power_effort; //try to get to this
         //work out the velocity from the power
@@ -786,6 +789,21 @@ function run_race(settings_r,race_r,riders_r){
           debugger;
         }
         race_rider.power_out = powerv;
+
+        //add fatigue if going harder than the threshold or recover if going under it
+        //recover if going under the threshold
+
+        if (race_rider.power_out < race_rider.threshold_power){
+          if (race_rider.endurance_fatigue_level > 0){
+            race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power)
+            if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
+          }
+        }
+        else if(race_rider.power_out > race_rider.threshold_power){
+          let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings_r.fatigue_power_rate);
+          race_rider.endurance_fatigue_level += fatigue_rise;
+          race_rider.accumulated_fatigue += fatigue_rise;
+        }
 
       }
       else{
@@ -861,7 +879,7 @@ function run_race(settings_r,race_r,riders_r){
         }
         let failure_level = settings_r.fatigue_failure_level*accumulated_effect;
         if(race_rider.endurance_fatigue_level >= failure_level){
-          current_max_power = (race_rider.threshold_power*(5/10));
+            current_max_power = (race_rider.threshold_power*((settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction)/10));
         }
         //can't go over the max power
         if (target_power > current_max_power){

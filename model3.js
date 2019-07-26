@@ -80,7 +80,7 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
       effort_level = ((rider_power - rider_threshold )*(9-threshold_effort_level))/(rider_max - rider_threshold) + threshold_effort_level;
     }
   }
-  console.log("mapped power " + rider_power + " to effort " + effort_level);
+  //console.log("mapped power " + rider_power + " to effort " + effort_level);
   return effort_level;
 }
 
@@ -121,7 +121,7 @@ function switchLead(positions_to_drop_back){
   let new_leader = race.riders[new_order[0]];
 
   new_leader.current_aim = "lead";
-  new_leader.current_power_effort = 5;
+  new_leader.current_power_effort = settings.threshold_power_effort_level;
 
   //update this rider's power Effort
   new_leader.current_power_effort = current_leader_power;
@@ -129,6 +129,10 @@ function switchLead(positions_to_drop_back){
 
   new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, current_leader_power, new_leader.threshold_power, new_leader.max_power)
 
+  if (new_leader.output_level < 0){
+    console.log("new_leader.output_level < 0");
+    debugger;
+  }
 
   console.log("new_leader.output_level = "+ new_leader.output_level);
 
@@ -367,26 +371,13 @@ function moveRace(){
       }
       let failure_level = settings.fatigue_failure_level*accumulated_effect;
       if(race_rider.endurance_fatigue_level >= failure_level){
-        current_max_power = (race_rider.threshold_power*(5/10));
+        current_max_power = (race_rider.threshold_power*((settings.threshold_power_effort_level-settings.recovery_effort_level_reduction)/10));
       }
       //can't go over the max power
       if (target_power > current_max_power){
         target_power = current_max_power; //can't go over this (for now)
       }
-      //fatigue if over the threshold, recover if under
-      if (target_power < race_rider.threshold_power ){
-        //recover if going under the threshold
-        if (race_rider.endurance_fatigue_level > 0){
-          race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- target_power)/race_rider.threshold_power)
-          if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;};
-        }
-      }
-      else{
-        //add fatigue if going harder than the threshold
-        let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (target_power- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
-        race_rider.endurance_fatigue_level += fatigue_rise
-        race_rider.accumulated_fatigue += fatigue_rise;
-      }
+
 
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
       let powerv = race_rider.power_out, power_adjustment = 0;
@@ -451,6 +442,21 @@ function moveRace(){
         }
       }
       race_rider.power_out = powerv;
+
+      //fatigue if over the threshold, recover if under
+      if (race_rider.power_out < race_rider.threshold_power ){
+        //recover if going under the threshold
+        if (race_rider.endurance_fatigue_level > 0){
+          race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power)
+          if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;};
+        }
+      }
+      else{
+        //add fatigue if going harder than the threshold
+        let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
+        race_rider.endurance_fatigue_level += fatigue_rise
+        race_rider.accumulated_fatigue += fatigue_rise;
+      }
     }
 
     race_rider.distance_this_step = race_rider.velocity; //asssumes we are travelling for 1 second: this is the total distance to be travelled on the track
@@ -647,7 +653,6 @@ function moveRace(){
       continue_racing = false;
     }
   }
-
   if (continue_racing && (race_state == "play" || race_state == "resume" )){
     //update the lap coun
     $("#race_info_lap").text(Math.floor(second_last_rider.distance_covered/settings.track_length)+1);
@@ -655,7 +660,6 @@ function moveRace(){
         function(){
           moveRace();
       },settings.race_move_wait_time);
-
   }
   else{
     //stopRace();
