@@ -213,7 +213,6 @@ function moveRace(){
       }
         let failure_level = settings.fatigue_failure_level*accumulated_effect;
 
-
       if(race_rider.endurance_fatigue_level >= failure_level){
         race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
       }

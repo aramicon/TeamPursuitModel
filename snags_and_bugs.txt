@@ -13,3 +13,12 @@ BUG 18/7
 If I have one mad strong sprinter, e.g. max watts 2000, and put it at the front and set the effort to anything over 6, e.g. [[2,"effort=6.002"]], it immediately drops the other riders: so there is some problem with how it maps effort to watts!
 
 -- looked at this for the vis model only
+
+BUG 30/07
+
+very different finish times in some cases.
+
+[[24,"effort=7.61"],[95,"drop=3"],[128,"drop=2"],[154,"drop=1"],[213,"drop=3"]] with 0,3,1,2
+
+-- it seems like there is a tiny change in accumulated fatigue, which in the VIS version is higher and forces a rider to go into recovery where the NOVIS does not. It seems that when a rider drops back in the VIS it accumulates fatigue on that step, whereas the NON-VIS does not.
+-- yup, fatigue for following riders in the NOVIS version was applied before the final power had been calced. It based fatigue on the target power. Mistake!

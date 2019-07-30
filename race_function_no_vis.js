@@ -750,8 +750,6 @@ function run_race(settings_r,race_r,riders_r){
 
         powerv+=power_adjustment;
 
-
-
         //round power output to 2 decimal places
         powerv = Math.round((powerv)*100)/100;
 
@@ -885,20 +883,6 @@ function run_race(settings_r,race_r,riders_r){
         if (target_power > current_max_power){
           target_power = current_max_power; //can't go over this (for now)
         }
-        //fatigue if over the threshold, recover if under
-        if (target_power < race_rider.threshold_power ){
-          //recover if going under the threshold
-          if (race_rider.endurance_fatigue_level > 0){
-            race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- target_power)/race_rider.threshold_power)
-            if ( race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;};
-          }
-        }
-        else{
-          //add fatigue if going harder than the threshold
-          let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (target_power- race_rider.threshold_power)/race_rider.max_power),settings_r.fatigue_power_rate);
-          race_rider.endurance_fatigue_level += fatigue_rise
-          race_rider.accumulated_fatigue += fatigue_rise;
-        }
 
         //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
         let powerv = race_rider.power_out, power_adjustment = 0;
@@ -966,9 +950,27 @@ function run_race(settings_r,race_r,riders_r){
           }
         }
         race_rider.power_out = powerv;
+
         if(race_rider.power_out < 0){
           console.log("crap! race_rider.power_out = " + race_rider.power_out);
           debugger;
+        }
+
+        //fatigue if over the threshold, recover if under
+        if (race_rider.power_out < race_rider.threshold_power ){
+          //recover if going under the threshold
+          if (race_rider.endurance_fatigue_level > 0){
+            race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power)
+            if ( race_rider.endurance_fatigue_level < 0){
+              race_rider.endurance_fatigue_level = 0;
+            }
+          }
+        }
+        else{
+          //add fatigue if going harder than the threshold
+          let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings_r.fatigue_power_rate);
+          race_rider.endurance_fatigue_level += fatigue_rise;
+          race_rider.accumulated_fatigue += fatigue_rise;
         }
       }
 
