@@ -63,7 +63,7 @@ let riders = [
   "colour":"#0000ff",
   "threshold_power":300,
   "current_power_effort":0,
-  "max_power":700,
+  "max_power":500,
   "weight":75,
   "fatigue_rate":15,
   "recovery_rate":2,

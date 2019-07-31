@@ -128,7 +128,7 @@
           </div>
         </div>
           <button type="button" id="button_evolve_instructions" class="btn">
-            <strong>RUN GA</strong> <i class="far fa-play-circle fa-3x"></i>
+            <strong>RUN GA</strong> <i class="far fa-play-circle fa-3x" style="color:#20c997;"></i>
           </button>
         </div>
 
@@ -148,14 +148,21 @@
             <label for="instructions">Instructions:</label>
             <textarea class="form-control" rows="5" id="instructions"></textarea>
           </div>
-          <div class="race_actions" id = "race_actions">
-            <div>
-            <button type="button" id="button_play_race" class="btn">
-              <i class="fa fa-play fa-3x"></i>
-            </button>
 
+            <div>
+            Single Race
+            <button type="button" id="button_play_race" class="btn">
+              <i class="fa fa-play fa-3x " style="color:#82c91e;"></i>
+            </button>
           </div>
-          <div id = "single_race_result"></div>
+          <div>
+          Check robustness
+          <button type="button" id="button_check_race_robustness" class="btn">
+            <i class="fa fa-play fa-3x" style="color:#f9919a;"></i>
+          </button>
+        </div>
+          Single race result: <div id = "single_race_result"></div>
+          Robustness check result: <div id = "robustness_check_result"></div>
         </div>
 
 

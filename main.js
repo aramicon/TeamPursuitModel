@@ -6,8 +6,7 @@ import {riders} from './riders.js';
 function run_single_race(){
   console.log("Run single race");
   update_race_settings();
-  $("#race_result").html("");
-
+  $("#single_race_result").html("running single race");
   //update settings
   let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
   if(input_teamOrder.length > 0){
@@ -55,7 +54,7 @@ function run_ga(){
 
     console.log("Run GA");
     update_race_settings();
-    $("#race_result").html("");
+    $("#race_result").html("Running generations of races... wait for results...");
 
     if (window.Worker){
       var gaWorker = new Worker("race_function_no_vis.js");
@@ -74,6 +73,54 @@ function run_ga(){
     else{
       console.log("Worker cannot be created, maybe not supported by this browser?");
     }
+}
+
+function run_robustness_check(){
+  let start_time = 0;
+
+    console.log("Run Robustness Check for given start order and instructions race");
+    update_race_settings();
+    $("#robustness_check_result").html("Running robustness check... wait...");
+
+    //update settings
+    let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
+    if(input_teamOrder.length > 0){
+      race.start_order = input_teamOrder;
+      //console.log("updated race.start_order " + race.start_order )
+    }
+    race.drop_instruction = 0;
+    race.live_instructions = [];
+    race.race_instructions = [];
+    race.race_instructions_r = [];
+
+    let instructions_t = [];
+    let new_instructions = $('#instructions').val();
+    if(new_instructions.length > 5){
+      //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+      instructions_t = JSON.parse(new_instructions);
+    }
+    if (instructions_t.length > 0){
+      race.race_instructions_r = instructions_t;
+    }
+
+    if (window.Worker){
+      var gaWorker = new Worker("race_function_no_vis.js");
+      gaWorker.onmessage = function(e) {
+        let end_time = new Date().getTime();
+        let result_data = e.data;
+        console.log("Robustness Test Duration " + (end_time - start_time)/1000 + " seconds.");
+        $("#robustness_check_result").html(result_data);
+        //get rid of the thread
+        gaWorker.terminate();
+      }
+      gaWorker.postMessage(["run_robustness_check",settings,race,riders]);
+      start_time =  new Date().getTime();
+      console.log('Robustness Check Message posted to worker');
+    }
+    else{
+      console.log("Worker cannot be created, maybe not supported by this browser?");
+    }
+
 }
 
 function update_race_settings(){
@@ -176,6 +223,7 @@ $(document).ready(function() {
   //attach events
   $("#button_play_race").on("click", run_single_race);
   $("#button_evolve_instructions").on("click", run_ga);
+  $("#button_check_race_robustness").on("click", run_robustness_check);
 
   // populate fields from global settings
   $('#starting_order').val(race.start_order.map(a=>a).join(","));

@@ -18,6 +18,9 @@ onmessage = function(e) {
   else if(messageType == "run_ga"){
     result = run_track_race_ga(e.data[1], e.data[2], e.data[3]);
   }
+  else if(messageType == "run_robustness_check"){
+    result = run_robustness_check(e.data[1], e.data[2], e.data[3]);
+  }
   else{
     console.log("Unknown request type " + messageType);
   }
@@ -192,6 +195,42 @@ function run_track_race(settings_r, race_r, riders_r){
   return run_race(settings_r,race_r,riders_r);
 
   //$("#race_result").text('Finish Time = ' + time_taken);
+}
+
+function run_robustness_check(settings_r, race_r, riders_r){
+
+  //create a population of mutations and measure how much they vary
+  let population = [];
+
+  //get the time of the original
+  race_r.time_taken = run_race(settings_r,race_r,riders_r);
+  let original_time_taken = race_r.time_taken;
+
+  //now set up a population of mutants
+  for(i=0;i<settings_r.robustness_check_population_size;i++){
+    population.push(mutate_race(race_r,settings_r));
+  }
+
+  //now run each race and store results
+  let population_stats = [];
+  let race_result = 0;
+
+  for(i=0;i<population.length;i++){
+    let load_race_properties = population[i];
+    race_r.race_instructions_r = [...load_race_properties.instructions];
+    race_r.start_order = [...load_race_properties.start_order];
+    load_race_properties.time_taken = run_race(settings_r,race_r,riders_r);
+    population_stats.push(load_race_properties.time_taken);
+  }
+
+  //return the stats
+  //work out the average
+  let total = 0;
+  for(i=0;i<population_stats.length;i++){
+    total+=population_stats[i];
+  }
+
+  return "Robustness Check:  Original race time taken " + original_time_taken + ". Average time of " + population.length + " mutants = " + total/population_stats.length;
 }
 
 function run_track_race_ga(settings_r, race_r, riders_r){
