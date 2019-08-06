@@ -22,3 +22,7 @@ very different finish times in some cases.
 
 -- it seems like there is a tiny change in accumulated fatigue, which in the VIS version is higher and forces a rider to go into recovery where the NOVIS does not. It seems that when a rider drops back in the VIS it accumulates fatigue on that step, whereas the NON-VIS does not.
 -- yup, fatigue for following riders in the NOVIS version was applied before the final power had been calced. It based fatigue on the target power. Mistake!
+
+bug 08 aug
+
+-- seems that the same race can run at different times. Times are close but not identical, e.g. 259/261. can test by using tournament selection and setting the group size to 1: the winner should always be the same, but it isn't.
