@@ -61,6 +61,6 @@ let settings = {
 "ga_range_to_move_instruction":10,
 "ga_range_to_change_effort":2,
 "stats":{"crossover_instruction_sizes":[]},
-"robustness_check_population_size":1000
+"robustness_check_population_size":10000
 }
 export {settings};
