@@ -62,6 +62,6 @@ let settings = {
 "ga_range_to_change_effort":2,
 "stats":{"crossover_instruction_sizes":[]},
 "robustness_check_population_size":1000,
-"ga_tournament_selection_group_size":10
+"ga_tournament_selection_group_size":5
 }
 export {settings};
