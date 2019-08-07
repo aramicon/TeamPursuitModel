@@ -43,9 +43,9 @@ let settings = {
 "more_than_two_riders_in_front_extra_shelter":0.12,
 "log_each_step":0,
 "ga_log_each_step":0,
-"ga_population_size":100,
-"ga_population_size_first_generation":200,
-"ga_number_of_generations":10,
+"ga_population_size":900,
+"ga_population_size_first_generation":1200,
+"ga_number_of_generations":20,
 "ga_max_timestep":400,
 "ga_probability_of_instruction_per_timestep_lower":0.01,
 "ga_probability_of_instruction_per_timestep_upper":0.03,
@@ -61,6 +61,7 @@ let settings = {
 "ga_range_to_move_instruction":10,
 "ga_range_to_change_effort":2,
 "stats":{"crossover_instruction_sizes":[]},
-"robustness_check_population_size":10000
+"robustness_check_population_size":1000,
+"ga_tournament_selection_group_size":10
 }
 export {settings};

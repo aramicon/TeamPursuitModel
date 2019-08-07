@@ -249,8 +249,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
   let population = [];
 
-  //create a starting population: use ga_population_size_first_generation so that a larger set can be used to create the initial set
-  for (let p=0;p<ga_population_size_first_generation;p++){
+  //create a starting population: use ga_population_size_first_generation so that a larger set can be used to create the initial set: this will not work with tournament selection!
+  for (let p=0;p<settings_r.ga_population_size;p++){
     //create a random starting order
     let new_race = {};
     let start_order = [];
@@ -325,44 +325,10 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
     table_text_info += "<tr><td>" + g + "</td><td> " + stats_average_time + "</td><td>" + stats_average_number_of_instructions + "</td><td>" + final_best_race_properties_index + "</td><td>" + final_best_race_properties.time_taken+ " </td><td> [" + final_best_race_properties.start_order + "]</td><td>" + JSON.stringify(final_best_race_properties.instructions) + "</td><td><a  target='_blank' href = 'model3.html?startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td>";
 
+    // create a new population based on the fitness
+
     if(g<(number_of_generations-1)){ //don't create a new population for the last generation
       // find the squre root of the total popualtion, so that a new population can be generated from these
-      let parent_population = [];
-      let pop_square_root = Math.floor(Math.sqrt(population_size));
-      //get the max time to use as an imitial comparison
-      let max_time_index = 0;
-      let max_time_properties = {};
-      let max_time = 0;
-      for(let i = 0; i< population_size;i++){
-        if(population[i].time_taken > max_time){
-          max_time = population[i].time_taken;
-          max_time_index = i;
-          max_time_properties = population[i];
-        }
-      }
-
-      for(let i = 0; i< pop_square_root;i++){
-        let best_race_properties_index = max_time_index;
-        let best_race_properties = max_time_properties;
-
-        for(let i = 0; i< population_size;i++){
-          if(population[i].time_taken < best_race_properties.time_taken){
-            //if this has NOT already been added use it
-            if(parent_population.indexOf(i)==-1){
-              best_race_properties_index = i;
-              best_race_properties = population[i];
-            }
-          }
-        }
-        parent_population.push(best_race_properties_index);
-      }
-
-    // for(let x = 0; x < population.length;x++){
-    //   console.log("race " + x + ", time taken " + population[x].time_taken);
-    // }
-    //   console.log(parent_population);
-
-      //make a new population using the best of the last generation
       let number_of_instructions_added_total = 0;
       let number_of_instructions_removed_total = 0;
       let number_of_instructions_moved_total = 0;
@@ -370,65 +336,33 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let number_of_drop_instructions_changed_total = 0;
       let number_of_start_order_shuffles_total = 0;
       let number_of_drop_instructions_total = 0;
-      let number_of_crossovers_total = 0;
+
       let total_number_of_instructions = 0;
       let variants = [];
+      let stats = {};
+      stats.number_of_crossovers_total = 0;
 
+      // population = new_population_best_squares(settings_r,population, stats);
+      population = new_population_tournament_selection(settings_r,population, stats);
 
-      let new_population = [];
-      for(let i = 0;i < parent_population.length;i++){
-        for(let k = 0;k < parent_population.length;k++){
-          //create a new set of instructions
-          //merge two parent instructions sets, choose a starting order, then mutate it
-          let new_race = {};
-          if(i==k){
-            new_race = population[parent_population[i]];
-            new_race = mutate_race(new_race,settings_r);
-          }
-          else{
-            if (Math.random() < settings_r.ga_p_crossover){
-              new_race = crossover(population[parent_population[i]],population[parent_population[k]],settings_r);
-              number_of_crossovers_total++;
+      for(let j = 0; j< population.length;j++){
+        number_of_instructions_added_total += population[j].stats.number_of_instructions_added;
+        number_of_instructions_removed_total += population[j].stats.number_of_instructions_removed;
+        number_of_instructions_moved_total += population[j].stats.number_of_instructions_moved;
+        number_of_effort_instructions_changed_total += population[j].stats.number_of_effort_instructions_changed;
+        number_of_drop_instructions_changed_total += population[j].stats.number_of_drop_instructions_changed;
+        number_of_start_order_shuffles_total += population[j].stats.number_of_start_order_shuffles;
+        number_of_drop_instructions_total += population[j].stats.number_of_drop_instructions;
+        total_number_of_instructions += population[j].instructions.length;
 
-              new_race.stats = {};
-              new_race.stats.number_of_instructions_added = 0;
-              new_race.stats.number_of_instructions_removed = 0;
-              new_race.stats.number_of_instructions_moved = 0;
-              new_race.stats.number_of_effort_instructions_changed = 0;
-              new_race.stats.number_of_drop_instructions_changed = 0;
-              new_race.stats.number_of_start_order_shuffles = 0;
-              new_race.stats.number_of_drop_instructions = 0;
-
-            }
-            else{
-              new_race = population[parent_population[i]];
-              new_race = mutate_race(new_race,settings_r);
-            }
-          }
-
-          new_population.push(new_race);
-          if(variants.indexOf(""+new_race.variant_id) == -1){
-          //  debugger;
-            variants.push(""+new_race.variant_id);
-          }
-
-          number_of_instructions_added_total += new_race.stats.number_of_instructions_added;
-          number_of_instructions_removed_total += new_race.stats.number_of_instructions_removed;
-          number_of_instructions_moved_total += new_race.stats.number_of_instructions_moved;
-          number_of_effort_instructions_changed_total += new_race.stats.number_of_effort_instructions_changed;
-          number_of_drop_instructions_changed_total += new_race.stats.number_of_drop_instructions_changed;
-          number_of_start_order_shuffles_total += new_race.stats.number_of_start_order_shuffles;
-          number_of_drop_instructions_total += new_race.stats.number_of_drop_instructions;
-          total_number_of_instructions += new_race.instructions.length;
-          // if (new_race.instructions.length != new_race.stats.number_of_drop_instructions){
-          //   debugger;
-          // }
+        if(variants.indexOf(""+population[j].variant_id) == -1){
+        //  debugger;
+          variants.push(""+population[j].variant_id);
         }
       }
-      population = new_population;
 
 
-      table_text_info +="<td>" + number_of_crossovers_total + "/" + population.length + "</td><td>" + (number_of_instructions_added_total/population.length) + "</td><td>" + number_of_instructions_removed_total/population.length + "</td><td>" + number_of_instructions_moved_total/population.length + "</td><td>" + number_of_effort_instructions_changed_total/population.length + "</td><td>" + number_of_drop_instructions_changed_total/population.length + "</td><td>" + number_of_start_order_shuffles_total/population.length  + "</td><td>" + number_of_drop_instructions_total + "/" + total_number_of_instructions + "</td><td>" + variants.length+"</td>";
+      table_text_info +="<td>" + stats.number_of_crossovers_total + "/" + population.length + "</td><td>" + (number_of_instructions_added_total/population.length) + "</td><td>" + number_of_instructions_removed_total/population.length + "</td><td>" + number_of_instructions_moved_total/population.length + "</td><td>" + number_of_effort_instructions_changed_total/population.length + "</td><td>" + number_of_drop_instructions_changed_total/population.length + "</td><td>" + number_of_start_order_shuffles_total/population.length  + "</td><td>" + number_of_drop_instructions_total + "/" + total_number_of_instructions + "</td><td>" + variants.length+"</td>";
     //  console.log("Generation " + g + " after mutations ");
     //  console.log(population);
     table_text_info += "</tr>";
@@ -450,6 +384,134 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   //   let stats_text = "settings_r.stats.crossover_instruction_sizes " + settings_r.stats.crossover_instruction_sizes.length + " " + settings_r.stats.crossover_instruction_sizes.reduce((a, b) => parseInt(a) + parseInt(b))/settings_r.stats.crossover_instruction_sizes.length + " " + JSON.stringify(settings_r.stats.crossover_instruction_sizes);
   //   $("#race_result_stats").html(stats_text);
   //}
+
+}
+
+function new_population_tournament_selection(settings_r,current_population, stats){
+  let new_population = [];
+  let remainder = (current_population.length % settings_r.ga_tournament_selection_group_size);
+  //debugger;
+  //return a new population based on mini-tournaments in current population.
+  for(let i = 0;i< (current_population.length-remainder);i+=settings_r.ga_tournament_selection_group_size){
+    //get the best race from the group
+    let group_size = settings_r.ga_tournament_selection_group_size;
+    if ((i + group_size + remainder) >= current_population.length){
+      group_size += remainder;
+    }
+    let best_time = current_population[i].time_taken;
+    let best_time_index = i;
+
+    for(let k = 1;k<group_size;k++){
+      if (current_population[(i+k)].time_taken < best_time){
+        best_time = current_population[(i+k)].time_taken;
+        best_time_index = (i+k);
+      }
+    }
+    //make group_size copies of the winner and put them in the new population
+    for(let k = 0;k<group_size;k++){
+      let new_race = {};
+      if((i+k) == best_time_index){
+        //add self without mutations at all
+        new_race = current_population[(i+k)];
+        new_race.stats = {};
+        new_race.stats.number_of_instructions_added = 0;
+        new_race.stats.number_of_instructions_removed = 0;
+        new_race.stats.number_of_instructions_moved = 0;
+        new_race.stats.number_of_effort_instructions_changed = 0;
+        new_race.stats.number_of_drop_instructions_changed = 0;
+        new_race.stats.number_of_start_order_shuffles = 0;
+        new_race.stats.number_of_drop_instructions = 0;
+      }
+      else{ //add a mutant of the gorup winner
+        new_race = current_population[best_time_index];
+        new_race = mutate_race(new_race,settings_r);
+      }
+      new_population.push(new_race);
+    }
+
+  }
+
+  //shuffle the array to stop the same groups from simply repeating
+  
+  shuffleArray(new_population);
+  return new_population;
+}
+
+function new_population_best_squares(settings_r,current_population, stats){
+  //get the max time to use as an imitial comparison
+  let population_size = current_population.length;
+  let max_time_index = 0;
+  let max_time_properties = {};
+  let max_time = 0;
+  let parent_population = [];
+  let pop_square_root = Math.floor(Math.sqrt(population_size));
+
+  //let stats.number_of_crossovers_total = 0;
+
+  for(let i = 0; i< population_size;i++){
+    if(current_population[i].time_taken > max_time){
+      max_time = current_population[i].time_taken;
+      max_time_index = i;
+      max_time_properties = current_population[i];
+    }
+  }
+
+  //get the top square root races from the current population
+  for(let i = 0; i< pop_square_root;i++){
+    let best_race_properties_index = max_time_index;
+    let best_race_properties = max_time_properties;
+
+    for(let i = 0; i< population_size;i++){
+      if(current_population[i].time_taken < best_race_properties.time_taken){
+        //if this has NOT already been added use it
+        if(parent_population.indexOf(i)==-1){
+          best_race_properties_index = i;
+          best_race_properties = current_population[i];
+        }
+      }
+    }
+    parent_population.push(best_race_properties_index);
+  }
+
+  //make a new population using these best-performing races
+
+  let new_population = [];
+  for(let i = 0;i < parent_population.length;i++){
+    for(let k = 0;k < parent_population.length;k++){
+      //create a new set of instructions
+      //merge two parent instructions sets, choose a starting order, then mutate it
+      let new_race = {};
+      if(i==k){
+        new_race = current_population[parent_population[i]];
+        new_race = mutate_race(new_race,settings_r);
+      }
+      else{
+        if (Math.random() < settings_r.ga_p_crossover){
+          new_race = crossover(current_population[parent_population[i]],current_population[parent_population[k]],settings_r);
+          stats.number_of_crossovers_total++;
+          new_race.stats = {};
+          new_race.stats.number_of_instructions_added = 0;
+          new_race.stats.number_of_instructions_removed = 0;
+          new_race.stats.number_of_instructions_moved = 0;
+          new_race.stats.number_of_effort_instructions_changed = 0;
+          new_race.stats.number_of_drop_instructions_changed = 0;
+          new_race.stats.number_of_start_order_shuffles = 0;
+          new_race.stats.number_of_drop_instructions = 0;
+
+        }
+        else{
+          new_race = current_population[parent_population[i]];
+          new_race = mutate_race(new_race,settings_r);
+        }
+      }
+
+      new_population.push(new_race);
+      // if (new_race.instructions.length != new_race.stats.number_of_drop_instructions){
+      //   debugger;
+      // }
+    }
+  }
+  return new_population;
 
 }
 
