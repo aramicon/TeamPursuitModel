@@ -1,0 +1,16 @@
+{
+  "name": "experiment_server",
+  "version": "1.0.0",
+  "description": "basic back end for experimetns",
+  "main": "app.js",
+  "dependencies": {
+    "mongodb": "^3.3.0-beta2",
+    "path": "^0.12.7"
+  },
+  "devDependencies": {},
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "donakello",
+  "license": "ISC"
+}
