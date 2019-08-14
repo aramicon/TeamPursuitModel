@@ -7,13 +7,11 @@ const app = express();
 const collection = "todo";
 
 const schema = Joi.object().keys({
-	todo:Joi.string().required()
+	todo:Joi.string().required(),
+	details:Joi.string()
 });
 
 app.use(bodyParser.json());
-
-
-
 
 
 app.get('/',(req,res)=> {
@@ -24,7 +22,6 @@ app.get('/getTodos',(req,res)=>{
 	db.getDB().collection(collection).find({}).toArray((err,documents)=>{
 		if(err){
 			console.log("error getting collection err " + err);
-
 		}
 		else{
 			console.log(documents);
@@ -37,9 +34,9 @@ app.put('/:id',(req,res)=>{
 	const todoID = req.params.id;
 	const userInput = req.body;
 	console.log("update existing todo using id");
-	console.log("id " + todoID + " body " + userInput.todo);
+	console.log("id " + todoID + " body " + JSON.stringify(userInput));
 
-	db.getDB().collection(collection).findOneAndUpdate({_id : db.getPrimaryKey(todoID)},{$set : {todo : userInput.todo}},{returnOriginal : false},(err,result)=>{
+	db.getDB().collection(collection).findOneAndUpdate({_id : db.getPrimaryKey(todoID)},{$set : {todo : userInput.todo,details : userInput.details}},{returnOriginal : false},(err,result)=>{
 		if(err){
 			console.log("error when updating err = " + err);
 		}

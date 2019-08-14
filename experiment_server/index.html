@@ -8,19 +8,68 @@
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
 
-    <title>To D0</title>
+    <title>Race Settings System</title>
   </head>
   <body>
-    <h1>To Do </h1>
+    <h1>Track race Experiment Settings Save Thingy </h1>
+    <p> Edit the settings and save to allow clients to select and run </p>
     <div class="container">
       <div class="row">
+          <form id = "form">
+            <div class="accordion" id="accordionExample">
+              <div class="card">
+                <div class="card-header" id="headingOne">
+                  <h2 class="mb-0">
+                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                    Global Settings
+                    </button>
+                  </h2>
+                </div>
+
+                <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
+                  <div class="card-body">
+                    <textarea rows="25" cols="100" id="global_settings"></textarea>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header" id="headingTwo">
+                  <h2 class="mb-0">
+                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                      Race Settings
+                    </button>
+                  </h2>
+                </div>
+                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+                  <div class="card-body">
+                      <textarea rows="25" cols="100" id="race_settings"></textarea>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header" id="headingThree">
+                  <h2 class="mb-0">
+                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                      Rider Settings
+                    </button>
+                  </h2>
+                </div>
+                <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
+                  <div class="card-body">
+                    <textarea rows="25" cols="100" id="rider_settings"></textarea>
+                  </div>
+                </div>
+              </div>
+              </div>
+
         <div class="col-lg-2"></div>
         <div class="col-lg-8"></div>
-          <form id = "form">
             <div class="form-group">
-              <label for="todoUserInput">Todo or not  ToDo?</label>
-              <input type="text" class="form-control" id="todoUserInput" placeholder="Todo">
-              <button type="submit" class="btn btn-primary">Create</button>
+
+              <label for="experimentName">Experiment Name</label>
+              <input type="text" class="form-control" id="todoDetails" placeholder="Experiment Name Thingy">
+
+              <button type="submit" class="btn btn-primary">Create Experiment Settings</button>
           </div>
           </form>
         <div class="col-lg-2"></div>
@@ -54,6 +103,8 @@
           const display = $('#display');
           const form = $('#form');
           const todoUserInput = $('#todoUserInput');
+          const todoDetailsInput = $('#todoDetails');
+
           const message = $('#message');
           message.hide();
 
@@ -77,17 +128,18 @@
               return response.json()
             }).then((data)=>{
               console.log('data ' + data);
-              displayTodos(data);
+              displayExperiments(data);
             });
           }
-
           getTodos();
-
           const resetTodosInput = () => {
             todoUserInput.val('');
           }
+          const resetDetailsInput = () => {
+            todoDetailsInput.val('');
+          }
 
-          const editTodo = (todo,todoID,editID) =>{
+          const editTodo = (todo,todoID,detailsID,editID) =>{
             let editBtn = $(`#${editID}`);
             editBtn.click(()=>{
               fetch(`/${todo._id}`,{
@@ -95,14 +147,17 @@
                 headers :{
                   "Content-Type" : "application/json; charset=utf-8"
                 },
-                body : JSON.stringify({todo : `${todoUserInput.val()}`})
+                body : JSON.stringify({todo : todoUserInput.val(),details:todoDetailsInput.val()})
               }).then((response) => {
                 return response.json();
               }).then((data)=>{
                 if(data.ok == 1){
                   let todoIndex = $(`#${todoID}`);
+                  let todoDetails = $(`#${detailsID}`);
                   todoIndex.html(data.value.todo);
+                  todoDetails.html(data.value.details);
                   resetTodosInput();
+                  resetDetailsInput();
                 }
               })
             });
@@ -133,14 +188,15 @@
               deleteID : "delete_" + todo._id,
               listItemID : "listItem_" + todo._id,
               todoID : "todo_" + todo._id,
+              detailsID : "details_" + todo._id
             }
           }
 
           const buildTemplate =(todo,ids) =>{
             return   `<li class="list-group-item" id="${ids.listItemID}">
               <div class="row">
-                <div class = "col-md-4"id = "${ids.todoID}">${todo.todo}</div>
-                <div class = "col-md-4"></div>
+                <div class = "col-md-4"id = "${ids.todoID}">${todo.todo} </div>
+                <div class = "col-md-4"id = "${ids.detailsID}">${todo.details} </div>
                 <div class = "col-md-4 text-right">
                   <button class = "btn btn-secondary" id = "${ids.editID}" type="button">Edit</button>
                   <button class = "btn btn-danger" id = "${ids.deleteID}" type="button">Delete</button>
@@ -149,11 +205,11 @@
             </li>`;
           }
 
-          const displayTodos = (data) => {
+          const displayExperiments = (data) => {
             data.forEach((todo) => {
                 let ids = buildIDs(todo);
                 display.append(buildTemplate(todo,ids));
-                editTodo(todo,ids.todoID,ids.editID);
+                editTodo(todo,ids.todoID,ids.detailsID,ids.editID);
                 deleteTodo(todo,ids.listItemID,ids.deleteID);
             });
           }
@@ -162,7 +218,7 @@
             e.preventDefault();
             fetch('/',{
               method : 'post',
-              body : JSON.stringify({todo:todoUserInput.val()}),
+              body : JSON.stringify({todo:todoUserInput.val(),details:todoDetailsInput.val()}),
               headers : {
                 "Content-Type" : "application/json; charset=utf-8"
               }
