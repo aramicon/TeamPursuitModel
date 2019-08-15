@@ -7,7 +7,7 @@
 
     <!-- Bootstrap CSS -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css" integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
-
+    <link rel="stylesheet" type="text/css" href="css/styles.css">
     <title>Race Settings System</title>
   </head>
   <body>
@@ -15,7 +15,7 @@
     <p> Edit the settings and save to allow clients to select and run </p>
     <div class="container">
       <div class="row">
-          <form id = "form">
+          <form id = "settings_form">
             <div class="accordion" id="accordionExample">
               <div class="card">
                 <div class="card-header" id="headingOne">
@@ -67,7 +67,7 @@
             <div class="form-group">
 
               <label for="experimentName">Experiment Name</label>
-              <input type="text" class="form-control" id="todoDetails" placeholder="Experiment Name Thingy">
+              <input type="text" class="form-control" id="nameInput" placeholder="Experiment Name Thingy">
 
               <button type="submit" class="btn btn-primary">Create Experiment Settings</button>
           </div>
@@ -101,9 +101,11 @@
     <script>
       $(document).ready(()=>{
           const display = $('#display');
-          const form = $('#form');
-          const todoUserInput = $('#todoUserInput');
-          const todoDetailsInput = $('#todoDetails');
+          const form = $('#settings_form');
+          const name_settingsInput = $('#nameInput');
+          const global_settingsInput = $('#global_settings');
+          const race_settingsInput = $('#race_settings');
+          const rider_settingsInput = $('#rider_settings');
 
           const message = $('#message');
           message.hide();
@@ -123,81 +125,96 @@
             }
           }
 
-          const getTodos = () => {
-            fetch('/getTodos',{method : 'get'}).then((response)=>{
+          const getExperimentSettings = () => {
+            fetch('/getExperimentSettings',{method : 'get'}).then((response)=>{
               return response.json()
             }).then((data)=>{
               console.log('data ' + data);
               displayExperiments(data);
             });
           }
-          getTodos();
-          const resetTodosInput = () => {
-            todoUserInput.val('');
+          getExperimentSettings();
+          const resetNameInput = () => {
+            name_settingsInput.val('');
           }
-          const resetDetailsInput = () => {
-            todoDetailsInput.val('');
+          const resetGlobalSettingsInput = () => {
+            global_settingsInput.val('');
+          }
+          const resetRaceSettingsInput = () => {
+            race_settingsInput.val('');
+          }
+          const resetRiderSettingsInput = () => {
+            rider_settingsInput.val('');
           }
 
-          const editTodo = (todo,todoID,detailsID,editID) =>{
+          const editExperimentSettings = (exp,expID,global_settingsID,race_settingsID,rider_settingsID,editID) =>{
             let editBtn = $(`#${editID}`);
             editBtn.click(()=>{
-              fetch(`/${todo._id}`,{
+              fetch(`/${exp._id}`,{
                 method : 'put',
                 headers :{
                   "Content-Type" : "application/json; charset=utf-8"
                 },
-                body : JSON.stringify({todo : todoUserInput.val(),details:todoDetailsInput.val()})
+                body : JSON.stringify({name : name_settingsInput.val(),global_settings : global_settingsInput.val(),race_settings : race_settingsInput.val(), rider_settings : rider_settingsInput.val()})
               }).then((response) => {
                 return response.json();
               }).then((data)=>{
                 if(data.ok == 1){
-                  let todoIndex = $(`#${todoID}`);
-                  let todoDetails = $(`#${detailsID}`);
-                  todoIndex.html(data.value.todo);
-                  todoDetails.html(data.value.details);
-                  resetTodosInput();
-                  resetDetailsInput();
+                  let name = $(`#${expID}`);
+                  let global_settings = $(`#${global_settingsID}`);
+                  let race_settings = $(`#${race_settingsID}`);
+                  let rider_settings = $(`#${rider_settingsID}`);
+                  name.html(data.value.name);
+                  global_settings.html(data.value.global_settings);
+                  race_settings.html(data.value.race_settings);
+                  rider_settings.html(data.value.rider_settings);
+                  //resetNameInput();
+                  //resetGlobalSettingsInput();
+                  //resetRaceSettingsInput();
+                  //resetRiderSettingsInput();
                 }
               })
             });
-
           }
 
-          const deleteTodo = (todo,listItemID,deleteID) =>{
+          const deleteExperimentSettings = (exp,listItemID,deleteID) =>{
             let deleteButton = $(`#${deleteID}`);
             deleteButton.click(()=>{
-              fetch(`/${todo._id}`,{
+              fetch(`/${exp._id}`,{
                 method : 'delete'
               }).then((response)=>{
                 return response.json();
               }).then((data)=>{
                 if(data.ok==1){//element removed
                   $(`#${listItemID}`).remove();
-
                 }
               })
             });
-
           }
 
           //helper function
-          const buildIDs = (todo)=>{
+          const buildIDs = (exp)=>{
             return {
-              editID : "edit_" + todo._id,
-              deleteID : "delete_" + todo._id,
-              listItemID : "listItem_" + todo._id,
-              todoID : "todo_" + todo._id,
-              detailsID : "details_" + todo._id
+              editID : "edit_" + exp._id,
+              deleteID : "delete_" + exp._id,
+              listItemID : "listItem_" + exp._id,
+              global_settingsID:"global_settings_" + exp.id,
+              race_settingsID:"race_settings_" + exp.id,
+              rider_settingsID:"rider_settings_" + exp.id,
+              expID : "todo_" + exp._id
             }
           }
 
-          const buildTemplate =(todo,ids) =>{
+          const buildTemplate =(exp,ids) =>{
             return   `<li class="list-group-item" id="${ids.listItemID}">
               <div class="row">
-                <div class = "col-md-4"id = "${ids.todoID}">${todo.todo} </div>
-                <div class = "col-md-4"id = "${ids.detailsID}">${todo.details} </div>
-                <div class = "col-md-4 text-right">
+                <div class = "col-md-4"id = "${ids.expID}">${exp.name} </div>
+                <div class = "col-md-4">
+                  <div class = "settings_box" id = "${ids.global_settingsID}"}> ${exp.global_settings}</div>
+                  <div class = "settings_box" id = "${ids.race_settingsID}"}> ${exp.race_settings}</div>
+                  <div class = "settings_box" id = "${ids.rider_settingsID}"}> ${exp.rider_settings}</div>
+                   </div>
+                   <div class = "col-md-4 text-right">
                   <button class = "btn btn-secondary" id = "${ids.editID}" type="button">Edit</button>
                   <button class = "btn btn-danger" id = "${ids.deleteID}" type="button">Delete</button>
                 </div>
@@ -206,19 +223,20 @@
           }
 
           const displayExperiments = (data) => {
-            data.forEach((todo) => {
-                let ids = buildIDs(todo);
-                display.append(buildTemplate(todo,ids));
-                editTodo(todo,ids.todoID,ids.detailsID,ids.editID);
-                deleteTodo(todo,ids.listItemID,ids.deleteID);
+            data.forEach((experiment_settings) => {
+                let ids = buildIDs(experiment_settings);
+                display.append(buildTemplate(experiment_settings,ids));
+                editExperimentSettings(experiment_settings,ids.expID,ids.global_settingsID,ids.race_settingsID, ids.rider_settingsIDids,ids.editID);
+                deleteExperimentSettings(experiment_settings,ids.listItemID,ids.deleteID);
             });
           }
 
           form.submit((e) => {
+            console.log("Submit form, new experiment");
             e.preventDefault();
             fetch('/',{
               method : 'post',
-              body : JSON.stringify({todo:todoUserInput.val(),details:todoDetailsInput.val()}),
+              body : JSON.stringify({name:name_settingsInput.val(),global_settings:global_settingsInput.val(),race_settings:race_settingsInput.val(),rider_settings : rider_settingsInput.val()}),
               headers : {
                 "Content-Type" : "application/json; charset=utf-8"
               }
@@ -229,8 +247,8 @@
               if(data.result.ok == 1 && data.result.n == 1){
                 let ids = buildIDs(data.document);
                 display.append(buildTemplate(data.document,ids));
-                editTodo(data.document,ids.todoID,ids.editID);
-                deleteTodo(data.document,ids.listItemID,ids.deleteID);
+                editExperimentSettings(data.document,ids.expID,ids.editID);
+                deleteExperimentSettings(data.document,ids.listItemID,ids.deleteID);
                 displayMessage(true,data.msg);
               }
             }
@@ -238,7 +256,7 @@
               displayMessage(false,data.error.message);
             }
 
-            resetTodosInput();
+          //  resetNameInput();
           });
           });
       });
