@@ -6,11 +6,13 @@ const db = require('./db');
 const app = express();
 const collection = "experiment_settings";
 
+const cors = require('cors');
+
 const schema = Joi.object().keys({
 	name:Joi.string().required(),
 	global_settings:Joi.object().required(),
 	race_settings:Joi.object().required(),
-	rider_settings:Joi.object().required()
+	rider_settings:Joi.array().required()
 });
 
 app.use(bodyParser.json());
@@ -26,6 +28,18 @@ app.get('/getExperimentSettings',(req,res)=>{
 	db.getDB().collection(collection).find({}).toArray((err,documents)=>{
 		if(err){
 			console.log("error getting collection err " + err);
+		}
+		else{
+			console.log(documents);
+			res.json(documents);
+		}
+	});
+});
+
+app.get('/getExperimentSettingNames',cors(), (req,res)=>{
+	db.getDB().collection(collection).find({},{projection:{name : 1}}).toArray((err,documents)=>{
+		if(err){
+			console.log("error getting collection of names err " + err);
 		}
 		else{
 			console.log(documents);
@@ -56,6 +70,7 @@ app.post("/",(req,res,next) => {
 	Joi.validate(userInput, schema, (err,result) =>{
 		if(err){
 			const error = new Error("Invalid Input adding experiment");
+			console.log(err);
 			error.status = 400;
 			next(error);
 		}
@@ -63,6 +78,7 @@ app.post("/",(req,res,next) => {
 			db.getDB().collection(collection).insertOne(userInput,(err,result)=>{
 				if(err){
 					const error = new Error("Failed to insert experiment");
+					console.log(err);
 					error.status = 400;
 					next(error);
 				}

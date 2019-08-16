@@ -247,5 +247,28 @@ $(document).ready(function() {
   $('#ga_range_to_change_effort').val(settings.ga_range_to_change_effort);
   $('#ga_log_each_step').val(settings.ga_log_each_step);
 
+  //try to load settings from the experiment server
+
+  const populateNamesDropdown = (data) => {
+      const namesDropDown = $("#experiment_names");
+      data.forEach((experiment_names) => {
+        namesDropDown.append($('<option>', {
+          value: experiment_names.id,
+          text: experiment_names.name
+      }));
+    });
+  }
+  const getExperimentNames = () => {
+    fetch('http://127.0.0.1:3003/getExperimentSettingNames/',{method : 'get'}).then((response)=>{
+      return response.json()
+    }).then((data)=>{
+      console.log('data ' + JSON.stringify(data));
+      populateNamesDropdown(data);
+    });
+  }
+  getExperimentNames();
+
+
+
 }
 );

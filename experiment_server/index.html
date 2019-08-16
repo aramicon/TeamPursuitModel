@@ -11,9 +11,12 @@
     <title>Race Settings System</title>
   </head>
   <body>
-    <h1>Track race Experiment Settings Save Thingy </h1>
-    <p> Edit the settings and save to allow clients to select and run </p>
+
     <div class="container">
+      <div class="jumbotron text-center">
+      <h1>Track race Experiment Settings Save Thingy</h1>
+      <p>Edit the settings and save to allow clients to select and run </p>
+    </div>
       <div class="row">
           <form id = "settings_form">
             <div class="accordion" id="accordionExample">
@@ -177,6 +180,21 @@
             });
           }
 
+          const loadExperimentSettings = (expID,global_settingsID,race_settingsID,rider_settingsID,loadID) =>{
+            //load the selected details into the edit area
+            let loadButton = $(`#${loadID}`);
+            loadButton.click(()=>{
+              let name = $(`#${expID}`);
+              let global_settings = $(`#${global_settingsID}`);
+              let race_settings = $(`#${race_settingsID}`);
+              let rider_settings = $(`#${rider_settingsID}`);
+              name_settingsInput.val(name.html());
+              global_settingsInput.val(global_settings.html());
+              race_settingsInput.val(race_settings.html());
+              rider_settingsInput.val(rider_settings.html());
+          });
+        }
+
           const deleteExperimentSettings = (exp,listItemID,deleteID) =>{
             let deleteButton = $(`#${deleteID}`);
             deleteButton.click(()=>{
@@ -197,10 +215,11 @@
             return {
               editID : "edit_" + exp._id,
               deleteID : "delete_" + exp._id,
+              loadID : "load_" + exp._id,
               listItemID : "listItem_" + exp._id,
-              global_settingsID:"global_settings_" + exp.id,
-              race_settingsID:"race_settings_" + exp.id,
-              rider_settingsID:"rider_settings_" + exp.id,
+              global_settingsID:"global_settings_" + exp._id,
+              race_settingsID:"race_settings_" + exp._id,
+              rider_settingsID:"rider_settings_" + exp._id,
               expID : "todo_" + exp._id
             }
           }
@@ -208,14 +227,15 @@
           const buildTemplate =(exp,ids) =>{
             return   `<li class="list-group-item" id="${ids.listItemID}">
               <div class="row">
-                <div class = "col-md-4"id = "${ids.expID}">${exp.name} </div>
-                <div class = "col-md-4">
+                <div class = "col-md-2"id = "${ids.expID}">${exp.name} </div>
+                <div class = "col-md-6">
                   <div class = "settings_box" id = "${ids.global_settingsID}"}> ${exp.global_settings}</div>
                   <div class = "settings_box" id = "${ids.race_settingsID}"}> ${exp.race_settings}</div>
                   <div class = "settings_box" id = "${ids.rider_settingsID}"}> ${exp.rider_settings}</div>
                    </div>
                    <div class = "col-md-4 text-right">
-                  <button class = "btn btn-secondary" id = "${ids.editID}" type="button">Edit</button>
+                  <button class = "btn btn-info" id = "${ids.loadID}" type="button">Load</button>
+                  <button class = "btn btn-success" id = "${ids.editID}" type="button">Edit</button>
                   <button class = "btn btn-danger" id = "${ids.deleteID}" type="button">Delete</button>
                 </div>
               </div>
@@ -226,7 +246,8 @@
             data.forEach((experiment_settings) => {
                 let ids = buildIDs(experiment_settings);
                 display.append(buildTemplate(experiment_settings,ids));
-                editExperimentSettings(experiment_settings,ids.expID,ids.global_settingsID,ids.race_settingsID, ids.rider_settingsIDids,ids.editID);
+                editExperimentSettings(experiment_settings,ids.expID,ids.global_settingsID,ids.race_settingsID, ids.rider_settingsID,ids.editID);
+                loadExperimentSettings(ids.expID,ids.global_settingsID,ids.race_settingsID, ids.rider_settingsID,ids.loadID);
                 deleteExperimentSettings(experiment_settings,ids.listItemID,ids.deleteID);
             });
           }
@@ -248,6 +269,7 @@
                 let ids = buildIDs(data.document);
                 display.append(buildTemplate(data.document,ids));
                 editExperimentSettings(data.document,ids.expID,ids.editID);
+                loadExperimentSettings(ids.expID,ids.global_settingsID,ids.race_settingsID, ids.rider_settingsID);
                 deleteExperimentSettings(data.document,ids.listItemID,ids.deleteID);
                 displayMessage(true,data.msg);
               }

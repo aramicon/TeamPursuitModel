@@ -1,9 +1,10 @@
 .settings_box{
   overflow:auto;
-  max-width:300px;
-  max-height:40px;
+  width:300px;
+  max-height:150px;
   border-radius:2px;
   padding:4px;
   border: 1px solid #ddd;
   margin: 2px;
+  font-size:0.8em;
 }
