@@ -47,6 +47,18 @@ app.get('/getExperimentSettingNames',cors(), (req,res)=>{
 		}
 	});
 });
+app.get('/getExperimentSettingFromID/:id',cors(), (req,res)=>{
+	const todoID = req.params.id;
+	db.getDB().collection(collection).find({_id : db.getPrimaryKey(todoID)}).toArray((err,documents)=>{
+		if(err){
+			console.log("error getting settings using ID " + err);
+		}
+		else{
+			console.log(documents);
+			res.json(documents);
+		}
+	});
+});
 
 app.put('/:id',(req,res)=>{
 	const todoID = req.params.id;

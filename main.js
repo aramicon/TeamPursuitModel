@@ -3,20 +3,42 @@ import {settings} from './global_settings.js';
 import {race} from './race_settings.js';
 import {riders} from './riders.js';
 
+let chosen_global_settings = settings;
+let chosen_race_settings = race;
+let chosen_rider_settings = riders;
+
 function run_single_race(){
   console.log("Run single race");
   update_race_settings();
   $("#single_race_result").html("running single race");
   //update settings
+  let current_settings_global = JSON.parse($("#global_settings").val());
+  let current_settings_race = JSON.parse($("#race_settings").val());
+  let current_settings_rider = JSON.parse($("#rider_settings").val());
+  let current_settings_option = $("#experiment_names").val();
+
+  if (current_settings_option != 0){
+    //we are loading settings
+    if (current_settings_global.length == 0 || current_settings_race.length == 0 || current_settings_rider == 0){
+      alert("Settings have not been loaded correctly")
+    }
+    else{
+      console.log("load settings from experiment")
+      chosen_global_settings = current_settings_global;
+      chosen_race_settings = current_settings_race;
+      chosen_rider_settings = current_settings_rider;
+    }
+  }
+
   let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
   if(input_teamOrder.length > 0){
-    race.start_order = input_teamOrder;
+    chosen_race_settings.start_order = input_teamOrder;
     //console.log("updated race.start_order " + race.start_order )
   }
-  race.drop_instruction = 0;
-  race.live_instructions = [];
-  race.race_instructions = [];
-  race.race_instructions_r = [];
+  chosen_race_settings.drop_instruction = 0;
+  chosen_race_settings.live_instructions = [];
+  chosen_race_settings.race_instructions = [];
+  chosen_race_settings.race_instructions_r = [];
 
   let instructions_t = [];
   let new_instructions = $('#instructions').val();
@@ -25,9 +47,8 @@ function run_single_race(){
     instructions_t = JSON.parse(new_instructions);
   }
   if (instructions_t.length > 0){
-    race.race_instructions_r = instructions_t;
+    chosen_race_settings.race_instructions_r = instructions_t;
   }
-
   //create a web worker and send it the details for the race
   if (window.Worker){
     let singleRaceWorker = new Worker("race_function_no_vis.js");
@@ -40,7 +61,7 @@ function run_single_race(){
       $("#single_race_result").html("Race Time: <strong>" + result + "</strong>. Test Duration " + (end_time - start_time)/1000 + " seconds.");
       singleRaceWorker.terminate();
     }
-    singleRaceWorker.postMessage(["run_single_race",settings,race,riders]);
+    singleRaceWorker.postMessage(["run_single_race",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
     start_time =  new Date().getTime();
     console.log('Single race message posted to worker at ' + start_time);
   }
@@ -66,7 +87,25 @@ function run_ga(){
         //get rid of the thread
         gaWorker.terminate();
       }
-      gaWorker.postMessage(["run_ga",settings,race,riders]);
+      let current_settings_global = JSON.parse($("#global_settings").val());
+      let current_settings_race = JSON.parse($("#race_settings").val());
+      let current_settings_rider = JSON.parse($("#rider_settings").val());
+      let current_settings_option = $("#experiment_names").val();
+
+      if (current_settings_option != 0){
+        //we are loading settings
+        if (current_settings_global.length == 0 || current_settings_race.length == 0 || current_settings_rider == 0){
+          alert("Settings have not been loaded correctly")
+        }
+        else{
+          console.log("load settings from experiment")
+          chosen_global_settings = current_settings_global;
+          chosen_race_settings = current_settings_race;
+          chosen_rider_settings = current_settings_rider;
+        }
+      }
+
+      gaWorker.postMessage(["run_ga",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
       start_time =  new Date().getTime();
       console.log('GA Message posted to worker');
     }
@@ -85,13 +124,13 @@ function run_robustness_check(){
     //update settings
     let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
     if(input_teamOrder.length > 0){
-      race.start_order = input_teamOrder;
+      chosen_race_settings.start_order = input_teamOrder;
       //console.log("updated race.start_order " + race.start_order )
     }
-    race.drop_instruction = 0;
-    race.live_instructions = [];
-    race.race_instructions = [];
-    race.race_instructions_r = [];
+    chosen_race_settings.drop_instruction = 0;
+    chosen_race_settings.live_instructions = [];
+    chosen_race_settings.race_instructions = [];
+    chosen_race_settings.race_instructions_r = [];
 
     let instructions_t = [];
     let new_instructions = $('#instructions').val();
@@ -100,7 +139,7 @@ function run_robustness_check(){
       instructions_t = JSON.parse(new_instructions);
     }
     if (instructions_t.length > 0){
-      race.race_instructions_r = instructions_t;
+      chosen_race_settings.race_instructions_r = instructions_t;
     }
 
     if (window.Worker){
@@ -113,7 +152,7 @@ function run_robustness_check(){
         //get rid of the thread
         gaWorker.terminate();
       }
-      gaWorker.postMessage(["run_robustness_check",settings,race,riders]);
+      gaWorker.postMessage(["run_robustness_check",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
       start_time =  new Date().getTime();
       console.log('Robustness Check Message posted to worker');
     }
@@ -252,23 +291,38 @@ $(document).ready(function() {
   const populateNamesDropdown = (data) => {
       const namesDropDown = $("#experiment_names");
       data.forEach((experiment_names) => {
-        namesDropDown.append($('<option>', {
-          value: experiment_names.id,
-          text: experiment_names.name
-      }));
+        namesDropDown.append($('<option>', {value : experiment_names._id}).text(experiment_names.name));
     });
+    //add a click event to the dropdown
+    namesDropDown.change(()=>{
+      let optionSelected = $(this).find("option:selected");
+      let valueSelected  = optionSelected.val();
+
+      //make a call to get the settings
+      fetch('http://127.0.0.1:3003/getExperimentSettingFromID/' + valueSelected,{method : 'get'}).then((response)=>{
+        return response.json()
+      }).then((data)=>{
+      //  console.log('data ' + JSON.stringify(data));
+        //console.log('data ' + JSON.stringify(data[0].global_settings) );
+        $("#global_settings").val(data[0].global_settings);
+        $("#race_settings").val(data[0].race_settings);
+        $("#rider_settings").val(data[0].rider_settings);
+        //populateNamesDropdown(data);
+      });
+    }
+
+      // alert(valueSelected);
+    );
   }
   const getExperimentNames = () => {
     fetch('http://127.0.0.1:3003/getExperimentSettingNames/',{method : 'get'}).then((response)=>{
       return response.json()
     }).then((data)=>{
-      console.log('data ' + JSON.stringify(data));
+      //console.log('data ' + JSON.stringify(data));
       populateNamesDropdown(data);
     });
   }
   getExperimentNames();
-
-
 
 }
 );

@@ -16,12 +16,66 @@
         <h1>Team Pursuit Model (no visualisation)</h1>
         <p> <a href="model3.html" target='_blank'>Visual Model</a></p>
         <p><div class="form-group">
-          <label for="sel1">Select list:</label>
+          <label for="sel1">Select Experiment Settings:</label>
           <select class="form-control" id="experiment_names">
-            <option>SELECT</option>
+            <option value = "0">SELECT</option>
           </select>
         </div></p>
         <div>
+          <div class="row">
+            <div class="col-lg-2"></div>
+            <div class="col-lg-8">
+
+                <div class="accordion" id="accordionExample">
+                  <div class="card">
+                    <div class="card-header" id="headingOne">
+                      <h2 class="mb-0">
+                        <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                        Global Settings
+                        </button>
+                      </h2>
+                    </div>
+
+                    <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
+                      <div class="card-body">
+                        <textarea rows="25" cols="100" id="global_settings"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-header" id="headingTwo">
+                      <h2 class="mb-0">
+                        <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                          Race Settings
+                        </button>
+                      </h2>
+                    </div>
+                    <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+                      <div class="card-body">
+                          <textarea rows="25" cols="100" id="race_settings"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="card">
+                    <div class="card-header" id="headingThree">
+                      <h2 class="mb-0">
+                        <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                          Rider Settings
+                        </button>
+                      </h2>
+                    </div>
+                    <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
+                      <div class="card-body">
+                        <textarea rows="25" cols="100" id="rider_settings"></textarea>
+                      </div>
+                    </div>
+                  </div>
+                  </div>
+                  </div>
+
+            <div class="col-lg-2"></div>
+          </div>
+
           <div class="race_info">
             <div id="accordion">
               <div class="card">
@@ -32,6 +86,7 @@
                     </button>
                   </h5>
                 </div>
+
                 <div id="raceSettings" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
                   <div class="card-body">
                     <div class="form-group">
