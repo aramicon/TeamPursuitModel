@@ -28,6 +28,7 @@ app.get('/getExperimentSettings',(req,res)=>{
 	db.getDB().collection(collection).find({}).toArray((err,documents)=>{
 		if(err){
 			console.log("error getting collection err " + err);
+			res.json("error")
 		}
 		else{
 			console.log(documents);

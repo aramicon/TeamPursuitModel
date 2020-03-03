@@ -76,6 +76,7 @@ function run_ga(){
     console.log("Run GA");
     update_race_settings();
     $("#race_result").html("Running generations of races... wait for results...");
+    $("#cogs").css({"visibility":"visible"})
 
     if (window.Worker){
       var gaWorker = new Worker("race_function_no_vis.js");
@@ -84,34 +85,44 @@ function run_ga(){
         let result_data = e.data;
         $("#race_result_stats").html("Test Duration " + (end_time - start_time)/1000 + " seconds.");
         $("#race_result").html(result_data);
+        $("#cogs").css({"visibility":"hidden"})
         //get rid of the thread
         gaWorker.terminate();
       }
-      let current_settings_global = JSON.parse($("#global_settings").val());
-      let current_settings_race = JSON.parse($("#race_settings").val());
-      let current_settings_rider = JSON.parse($("#rider_settings").val());
-      let current_settings_option = $("#experiment_names").val();
 
-      if (current_settings_option != 0){
-        //we are loading settings
-        if (current_settings_global.length == 0 || current_settings_race.length == 0 || current_settings_rider == 0){
-          alert("Settings have not been loaded correctly")
-        }
-        else{
-          console.log("load settings from experiment")
-          chosen_global_settings = current_settings_global;
-          chosen_race_settings = current_settings_race;
-          chosen_rider_settings = current_settings_rider;
-        }
+      try {
+        let current_settings_global = JSON.parse($("#global_settings").val());
+        let current_settings_race = JSON.parse($("#race_settings").val());
+        let current_settings_rider = JSON.parse($("#rider_settings").val());
+        let current_settings_option = $("#experiment_names").val();
+
+        if (current_settings_option != 0){
+          //we are loading settings
+          if (current_settings_global.length == 0 || current_settings_race.length == 0 || current_settings_rider == 0){
+            alert("Settings have not been loaded correctly")
+          }
+          else{
+            console.log("load settings from experiment")
+            chosen_global_settings = current_settings_global;
+            chosen_race_settings = current_settings_race;
+            chosen_rider_settings = current_settings_rider;
+          }
+
+
+        gaWorker.postMessage(["run_ga",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
+        start_time =  new Date().getTime();
+        console.log('GA Message posted to worker');
       }
-
-      gaWorker.postMessage(["run_ga",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
-      start_time =  new Date().getTime();
-      console.log('GA Message posted to worker');
-    }
-    else{
-      console.log("Worker cannot be created, maybe not supported by this browser?");
-    }
+      else{
+        console.log("Worker cannot be created, maybe not supported by this browser?");
+      }
+  }
+  catch(err) {
+    $("#race_result").html("Error trying to run GA: " + err.message);
+    $("#cogs").css({"visibility":"hidden"})
+    console.log(err.message)
+  }
+}
 }
 
 function run_robustness_check(){
@@ -304,9 +315,11 @@ $(document).ready(function() {
       }).then((data)=>{
       //  console.log('data ' + JSON.stringify(data));
         //console.log('data ' + JSON.stringify(data[0].global_settings) );
+        console.log(data);
         $("#global_settings").val(data[0].global_settings);
         $("#race_settings").val(data[0].race_settings);
         $("#rider_settings").val(data[0].rider_settings);
+        $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong>")
         //populateNamesDropdown(data);
       });
     }
@@ -315,12 +328,28 @@ $(document).ready(function() {
     );
   }
   const getExperimentNames = () => {
-    fetch('http://127.0.0.1:3003/getExperimentSettingNames/',{method : 'get'}).then((response)=>{
-      return response.json()
+
+    let serverURL = 'http://127.0.0.1:3003/getExperimentSettingNames/';
+      $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>")
+
+    fetch(serverURL,{method : 'get'}).then((response)=>{
+      console.log(response);
+      return response.json();
+      if (!response.ok) {
+            throw Error(response.statusText);
+      }
     }).then((data)=>{
       //console.log('data ' + JSON.stringify(data));
+
+      console.log("data.length " + data.length);
       populateNamesDropdown(data);
-    });
+      $("#database_connection_label").text(data.length + " settings found.")
+
+    }).catch((error) => {
+      console.log("Error loading settings from experiment server");
+      $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
+      console.log(error)
+});
   }
   getExperimentNames();
 
