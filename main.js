@@ -6,6 +6,7 @@ import {riders} from './riders.js';
 let chosen_global_settings = settings;
 let chosen_race_settings = race;
 let chosen_rider_settings = riders;
+let selected_settings_id = 0;
 
 function run_single_race(){
   console.log("Run single race");
@@ -269,11 +270,48 @@ function update_race_settings(){
   }
 }
 
+const updateExperimentSettings = () => {
+
+  //only update if there's a selected id
+  if (selected_settings_id.length > 1){
+    let serverURL = 'http://127.0.0.1:3003/update_race_settings/'+selected_settings_id;
+      $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>")
+
+    fetch(serverURL,{method : 'post',mode: 'cors'}).then((response)=>{
+      console.log(response);
+      return response.json();
+      if (!response.ok) {
+            throw Error(response.statusText);
+      }
+    }).then((data)=>{
+      //console.log('data ' + JSON.stringify(data));
+
+
+      $("#database_connection_label").text("setting updated")
+
+    }).catch((error) => {
+      console.log("Error updating settings on experiment server");
+      $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
+      console.log(error)
+  });
+
+  }
+  else{
+
+    alert("Invalid Settings ID, sols.")
+  }
+
+}
+
+
+
 $(document).ready(function() {
   //attach events
   $("#button_play_race").on("click", run_single_race);
   $("#button_evolve_instructions").on("click", run_ga);
   $("#button_check_race_robustness").on("click", run_robustness_check);
+  $("#button_update_settings").on("click", updateExperimentSettings);
+
 
   // populate fields from global settings
   $('#starting_order').val(race.start_order.map(a=>a).join(","));
@@ -319,7 +357,9 @@ $(document).ready(function() {
         $("#global_settings").val(data[0].global_settings);
         $("#race_settings").val(data[0].race_settings);
         $("#rider_settings").val(data[0].rider_settings);
-        $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong>")
+        $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong>");
+        //set the id (global)
+        selected_settings_id = data[0]._id;
         //populateNamesDropdown(data);
       });
     }

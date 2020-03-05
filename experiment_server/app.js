@@ -7,6 +7,12 @@ const app = express();
 const collection = "experiment_settings";
 
 const cors = require('cors');
+const corsOptions = {
+  "origin": "*",
+  "methods": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
+  "preflightContinue": false,
+  "optionsSuccessStatus": 204
+}
 
 const schema = Joi.object().keys({
 	name:Joi.string().required(),
@@ -16,6 +22,7 @@ const schema = Joi.object().keys({
 });
 
 app.use(bodyParser.json());
+app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(express.static(__dirname + '/public'));
 
@@ -37,7 +44,7 @@ app.get('/getExperimentSettings',(req,res)=>{
 	});
 });
 
-app.get('/getExperimentSettingNames',cors(), (req,res)=>{
+app.get('/getExperimentSettingNames',cors(corsOptions), (req,res)=>{
 	db.getDB().collection(collection).find({},{projection:{name : 1}}).toArray((err,documents)=>{
 		if(err){
 			console.log("error getting collection of names err " + err);
@@ -48,7 +55,7 @@ app.get('/getExperimentSettingNames',cors(), (req,res)=>{
 		}
 	});
 });
-app.get('/getExperimentSettingFromID/:id',cors(), (req,res)=>{
+app.get('/getExperimentSettingFromID/:id',cors(corsOptions), (req,res)=>{
 	const todoID = req.params.id;
 	db.getDB().collection(collection).find({_id : db.getPrimaryKey(todoID)}).toArray((err,documents)=>{
 		if(err){
@@ -61,13 +68,14 @@ app.get('/getExperimentSettingFromID/:id',cors(), (req,res)=>{
 	});
 });
 
-app.put('/:id',(req,res)=>{
-	const todoID = req.params.id;
+app.post('/update_race_settings/:id',cors(corsOptions),(req,res)=>{
+	console.log("update existing experiment using settings_id");
+	const settings_id = req.params.id;
 	const userInput = req.body;
-	console.log("update existing experiment using id");
-	console.log("id " + todoID + " body " + JSON.stringify(userInput));
 
-	db.getDB().collection(collection).findOneAndUpdate({_id : db.getPrimaryKey(todoID)},{$set : {name : userInput.name,global_settings : userInput.global_settings, race_settings : userInput.race_settings, rider_settings : userInput.rider_settings}},{returnOriginal : false},(err,result)=>{
+	console.log("id " + settings_id + " body " + JSON.stringify(userInput));
+
+	 db.getDB().collection(collection).findOneAndUpdate({_id : db.getPrimaryKey(settings_id)},{$set : {name : userInput.name,global_settings : userInput.global_settings, race_settings : userInput.race_settings, rider_settings : userInput.rider_settings}},{returnOriginal : false},(err,result)=>{
 		if(err){
 			console.log("error when updating err = " + err);
 		}
@@ -77,7 +85,7 @@ app.put('/:id',(req,res)=>{
 	});
 });
 
-app.post("/",(req,res,next) => {
+app.post("/new_race_settings/",cors(),(req,res,next) => {
 	const userInput = req.body;
 	console.log("save experiment " + JSON.stringify(userInput));
 	Joi.validate(userInput, schema, (err,result) =>{
