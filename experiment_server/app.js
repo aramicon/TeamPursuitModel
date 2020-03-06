@@ -10,7 +10,7 @@ const cors = require('cors');
 const corsOptions = {
   "origin": "*",
   "methods": "GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS",
-  "preflightContinue": false,
+  "preflightContinue": true,
   "optionsSuccessStatus": 204
 }
 
@@ -22,7 +22,6 @@ const schema = Joi.object().keys({
 });
 
 app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
 
 app.use(express.static(__dirname + '/public'));
 
@@ -68,15 +67,17 @@ app.get('/getExperimentSettingFromID/:id',cors(corsOptions), (req,res)=>{
 	});
 });
 
+app.options('/update_race_settings/:id', cors())
 app.post('/update_race_settings/:id',cors(corsOptions),(req,res)=>{
 	console.log("update existing experiment using settings_id");
 	const settings_id = req.params.id;
 	const userInput = req.body;
+  //console.log("req = ", req);
 
-	console.log("id " + settings_id + " body " + JSON.stringify(userInput));
+	console.log(userInput.global_settings);
 
 	 db.getDB().collection(collection).findOneAndUpdate({_id : db.getPrimaryKey(settings_id)},{$set : {name : userInput.name,global_settings : userInput.global_settings, race_settings : userInput.race_settings, rider_settings : userInput.rider_settings}},{returnOriginal : false},(err,result)=>{
-		if(err){
+	    if(err){
 			console.log("error when updating err = " + err);
 		}
 		else{

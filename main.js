@@ -275,9 +275,27 @@ const updateExperimentSettings = () => {
   //only update if there's a selected id
   if (selected_settings_id.length > 1){
     let serverURL = 'http://127.0.0.1:3003/update_race_settings/'+selected_settings_id;
-      $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>")
-
-    fetch(serverURL,{method : 'post',mode: 'cors'}).then((response)=>{
+      $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
+      let current_settings_global = $("#global_settings").val();
+      let current_settings_race = $("#race_settings").val();
+      let current_settings_rider = $("#rider_settings").val();
+      let current_settings_option = $("#experiment_names").val();
+      let dataToSend = {
+              "global_settings":current_settings_global,
+              "race_settings":current_settings_race,
+              "rider_settings":current_settings_rider,
+              "name":$("#new_settings_name").val()
+            };
+    let jsonToSendS = JSON.stringify(dataToSend);
+    console.log("jsonToSendS ", jsonToSendS);
+    fetch(serverURL,{
+      method : 'post',
+      headers: {
+    'Content-Type': 'application/json',
+      },
+      mode : 'cors',
+      body : jsonToSendS
+    }).then((response)=>{
       console.log(response);
       return response.json();
       if (!response.ok) {
@@ -358,6 +376,7 @@ $(document).ready(function() {
         $("#race_settings").val(data[0].race_settings);
         $("#rider_settings").val(data[0].rider_settings);
         $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong>");
+        $("#new_settings_name").val(data[0].name);
         //set the id (global)
         selected_settings_id = data[0]._id;
         //populateNamesDropdown(data);
