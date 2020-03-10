@@ -321,6 +321,61 @@ const updateExperimentSettings = () => {
 
 }
 
+const addNewExperimentSettings = () => {
+
+  //only update if there's a selected id
+
+    let serverURL = 'http://127.0.0.1:3003/new_race_settings';
+      $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
+
+      let current_settings_global = $("#global_settings").val();
+      let current_settings_race = $("#race_settings").val();
+      let current_settings_rider = $("#rider_settings").val();
+      let current_settings_option = $("#experiment_names").val();
+
+      if (current_settings_global.length > 0 && current_settings_race.length > 0 && current_settings_rider.length > 0 && current_settings_option.length > 0){
+
+
+      let dataToSend = {
+              "global_settings":current_settings_global,
+              "race_settings":current_settings_race,
+              "rider_settings":current_settings_rider,
+              "name":$("#new_settings_name").val()
+            };
+    let jsonToSendS = JSON.stringify(dataToSend);
+    console.log("jsonToSendS ", jsonToSendS);
+    fetch(serverURL,{
+      method : 'post',
+      headers: {
+    'Content-Type': 'application/json',
+      },
+      mode : 'cors',
+      body : jsonToSendS
+    }).then((response)=>{
+      console.log(response);
+      return response.json();
+      if (!response.ok) {
+            throw Error(response.statusText);
+      }
+    }).then((data)=>{
+      //console.log('data ' + JSON.stringify(data));
+
+
+      $("#database_connection_label").text("setting updated")
+
+    }).catch((error) => {
+      console.log("Error updating settings on experiment server");
+      $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
+      console.log(error)
+  });
+
+}
+else{
+  alert("Cannot add new settings: check that values are provided")
+}
+
+}
+
 
 
 $(document).ready(function() {
@@ -329,6 +384,7 @@ $(document).ready(function() {
   $("#button_evolve_instructions").on("click", run_ga);
   $("#button_check_race_robustness").on("click", run_robustness_check);
   $("#button_update_settings").on("click", updateExperimentSettings);
+  $("#button_add_new_settings").on("click", addNewExperimentSettings);
 
 
   // populate fields from global settings

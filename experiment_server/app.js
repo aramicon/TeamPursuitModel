@@ -72,9 +72,7 @@ app.post('/update_race_settings/:id',cors(corsOptions),(req,res)=>{
 	console.log("update existing experiment using settings_id");
 	const settings_id = req.params.id;
 	const userInput = req.body;
-  //console.log("req = ", req);
-
-	console.log(userInput.global_settings);
+  console.log("updating existing settings  ", settings_id);
 
 	 db.getDB().collection(collection).findOneAndUpdate({_id : db.getPrimaryKey(settings_id)},{$set : {name : userInput.name,global_settings : userInput.global_settings, race_settings : userInput.race_settings, rider_settings : userInput.rider_settings}},{returnOriginal : false},(err,result)=>{
 	    if(err){
@@ -86,7 +84,8 @@ app.post('/update_race_settings/:id',cors(corsOptions),(req,res)=>{
 	});
 });
 
-app.post("/new_race_settings/",cors(),(req,res,next) => {
+app.options('/new_race_settings', cors())
+app.post("/new_race_settings",cors(),(req,res,next) => {
 	const userInput = req.body;
 	console.log("save experiment " + JSON.stringify(userInput));
 	Joi.validate(userInput, schema, (err,result) =>{
@@ -97,15 +96,20 @@ app.post("/new_race_settings/",cors(),(req,res,next) => {
 			next(error);
 		}
 		else{
-			db.getDB().collection(collection).insertOne(userInput,(err,result)=>{
+      let newSettings = {name : userInput.name,
+                        global_settings : userInput.global_settings,
+                        race_settings : userInput.race_settings,
+                        rider_settings : userInput.rider_settings};
+
+			db.getDB().collection(collection).insertOne(newSettings,(err,result)=>{
 				if(err){
-					const error = new Error("Failed to insert experiment");
+					const error = new Error("Failed to insert new experiment settings");
 					console.log(err);
 					error.status = 400;
 					next(error);
 				}
 				else{
-					res.json({result:result.result, document: result.ops[0],msg:"Successfully inserted experiment",err:null});
+					res.json({result:result.result, document: result.ops[0],msg:"Successfully inserted new experiment",err:null});
 				}
 			});
 		}
