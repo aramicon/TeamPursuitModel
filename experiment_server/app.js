@@ -30,6 +30,15 @@ app.get('/',(req,res)=> {
 	res.sendFile(path.join(__dirname,'index.html'));
 });
 
+app.get('/ga',(req,res)=> {
+	res.sendFile(path.join(__dirname,'public/ga.html'));
+});
+
+app.get('/tpgame',(req,res)=> {
+	res.sendFile(path.join(__dirname,'public/tpgame.html'));
+});
+
+
 app.get('/getExperimentSettings',(req,res)=>{
 	db.getDB().collection(collection).find({}).toArray((err,documents)=>{
 		if(err){

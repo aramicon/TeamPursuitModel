@@ -1,15 +1,18 @@
+
 //code by Donal kelly donakello@gmail.com
 //Model of team pursuit track cycle race
 
 //import global, race, and rider setting data
 
-import {settings} from './global_settings.js';
-import {race} from './race_settings.js';
-import {riders} from './riders.js';
+import {settings} from './global_settings_template.js';
+import {race} from './race_settings_template.js';
+import {riders} from './riders_template.js';
+
+let newton_lookup = []; //used to store newton() function calculations to avoid tons of needless calls
 
 let c = {};
 let ctx = {};
-var race_state = 'stop';
+let race_state = 'stop';
 
 console.log("Track bend radius = 22m");
 console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/2 );
@@ -29,25 +32,62 @@ function resetRace(){ //reset the race; can be triggered by hitting the STOP but
 
 function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is from bikecalculator.com */
   //from http://www.bikecalculator.com/
-		var vel = 20;       // Initial guess
-		var MAX = 10;       // maximum iterations
-		var TOL = 0.05;     // tolerance
+		let vel = 20;       // Initial guess
+		let MAX = 10;       // maximum iterations
+		let TOL = 0.05;     // tolerance
 		for(let i_n=1; i_n < MAX; i_n++) {
-			var tv = vel + hw;
-			var aeroEff = (tv > 0.0) ? aero : -aero; // wind in face, must reverse effect
-			var f = vel * (aeroEff * tv * tv + tr) - tran * p; // the function
-			var fp = aeroEff * (3.0 * vel + hw) * tv + tr;     // the derivative
-			var vNew = vel - f / fp;
+			let tv = vel + hw;
+			let aeroEff = (tv > 0.0) ? aero : -aero; // wind in face, must reverse effect
+			let f = vel * (aeroEff * tv * tv + tr) - tran * p; // the function
+			let fp = aeroEff * (3.0 * vel + hw) * tv + tr;     // the derivative
+			let vNew = vel - f / fp;
 			if (Math.abs(vNew - vel) < TOL) return vNew;  // success
 			vel = vNew;
 		}
 		return 0.0;  // failed to converge
 }
 
+function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold, rider_max ){
+  let power_from_effort = 0;
+
+  if (rider_effort < threshold_effort_level){
+    power_from_effort = rider_threshold*(rider_effort)/10;
+  }
+  else if(rider_effort == threshold_effort_level){
+    power_from_effort = rider_threshold;
+  }
+  else{
+    power_from_effort = rider_threshold + (rider_max - rider_threshold) *((rider_effort-threshold_effort_level)/(9-threshold_effort_level));
+  }
+  //console.log("mapped effort " + rider_effort + " to power " + power_from_effort);
+  return power_from_effort;
+}
+function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, rider_max ){
+  let effort_level = 0;
+  if (rider_power < rider_threshold){
+    effort_level = ((rider_power*threshold_effort_level)/rider_threshold);
+
+  }
+  else if(rider_power == rider_threshold){
+    effort_level = threshold_effort_level;
+  }
+  else{ //power is over threshold
+    if (rider_power >= rider_max ){
+      effort_level = 9;
+    }
+    else{
+      //reverse how power is worked out when over the threshold
+      effort_level = ((rider_power - rider_threshold )*(9-threshold_effort_level))/(rider_max - rider_threshold) + threshold_effort_level;
+    }
+  }
+  //console.log("mapped power " + rider_power + " to effort " + effort_level);
+  return effort_level;
+}
+
 function setEffortInstruction(){
   //add instruction to change the effort of the leading rider
   let effort = parseInt(event.target.id.replace("set_effort_",""));
-  race.live_instructions.push(["effort",effort+1]);
+  race.live_instructions.push(["effort",effort]);
 }
 
 function setEffort(effort){ //actually update the effort level
@@ -81,27 +121,20 @@ function switchLead(positions_to_drop_back){
   let new_leader = race.riders[new_order[0]];
 
   new_leader.current_aim = "lead";
-  new_leader.current_power_effort = 5;
+  new_leader.current_power_effort = settings.threshold_power_effort_level;
 
   //update this rider's power Effort
   new_leader.current_power_effort = current_leader_power;
   let current_threshold = new_leader.threshold_power;
 
-  if (current_leader_power < current_threshold){
-    new_leader.output_level = (current_leader_power/current_threshold)*10;
-    console.log("new_leader.output_level = "+ new_leader.output_level);
+  new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, current_leader_power, new_leader.threshold_power, new_leader.max_power)
+
+  if (new_leader.output_level < 0){
+    console.log("new_leader.output_level < 0");
+    debugger;
   }
-  else if(current_leader_power == current_threshold){
-    new_leader.current_power_effort = 5;
-  }
-  else{ //power is over threshold
-    if (current_leader_power >= new_leader.max_power ){
-      new_leader.output_level = 9;
-    }
-    else{
-        new_leader.output_level = (current_leader_power/new_leader.max_power)*10;
-    }
-  }
+
+  console.log("new_leader.output_level = "+ new_leader.output_level);
 
   for(let i=1;i<new_order.length;i++){
     if (new_order[i] != current_leader){ //don't update the dropping back rider
@@ -162,12 +195,9 @@ function moveRace(){
     //work out how far the race_rider can go in this time step
     //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
 
-    let density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
-    let twt = 9.8 * (race_rider.weight + settings.bike_weight);  // total weight of rider + bike in newtons
-    let A2 = 0.5 * settings.frontalArea * density;  // full air resistance parameter
-    let tres = twt * (settings.gradev + settings.rollingRes); // total resistance = gravity/grade and rolling resistance
 
     let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
+    race_rider.aero_A2 = Math.round((0.5 * settings.frontalArea * race_rider.aero_density)*10000)/10000;   // full air resistance parameter
 
     if (race_rider.current_aim =="lead"){
       //push the pace at the front
@@ -183,41 +213,28 @@ function moveRace(){
       }
         let failure_level = settings.fatigue_failure_level*accumulated_effect;
 
-
       if(race_rider.endurance_fatigue_level >= failure_level){
-        race_rider.output_level = 5;
+        race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
       }
       //set the power level based on the effort instruction
-      if (race_rider.output_level < 6){
-        race_rider.current_power_effort = race_rider.threshold_power*(race_rider.output_level)/10;
-        //recover if going under the threshold
-        if (race_rider.endurance_fatigue_level > 0){
-          race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.current_power_effort)/race_rider.threshold_power)
-          if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
-        }
-      }
-      else if(race_rider.output_level == 6){
-        race_rider.current_power_effort = race_rider.threshold_power;
-      }
-      else{
-        race_rider.current_power_effort = race_rider.max_power*(race_rider.output_level)/10;
-        //add fatigue if going harder than the threshold
-        let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.current_power_effort- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
-        race_rider.endurance_fatigue_level += fatigue_rise;
-        race_rider.accumulated_fatigue += fatigue_rise;
-      }
+
+      race_rider.current_power_effort = mapEffortToPower(settings.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power );
 
       let target_power = race_rider.current_power_effort; //try to get to this
       //work out the velocity from the power
+      //target power cannot be <= 0; riders do not stop; need a predefined lowest limit?
+      if (target_power < 0){
+        target_power = 0;
+      }
 
       let powerv = race_rider.power_out, power_adjustment = 0;
       //compare power required to previous power and look at how it can increase or decrease
       if (powerv > target_power){ //slowing down
-        if((powerv - target_power) > settings.power_adjustment_step_size_down){
+        if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
           power_adjustment = settings.power_adjustment_step_size_down;
         }
         else{
-          power_adjustment = (powerv - target_power);
+          power_adjustment = (target_power - powerv);
         }
       }
       else if(powerv < target_power){ //speeding up
@@ -229,8 +246,55 @@ function moveRace(){
         }
       }
       powerv+=power_adjustment;
-      race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
+
+      //round power output to 2 decimal places
+      powerv = Math.round((powerv)*100)/100;
+      //check the lookup table
+      let lookup_velocity = -1;
+      if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
+        if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
+          lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)];
+        }
+      }
+      if ( lookup_velocity === undefined || lookup_velocity === -1){
+        //does not exist in the lookup so call the function and save it
+        race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
+        if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+          if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
+            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+          }
+          else{
+            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
+            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+          }
+        }
+        else{
+          //add new array for total weight and A2 values
+          newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
+          newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
+          newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+        }
+      }
+      else{
+        race_rider.velocity = lookup_velocity;
+      }
       race_rider.power_out = powerv;
+
+      //add fatigue if going harder than the threshold or recover if going under it
+      //recover if going under the threshold
+
+      if (race_rider.power_out < race_rider.threshold_power){
+        if (race_rider.endurance_fatigue_level > 0){
+          race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power)
+          if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
+        }
+      }
+      else if(race_rider.power_out > race_rider.threshold_power){
+        let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
+        race_rider.endurance_fatigue_level += fatigue_rise;
+        race_rider.accumulated_fatigue += fatigue_rise;
+      }
+
     }
     else{
       //rider may be following or dropping back. Either way they will be basing velocity on that of another rider- normally just following the rider in front of you
@@ -287,9 +351,14 @@ function moveRace(){
         //if you have no rider in front of you this distance is set to -1, so you have no shelter
         level_of_shelter = 0;
       }
-      A2 -= A2*(shelter_effect_strength*level_of_shelter);
-      let A2Eff = (tv > 0.0) ? A2 : -A2; // wind in face, must reverse effect
-      let target_power = (target_velocity * tres + target_velocity * tv * tv * A2Eff) / settings.transv;
+      race_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter_effect_strength*level_of_shelter))*10000)/10000;
+      let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
+      let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings.transv;
+
+      //can't go below zero : otherwise riders can go backwards!
+      if (target_power < 0){
+        target_power = 0;
+      }
 
       //What is the max power that this rider can do for now? Need to consider fatigue
       let current_max_power = race_rider.max_power;
@@ -301,26 +370,13 @@ function moveRace(){
       }
       let failure_level = settings.fatigue_failure_level*accumulated_effect;
       if(race_rider.endurance_fatigue_level >= failure_level){
-        current_max_power = (race_rider.threshold_power*(5/10));
+        current_max_power = (race_rider.threshold_power*((settings.threshold_power_effort_level-settings.recovery_effort_level_reduction)/10));
       }
       //can't go over the max power
       if (target_power > current_max_power){
         target_power = current_max_power; //can't go over this (for now)
       }
-      //fatigue if over the threshold, recover if under
-      if (target_power < race_rider.threshold_power ){
-        //recover if going under the threshold
-        if (race_rider.endurance_fatigue_level > 0){
-          race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- target_power)/race_rider.threshold_power)
-          if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;};
-        }
-      }
-      else{
-        //add fatigue if going harder than the threshold
-        let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (target_power- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
-        race_rider.endurance_fatigue_level += fatigue_rise
-        race_rider.accumulated_fatigue += fatigue_rise;
-      }
+
 
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
       let powerv = race_rider.power_out, power_adjustment = 0;
@@ -343,9 +399,40 @@ function moveRace(){
           power_adjustment = (target_power - powerv);
         }
       }
-      powerv+=power_adjustment;
+
       let old_velocity = race_rider.velocity; //use to check if rider slows down or speeds up for this step
-      race_rider.velocity = newton(A2, settings.headwindv, tres, settings.transv, powerv);
+
+      powerv+=power_adjustment;
+      powerv = Math.round((powerv)*100)/100;
+
+      let lookup_velocity = -1;
+      if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
+        if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
+          lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)];
+        }
+      }
+      if ( lookup_velocity === undefined || lookup_velocity === -1){
+        //does not exist in the lookup so call the function and save it
+        race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
+        if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+          if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
+            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+          }
+          else{
+            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
+            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+          }
+        }
+        else{
+          //add new array for total weight and A2 values
+          newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
+          newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
+          newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+        }
+      }
+      else{
+        race_rider.velocity = lookup_velocity;
+      }
 
       //if you are dropping back and get back to the rider in front, go back to a follow state
       if(race_rider.current_aim =="drop"){ //once you are behind the rider_to_follow, you 'follow' again
@@ -354,6 +441,21 @@ function moveRace(){
         }
       }
       race_rider.power_out = powerv;
+
+      //fatigue if over the threshold, recover if under
+      if (race_rider.power_out < race_rider.threshold_power ){
+        //recover if going under the threshold
+        if (race_rider.endurance_fatigue_level > 0){
+          race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power)
+          if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;};
+        }
+      }
+      else{
+        //add fatigue if going harder than the threshold
+        let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
+        race_rider.endurance_fatigue_level += fatigue_rise
+        race_rider.accumulated_fatigue += fatigue_rise;
+      }
     }
 
     race_rider.distance_this_step = race_rider.velocity; //asssumes we are travelling for 1 second: this is the total distance to be travelled on the track
@@ -550,7 +652,6 @@ function moveRace(){
       continue_racing = false;
     }
   }
-
   if (continue_racing && (race_state == "play" || race_state == "resume" )){
     //update the lap coun
     $("#race_info_lap").text(Math.floor(second_last_rider.distance_covered/settings.track_length)+1);
@@ -558,11 +659,10 @@ function moveRace(){
         function(){
           moveRace();
       },settings.race_move_wait_time);
-
   }
   else{
     //stopRace();
-    console.log("Race Complete");
+    console.log("Race Complete/paused");
     d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x");
   }
 }
@@ -634,7 +734,13 @@ function load_race(){
     load_rider.endurance_fatigue_level = 0;
     load_rider.burst_fatigue_level = 0;
     load_rider.accumulated_fatigue = 0;
-    load_rider.output_level=6;
+    load_rider.output_level=settings.threshold_power_effort_level;
+
+    //set up the aero properties so they don't have to be recalculated
+    load_rider.aero_density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
+    load_rider.aero_twt = Math.round((9.8 * (load_rider.weight + settings.bike_weight)*10))/10;  // total weight of rider + bike in newtons, rouded to 1 decimal place
+    load_rider.aero_tres = load_rider.aero_twt * (settings.gradev + settings.rollingRes);
+
     if (i==0){
       load_rider.current_aim = "lead";
     }
@@ -678,6 +784,11 @@ $(document).ready(function() {
   $("#button_fw").on("click", forwardStep);
   $(".set_effort").on("click", setEffortInstruction);
   $(".switch_lead").on("click", switchLeadInstruction);
+
+  load_details_from_url();
+
+  update_race_settings();
+
   load_race();
 }
 );
@@ -721,4 +832,26 @@ function forwardStep() {
         setTimeout(function(){  d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x "); }, 200);
         moveRace();
       }
+}
+
+function load_details_from_url(){
+  //should get the info needed to run the test: may also get an id, if it does, needs to load the settings from the db
+  let url = new URL(window.location);
+  if(url.search.length > 0){
+    let settings_id = url.searchParams.get("settings_id");
+    console.log("settings_id " + settings_id);
+    let start_order = url.searchParams.get("startorder");
+    let instructions = url.searchParams.get("instructions");
+    if(start_order.length > 0){
+      console.log(start_order);
+      $("#teamorder").val(start_order);
+    }
+    if(instructions.length > 0){
+      console.log(instructions);
+      $("#instructions").val(instructions);
+    }
+  }
+
+
+
 }

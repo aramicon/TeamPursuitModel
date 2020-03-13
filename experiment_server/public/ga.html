@@ -1,22 +1,21 @@
 <html>
   <head>
     <title>Team Pursuit No VIS Model</title>
-    <link rel="stylesheet" type = "text/css" href = "model3.css">
-    <link rel="stylesheet" type = "text/css" href = "bootstrap.min.css">
+    <link rel="stylesheet" type = "text/css" href = "css/model3.css">
+    <link rel="stylesheet" type = "text/css" href = "css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
     <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
     <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script src = "main.js" type="module"></script>
+    <script src = "js/ga.js" type="module"></script>
     <!-- <script src = "race_function_no_vis.js" type="module"></script> -->
   </head>
   <body>
     <div class="container">
         <h1>Team Pursuit Model (no visualisation)</h1>
-        <p> <a href="model3.html" target='_blank'>Visual Model</a></p>
+        <p> <a href="tpgame" target='_blank'>Visual Model</a></p>
         <p><div class="form-group">
-
           <label for="sel1">Load Saved Experiment Settings | </label>
             <div id = "database_connection_label" class="alert alert-primary">Checking Db connection</div>
           <div class="form-group">
@@ -29,7 +28,6 @@
           <div class="row">
             <div class="col-lg-2"></div>
             <div class="col-lg-8">
-
                 <div class="accordion" id="accordionExample">
                   <div class="card">
                     <div class="card-header" id="headingOne">
@@ -39,7 +37,6 @@
                         </button>
                       </h2>
                     </div>
-
                     <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
                       <div class="card-body">
                         <textarea rows="25" cols="100" id="global_settings"></textarea>
@@ -76,10 +73,8 @@
                   </div>
                   </div>
                   </div>
-
             <div class="col-lg-2"></div>
           </div>
-
           <form  class="form-inline">
         <button type="button" id="button_update_settings" class="btn btn-primary mb-2">
           <i class="fas fa-save" style="color:#90ec78;"></i> Update
@@ -93,8 +88,6 @@
         <button type="button" id="button_add_new_settings" class="btn btn-primary mb-2">
           <i class="fas fa-plus-circle" style="color:#90ec78;"></i> Add As New
         </button>
-
-
       </form>
       <div class="form-group">
         <button type="button" id="button_evolve_instructions" class="btn btn-success">
@@ -109,7 +102,6 @@
           <i class="fa fa-cog fa-spin fa-1x fa-fw"></i>
         </div>
       </div>
-
           <h2>RESULTS</h2>
           <div id = "race_result">no GA run</div>
 
@@ -125,7 +117,6 @@
             <label for="instructions">Instructions:</label>
             <textarea class="form-control" rows="5" id="instructions"></textarea>
           </div>
-
             <div>
             Single Race
             <button type="button" id="button_play_race" class="btn">

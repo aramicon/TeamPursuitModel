@@ -1,0 +1,51 @@
+-- try to not lose the best strat in each generation through mutation (keep one pure copy)
+
+-- figure out how to send info from the test to GA to the tester
+
+-- read the wiki on GAs: https://en.wikipedia.org/wiki/Genetic_algorithm
+
+-- first launch mongo with C:\mongodb\bin\mongod.exe  --config C:\mongodb\data\db\mongod.cfg
+
+-- now launch the experiment server in C:\Users\Donal\Documents\Projects\RESEARCH\bikeracing\TeamPursuitModel\TeamPursuitModel\experiment_server
+node app.js
+
+-- why don't I move the whole thing onto the node server??
+
+-- how do i serve up a flat html page?
+
+-- foook... i already had a page built for creating settings :-( this is now done twice. but hey.
+
+-- create a new url path for http://127.0.0.1:3003/ga/ and load up the main ga page, no?
+
+-- ok, so moved a lot of files, and renamed stuff, and it now loads from node
+
+-- clean up the js- put it all under a public/js folder
+
+-- ok, so it now serves up the files and seeeems to run the GA
+
+-- now look at getting the settings to port from the GA to the game version
+
+-- create a new route for the game version 
+
+-- ok, can now access and run the original game via http://127.0.0.1:3003/tpgame
+
+-- oh, since everything is on node I can just send the id of the settings in the db long with the instructions?
+
+-- tpgame can then do its own lookup? try try
+
+-- id is not being returned from the db. do i need to add it to the global_settings?
+
+-- how can I add it... don't want to save it in the general settings. 
+-- maybe store it in another field? Hidden?
+
+-- bug: if i use one very strong rider it evolves to be the lead rider, but when i watch it in the game it drops the others and laps them, so the time taken is much longer than the GA's version. Must be some difference in the physics again :-(
+
+-- at least fix the GA to keep the best riders
+
+-- fuck, GA is actually very different, I must have changed it a lot... looks at groups in the population. But it is losing the winners as it goes from one generation to the next in some cases. Must fix.
+
+-- note: if instructions or startign order do not change, there's no need to re-run that race
+
+- save this file and commit everything.
+
+-- two main issues right now: putting strong rider on front for too long. ANd GA losing the best strat from popualtion to popualtion.

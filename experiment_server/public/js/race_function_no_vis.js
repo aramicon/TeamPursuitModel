@@ -89,6 +89,7 @@ function mutate_race(r, settings_r){
   const p_move_instruction = settings_r.ga_p_move_instruction;
   const range_to_move_instruction = settings_r.ga_range_to_move_instruction;
   const range_to_change_effort = settings_r.ga_range_to_change_effort;
+
   let time_taken_old = r.time_taken;
 
   new_race.start_order = r.start_order;
@@ -240,6 +241,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   const probability_of_instruction_per_timestep_upper =settings_r.ga_probability_of_instruction_per_timestep_upper;
   const population_size = settings_r.ga_population_size;
   const ga_population_size_first_generation = settings_r.ga_population_size_first_generation;
+  console.log(settings_r);
+  const settings_id = settings_r._id;
   //warn user if the population_size is not an even square
   if(!Number.isInteger(Math.sqrt(population_size))){
     alert("Warning: ga_population_size of " + population_size + " should be a product of an integer squared, e.g. 9,25,36,3600")
@@ -323,7 +326,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     }
       //console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " time taken " + final_best_race_properties.time_taken);
 
-    table_text_info += "<tr><td>" + g + "</td><td> " + stats_average_time + "</td><td>" + stats_average_number_of_instructions + "</td><td>" + final_best_race_properties_index + "</td><td>" + final_best_race_properties.time_taken+ " </td><td> [" + final_best_race_properties.start_order + "]</td><td>" + JSON.stringify(final_best_race_properties.instructions) + "</td><td><a  target='_blank' href = 'model3.html?startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td>";
+    table_text_info += "<tr><td>" + g + "</td><td> " + stats_average_time + "</td><td>" + stats_average_number_of_instructions + "</td><td>" + final_best_race_properties_index + "</td><td style='background-color:#aaffaa'>" + final_best_race_properties.time_taken+ " </td><td> [" + final_best_race_properties.start_order + "]</td><td>" + JSON.stringify(final_best_race_properties.instructions) + "</td><td><a  target='_blank' href = 'tpgame.html?settings_id=" + settings_id + "&startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td>";
 
     // create a new population based on the fitness
 
@@ -389,12 +392,15 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
 function new_population_tournament_selection(settings_r,current_population, stats){
   let new_population = [];
-  let remainder = (current_population.length % settings_r.ga_tournament_selection_group_size);
+  // split the popualtion into a set of groups; there may be a remainder
+  let group_size = settings_r.ga_tournament_selection_group_size;
+  let remainder = (current_population.length % group_size);
   //debugger;
   //return a new population based on mini-tournaments in current population.
-  for(let i = 0;i< (current_population.length-remainder);i+=settings_r.ga_tournament_selection_group_size){
+  for(let i = 0;i< (current_population.length-remainder);i+=group_size){
     //get the best race from the group
-    let group_size = settings_r.ga_tournament_selection_group_size;
+
+    //check to see if we need to handle the remainder
     if ((i + group_size + remainder) >= current_population.length){
       group_size += remainder;
     }
@@ -408,6 +414,7 @@ function new_population_tournament_selection(settings_r,current_population, stat
       }
     }
     //make group_size copies of the winner and put them in the new population
+
     for(let k = 0;k<group_size;k++){
       let new_race = {};
       if((i+k) == best_time_index){
@@ -422,7 +429,7 @@ function new_population_tournament_selection(settings_r,current_population, stat
         new_race.stats.number_of_start_order_shuffles = 0;
         new_race.stats.number_of_drop_instructions = 0;
       }
-      else{ //add a mutant of the gorup winner
+      else{ //otherwise add a mutant of the gorup winner
         new_race = current_population[best_time_index];
         new_race = mutate_race(new_race,settings_r);
       }
@@ -432,7 +439,7 @@ function new_population_tournament_selection(settings_r,current_population, stat
   }
 
   //shuffle the array to stop the same groups from simply repeating
-  
+
   shuffleArray(new_population);
   return new_population;
 }

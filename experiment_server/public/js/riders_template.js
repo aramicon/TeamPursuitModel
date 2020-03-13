@@ -27,7 +27,7 @@ let riders = [
   "number_of_riders_in_front":0,
   "endurance_fatigue_level":0,
   "accumulated_fatigue":0,
-  "output_level":6,
+  "output_level":6
 },
 {"name":"NORMAL 2",
   "colour":"#00ff00",
@@ -87,7 +87,7 @@ let riders = [
   "number_of_riders_in_front":0,
   "endurance_fatigue_level":0,
   "accumulated_fatigue":0,
-  "output_level":6,
+  "output_level":6
 },
 {"name":"STRONG 2",
   "colour":"#aaaaaa",
@@ -117,8 +117,8 @@ let riders = [
   "number_of_riders_in_front":0,
   "endurance_fatigue_level":0,
   "accumulated_fatigue":0,
-  "output_level":6,
-},
+  "output_level":6
+}
 
 ];
 
