@@ -1,4 +1,4 @@
-let race = {
+let race_template = {
   "distance":4000,
   "start_order":[0,1,2,3],
   "current_order":[],
@@ -13,7 +13,7 @@ let race = {
   "bend1_switch_start_distance":0,
   "bend1_switch_end_distance":0,
   "bend2_switch_start_distance":0,
-  "bend2_switch_end_distance":0   
+  "bend2_switch_end_distance":0
 }
 
-export {race};
+export {race_template};

@@ -35,7 +35,7 @@ let newton_lookup = []; //used to store newton() function calculations to avoid 
 
 
 function shuffleArray(array) {
-    for (let i = array.length - 1; i > 0; i--) {
+    for (let i = array.length - 1; i >= 0; i--) { //changed i > 0 to i >= 0 cos i figured item at 0 will be less likely to be swapped?
         const j = Math.floor(Math.random() * (i + 1));
         [array[i], array[j]] = [array[j], array[i]];
     }
@@ -78,7 +78,7 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
   return effort_level;
 }
 
-function mutate_race(r, settings_r){
+function mutate_race(r, settings_r,gen){
   let new_race = {};
 
   const p_shuffle_start = settings_r.ga_p_shuffle_start;
@@ -92,8 +92,14 @@ function mutate_race(r, settings_r){
 
   let time_taken_old = r.time_taken;
 
-  new_race.start_order = r.start_order;
+  new_race.start_order = [...r.start_order];
   new_race.variant_id = r.variant_id;
+  //also set a geenration, type, and counter
+  new_race.id_generation = gen;
+  new_race.id_type = 1;
+  new_race.id_mutant_counter = settings_r.mutant_counter;
+  //should now be able to id a mutant even if it gets moved around/shuffled
+
   new_race.instructions = [];
   new_race.time_taken = 0;
   new_race.stats = {};
@@ -107,6 +113,7 @@ function mutate_race(r, settings_r){
 
 
   if(Math.random() < p_shuffle_start){
+    //note that shuffling in place may cause bugs
     shuffleArray(new_race.start_order);
     new_race.stats.number_of_start_order_shuffles++;
   }
@@ -192,7 +199,8 @@ function new_random_instruction(timestep, settings_r){
 }
 
 function run_track_race(settings_r, race_r, riders_r){
-
+  //include a run type to know how this race is being run
+  settings_r.run_type = "single_race";
   return run_race(settings_r,race_r,riders_r);
 
   //$("#race_result").text('Finish Time = ' + time_taken);
@@ -204,12 +212,13 @@ function run_robustness_check(settings_r, race_r, riders_r){
   let population = [];
 
   //get the time of the original
+  settings_r.run_type = "robustness_check";
   race_r.time_taken = run_race(settings_r,race_r,riders_r);
   let original_time_taken = race_r.time_taken;
 
   //now set up a population of mutants
   for(i=0;i<settings_r.robustness_check_population_size;i++){
-    population.push(mutate_race(race_r,settings_r));
+    population.push(mutate_race(race_r,settings_r,1001));
   }
 
   //now run each race and store results
@@ -220,6 +229,7 @@ function run_robustness_check(settings_r, race_r, riders_r){
     let load_race_properties = population[i];
     race_r.race_instructions_r = [...load_race_properties.instructions];
     race_r.start_order = [...load_race_properties.start_order];
+    settings_r.run_type = "robustness_check";
     load_race_properties.time_taken = run_race(settings_r,race_r,riders_r);
     population_stats.push(load_race_properties.time_taken);
   }
@@ -241,7 +251,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   const probability_of_instruction_per_timestep_upper =settings_r.ga_probability_of_instruction_per_timestep_upper;
   const population_size = settings_r.ga_population_size;
   const ga_population_size_first_generation = settings_r.ga_population_size_first_generation;
-  console.log(settings_r);
   const settings_id = settings_r._id;
   //warn user if the population_size is not an even square
   if(!Number.isInteger(Math.sqrt(population_size))){
@@ -262,8 +271,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     for(let i = 0;i<team_size;i++){
       start_order.push(i);
     }
-     shuffleArray(start_order);
-    new_race.start_order =start_order;
+    shuffleArray(start_order);
+    new_race.start_order =[...start_order];
     let instructions = [];
     //create a set of random instructions
     for(let i=0;i<max_timestep;i++){
@@ -276,6 +285,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     }
     new_race.instructions = instructions;
     new_race.variant_id = p;
+    new_race.id_generation = 0;
+    new_race.id_type = 0;
+    new_race.id_mutant_counter = 0;
     population.push(new_race);
   }
 
@@ -290,7 +302,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let stats_average_time = 0;
     let stats_total_number_of_instructions = 0;
     let stats_average_number_of_instructions = 0;
-
+    //need to find the best solution from the whole population
+    let final_best_race_properties_index = 0;
+    let final_best_race_properties = population[0];
 
     for(let i = 0;i<population.length;i++){
       //reset any race properties
@@ -303,9 +317,19 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let load_race_properties = population[i];
       race_r.race_instructions_r = [...load_race_properties.instructions];
       race_r.start_order = [...load_race_properties.start_order];
+      //run the actual race, i.e. the fitness function, returning just a time taken
+      settings_r.run_type = "ga";
       load_race_properties.time_taken = run_race(settings_r,race_r,riders_r);
       stats_total_time += load_race_properties.time_taken;
       stats_total_number_of_instructions += load_race_properties.instructions.length;
+      //update best race if a new best is found
+        //console.log("race run, id " + population[i].variant_id + "_" + population[i].id_generation + "_" + population[i].id_type + "_" + population[i].id_mutant_counter + " " +population[i].time_taken + " seconds | start_order " +  population[i].start_order);
+
+      if(population[i].time_taken < final_best_race_properties.time_taken){
+        final_best_race_properties_index = i;
+        final_best_race_properties = population[i];
+      }
+
 
       //console.log("race " + i + " time taken " + load_race_properties.time_taken + " instructions " + JSON.stringify(race_r.race_instructions_r));
     }
@@ -315,16 +339,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     //find the best instructions
 
     //first, display the best time from this generation
-    let final_best_race_properties_index = 0;
-    let final_best_race_properties = population[0];
 
-    for(let i = 0; i< population_size;i++){
-      if(population[i].time_taken < final_best_race_properties.time_taken){
-        final_best_race_properties_index = i;
-        final_best_race_properties = population[i];
-      }
-    }
-      //console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " time taken " + final_best_race_properties.time_taken);
+
+    console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " id "+final_best_race_properties.variant_id+"_"+final_best_race_properties.id_generation
+    +"_"+final_best_race_properties.id_type+"_"+final_best_race_properties.id_mutant_counter
+    + " time taken " + final_best_race_properties.time_taken);
 
     table_text_info += "<tr><td>" + g + "</td><td> " + stats_average_time + "</td><td>" + stats_average_number_of_instructions + "</td><td>" + final_best_race_properties_index + "</td><td style='background-color:#aaffaa'>" + final_best_race_properties.time_taken+ " </td><td> [" + final_best_race_properties.start_order + "]</td><td>" + JSON.stringify(final_best_race_properties.instructions) + "</td><td><a  target='_blank' href = 'tpgame.html?settings_id=" + settings_id + "&startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td>";
 
@@ -345,8 +364,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let stats = {};
       stats.number_of_crossovers_total = 0;
 
-      // population = new_population_best_squares(settings_r,population, stats);
-      population = new_population_tournament_selection(settings_r,population, stats);
+      // population = new_population_best_squares(settings_r,population, stats,g);
+      settings_r.mutant_counter = 0
+      population = new_population_tournament_selection(settings_r,population, stats,g+1);
+
+
 
       for(let j = 0; j< population.length;j++){
         number_of_instructions_added_total += population[j].stats.number_of_instructions_added;
@@ -390,7 +412,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
 }
 
-function new_population_tournament_selection(settings_r,current_population, stats){
+function new_population_tournament_selection(settings_r,current_population, stats,generation){
   let new_population = [];
   // split the popualtion into a set of groups; there may be a remainder
   let group_size = settings_r.ga_tournament_selection_group_size;
@@ -406,11 +428,13 @@ function new_population_tournament_selection(settings_r,current_population, stat
     }
     let best_time = current_population[i].time_taken;
     let best_time_index = i;
+    let best_time_player=current_population[i];
 
     for(let k = 1;k<group_size;k++){
       if (current_population[(i+k)].time_taken < best_time){
         best_time = current_population[(i+k)].time_taken;
         best_time_index = (i+k);
+        best_time_player=current_population[i+k];
       }
     }
     //make group_size copies of the winner and put them in the new population
@@ -428,11 +452,14 @@ function new_population_tournament_selection(settings_r,current_population, stat
         new_race.stats.number_of_drop_instructions_changed = 0;
         new_race.stats.number_of_start_order_shuffles = 0;
         new_race.stats.number_of_drop_instructions = 0;
+        //note: make sure the starting order of this race doesn not change!
       }
       else{ //otherwise add a mutant of the gorup winner
         new_race = current_population[best_time_index];
-        new_race = mutate_race(new_race,settings_r);
+        new_race = mutate_race(new_race,settings_r,generation);
+        settings_r.mutant_counter++;
       }
+      //console.log("New pop race id group " + i + " (of size "+ group_size + ") best race in group ("+best_time_player.variant_id + "_" + best_time_player.id_generation + "_" + best_time_player.id_type + "_" + best_time_player.id_mutant_counter+") " + new_race.variant_id + "_" + new_race.id_generation + "_" + new_race.id_type + "_" + new_race.id_mutant_counter);
       new_population.push(new_race);
     }
 
@@ -444,7 +471,7 @@ function new_population_tournament_selection(settings_r,current_population, stat
   return new_population;
 }
 
-function new_population_best_squares(settings_r,current_population, stats){
+function new_population_best_squares(settings_r,current_population, stats,generation){
   //get the max time to use as an imitial comparison
   let population_size = current_population.length;
   let max_time_index = 0;
@@ -490,7 +517,7 @@ function new_population_best_squares(settings_r,current_population, stats){
       let new_race = {};
       if(i==k){
         new_race = current_population[parent_population[i]];
-        new_race = mutate_race(new_race,settings_r);
+        new_race = mutate_race(new_race,settings_r,generation);
       }
       else{
         if (Math.random() < settings_r.ga_p_crossover){
@@ -508,7 +535,7 @@ function new_population_best_squares(settings_r,current_population, stats){
         }
         else{
           new_race = current_population[parent_population[i]];
-          new_race = mutate_race(new_race,settings_r);
+          new_race = mutate_race(new_race,settings_r,generation);
         }
       }
 
@@ -524,12 +551,12 @@ function new_population_best_squares(settings_r,current_population, stats){
 
 function crossover(parent1,parent2,settings_r){
   let new_race_details = {};
-  new_race_details.start_order = parent1.start_order;
+  new_race_details.start_order = [...parent1.start_order];
   if(Math.random() > 0.5){
-    new_race_details.start_order = parent2.start_order;
+    new_race_details.start_order = [...parent2.start_order];
   }
   //set the variant id
-  new_race_details.variant_id = ""+parent1.variant_id+"_"+parent2.variant_id;
+  new_race_details.variant_id = ""+parent1.variant_id+"|"+parent2.variant_id;
 
   //let instruction_1_locations = parent1.instructions.map(a=>a[0]);
 //  let instruction_2_locations = parent2.instructions.map(a=>a[0]);
@@ -1113,11 +1140,11 @@ function run_race(settings_r,race_r,riders_r){
         display_rider.distance_from_rider_in_front = min_distance;
         display_rider.number_of_riders_in_front = number_of_riders_in_front;
 
-      if(settings_r.ga_log_each_step){
+      if(settings_r.ga_log_each_step && settings_r.run_type == "single_race"){
         logMessage += " " + race_r.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race_r.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
       }
     }
-      if(settings_r.ga_log_each_step){console.log(logMessage);}
+      if(settings_r.ga_log_each_step && settings_r.run_type == "single_race"){console.log(logMessage);}
 
     race_r.race_clock++;
     //work out the distance covered of the second last rider

@@ -1,4 +1,4 @@
-let riders = [
+let riders_template = [
   {"name":"NORMAL 1",
   "colour":"#ff0000",
   "threshold_power":400,
@@ -122,4 +122,4 @@ let riders = [
 
 ];
 
-export {riders};
+export {riders_template};

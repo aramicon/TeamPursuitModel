@@ -4,9 +4,14 @@
 
 //import global, race, and rider setting data
 
-import {settings} from './global_settings_template.js';
-import {race} from './race_settings_template.js';
-import {riders} from './riders_template.js';
+import {settings_template} from './global_settings_template.js';
+import {race_template} from './race_settings_template.js';
+import {riders_template} from './riders_template.js';
+
+let settings = settings_template;
+let race = race_template;
+let riders = riders_template;
+let selected_settings_id = 0;
 
 let newton_lookup = []; //used to store newton() function calculations to avoid tons of needless calls
 
@@ -95,18 +100,22 @@ function setEffort(effort){ //actually update the effort level
   leadingRider.output_level = effort;
   $('#instruction_info').text("Change effort to " + effort);
   console.log("Effort updated to " + effort);
+  $("#race_info").html("<strong>Effort Updated</strong>: "+  effort);
 }
 
 function switchLeadInstruction(){
   //add an instruction to change the lead
   let positions_to_drop_back = parseInt(event.target.id.replace("switch_lead_",""));
   race.drop_instruction = positions_to_drop_back;
+
 }
 
 function switchLead(positions_to_drop_back){
   if (positions_to_drop_back >= (race.current_order.length-1)){
     positions_to_drop_back = (race.current_order.length-1);
   }
+
+    $("#race_info").html("<strong>Leader Drops Back</strong> by "+  positions_to_drop_back + " places");
 
   let current_leader = race.current_order[0];
   race.riders[current_leader].current_aim = "drop"; //separate status whilst dropping back
@@ -840,6 +849,32 @@ function load_details_from_url(){
   if(url.search.length > 0){
     let settings_id = url.searchParams.get("settings_id");
     console.log("settings_id " + settings_id);
+    //if we get a settigns id we should try to load the settings from the db
+    if (settings_id){
+      //make a call to get the settings
+      fetch('http://127.0.0.1:3003/getExperimentSettingFromID/' + settings_id,{method : 'get'}).then((response)=>{
+        return response.json()
+      }).then((data)=>{
+      //  console.log('data ' + JSON.stringify(data));
+        //console.log('data ' + JSON.stringify(data[0].global_settings) );
+        console.log(data);
+        race = JSON.parse(data[0].race_settings);
+        settings = JSON.parse(data[0].global_settings);
+        riders = JSON.parse(data[0].rider_settings);
+
+        $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id + "</span>");
+        $("#new_settings_name").val(data[0].name);
+
+        //set the id (global)
+        selected_settings_id = data[0]._id;
+
+        //need to make sure the race is loaded AFTER we get the settings
+        load_race();
+    })}
+
+
+
+
     let start_order = url.searchParams.get("startorder");
     let instructions = url.searchParams.get("instructions");
     if(start_order.length > 0){

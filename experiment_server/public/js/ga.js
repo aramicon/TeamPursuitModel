@@ -204,10 +204,11 @@ const updateExperimentSettings = () => {
             throw Error(response.statusText);
       }
     }).then((data)=>{
-      //console.log('data ' + JSON.stringify(data));
+      console.log('data ' + JSON.stringify(data));
 
 
-      $("#database_connection_label").text("setting updated")
+      //$("#database_connection_label").text("setting updated");
+    $("#database_connection_label").html("<strong>Updated Settings "+data.value.name+"</strong> | _id | <span id = 'settings_id'>"+data.value._id + "</span>");
 
     }).catch((error) => {
       console.log("Error updating settings on experiment server");

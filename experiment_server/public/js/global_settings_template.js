@@ -1,4 +1,4 @@
-let settings = {
+let settings_template = {
 "threshold_power_effort_level":5,
 "recovery_effort_level_reduction":1,
 "radius":100,
@@ -64,4 +64,4 @@ let settings = {
 "robustness_check_population_size":1000,
 "ga_tournament_selection_group_size":5
 }
-export {settings};
+export {settings_template};

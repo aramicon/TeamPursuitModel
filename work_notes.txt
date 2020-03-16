@@ -1,3 +1,6 @@
+-- launch mongo
+C:\mongodb\bin\mongod.exe  --config C:\mongodb\data\db\mongod.cfg
+
 -- try to not lose the best strat in each generation through mutation (keep one pure copy)
 
 -- figure out how to send info from the test to GA to the tester
@@ -49,3 +52,71 @@ node app.js
 - save this file and commit everything.
 
 -- two main issues right now: putting strong rider on front for too long. ANd GA losing the best strat from popualtion to popualtion.
+
+-- 16th march
+-- look at losing-best-strat issue first 
+-- record the best strat after running races, then find where it is in the next gen.
+
+-- ok, need to work on how to identify strats and add a few more properties, like the generation, a type, and a variant counter
+-- all variant ids are the same? eek. need to set up the id props at the first gen as well
+
+everything in the id is undefined after we run first batch of races. Warum??
+
+-- now they have legit ids from one generation to the next-- need to now look at the groups/tounraments in a generation and see what is happpening there
+
+-- looks like it works ok and the fastest strat is kept
+
+-- BUT!! found example where the starting order of the fastest race is changed! this must be it!
+
+-- also found another one where the time taken jumps by 1- but it looks like the instrucitons are identical and starting_ordet oo, so maybe a rounding issue?
+
+-- ok, so starting_order changes for the whole population hwne it is shuffled, not for a single race... oops
+
+-- right, so thsi reproduces the bug:
+a = {id:1,s:[0,1,2]};
+b = {};
+b.id = 2;
+b.s = a.s;
+b.s[0] = 5
+
+-- now both a.s[0] and b.s[0] will be 5. when we assign b.s = a.s it is a reference that is stored. then because we shuffle in place and do not return a new array, kerpoom!
+
+-- could look for JS 'deepcopy' and change = line OR return a new array with the shuffle instead of just editing the original?
+
+-- made slight change to the shuffle array. not sure why it goes down through the array and not up. why?
+
+-- need a deep copy. leave shuffle as is (uses less ram?) use Array.from() when we assign start_order
+
+let a = [1,2,3];
+let b = Array.from(a);
+
+-- no waits, can use the ES6 b = [...a] syntax :-)
+
+-- what else am I shuffling and does it break?
+-- just the new_population i thinks
+
+-- goooood, seems to have fixed that issue.
+
+-- now on to the problem with getting different outcomes in the visual and ga races 
+
+-- so when i run the ga i am getting faster times... in the game version the lead riders are dropping others 
+
+-- will have to switch on the big logging messages setting to see what's goign down.
+
+-- was able to run the logging on the ga end but not the game one
+
+-- settings id is not loaded into the url in the ga results 
+
+-- ah, when i update settings it doesn't display the id <span>
+
+-- fixed... update relies with data.value.name etc. 
+
+-- now need to change so that the logging is NOT done when running the GA itself... 
+
+-- bah, getting the error Uncaught (in promise) TypeError: Assignment to constant variable.
+
+-- enough for today... fixed one bug, now need to retest the game, currenlty it does seem to displat intstructions but...
+-- looks like the start_order is NOT being used now when i load settings via url- makes sense as it ALSO gets a start order from the settings and needs to make sure the url one is taken 
+
+-- also, fatigue dispaly looks suspicious, will need to look into wy it is 5/5 for the strong rider.
+
