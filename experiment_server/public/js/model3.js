@@ -189,6 +189,7 @@ function moveRace(){
 
   //also look at the drop instruciton: this can only be done at the beginnings of bends where the track is banked
   if(race.drop_instruction > 0){
+    console.log("clock "+ race.race_clock+ " drop instruction " + race.drop_instruction);
     if (race.riders.filter(a=>a.current_aim == "drop").length == 0){   //if no  rider is dropping back
       let lead_rider_distance_on_lap = race.riders[race.current_order[0]].distance_covered % settings.track_length;
       if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance)){
@@ -796,9 +797,6 @@ $(document).ready(function() {
 
   load_details_from_url();
 
-  update_race_settings();
-
-  load_race();
 }
 );
 
@@ -862,29 +860,40 @@ function load_details_from_url(){
         settings = JSON.parse(data[0].global_settings);
         riders = JSON.parse(data[0].rider_settings);
 
-        $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id + "</span>");
+        $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id);
         $("#new_settings_name").val(data[0].name);
 
         //set the id (global)
         selected_settings_id = data[0]._id;
 
+
+        //set the start order and instructions
+        let start_order = url.searchParams.get("startorder");
+        let instructions = url.searchParams.get("instructions");
+        if(start_order.length > 0){
+          console.log("loaded start_order from URL: " + start_order);
+          $("#teamorder").val(start_order);
+        }
+        if(instructions.length > 0){
+          console.log("loaded instructions from URL: " + instructions);
+          $("#instructions").val(instructions);
+        }
+
         //need to make sure the race is loaded AFTER we get the settings
+        update_race_settings();
         load_race();
     })}
+    else{
+      $("#database_connection_label").html("<strong>No Settings loaded</strong>, will use template file settings.");
 
-
-
-
-    let start_order = url.searchParams.get("startorder");
-    let instructions = url.searchParams.get("instructions");
-    if(start_order.length > 0){
-      console.log(start_order);
-      $("#teamorder").val(start_order);
+      update_race_settings();
+      load_race();
     }
-    if(instructions.length > 0){
-      console.log(instructions);
-      $("#instructions").val(instructions);
-    }
+
+
+
+
+
   }
 
 
