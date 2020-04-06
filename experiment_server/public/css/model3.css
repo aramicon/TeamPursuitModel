@@ -1,3 +1,30 @@
+.range-slider {
+
+  // Slider
+  .input-range {
+    -webkit-appearance: none;
+    height: 200px;
+    border-radius: 5px;
+    background: #ccc;
+    outline: none;
+    writing-mode: bt-lr; /* IE */
+    -webkit-appearance: slider-vertical; /* WebKit */
+
+  }
+}
+
+// Firefox Overrides
+::-moz-range-track {
+    background: #ccc;
+    border: 0;
+}
+
+input::-moz-focus-inner {
+  border: 0;
+}
+
+
+
 .three-cogs {
 	 position: relative;
    visibility: hidden;

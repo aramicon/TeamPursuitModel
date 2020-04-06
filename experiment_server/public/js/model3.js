@@ -19,8 +19,21 @@ let c = {};
 let ctx = {};
 let race_state = 'stop';
 
+let step_speed = 120;
+
+
 console.log("Track bend radius = 22m");
 console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/2 );
+
+var range = $('.input-range');
+range.val(10-(step_speed/60));
+
+range.on('input', function(){
+    step_speed =(10 - this.value) * 60;
+    console.log("step_speed "+ step_speed);
+});
+
+
 
 function addRiderDisplay(){
   $("#riders_info" ).empty();
@@ -668,7 +681,7 @@ function moveRace(){
       setTimeout(
         function(){
           moveRace();
-      },settings.race_move_wait_time);
+      },step_speed);
   }
   else{
     //stopRace();
@@ -836,7 +849,7 @@ function forwardStep() {
       if(race_state == "pause"){
         console.log("button forward invoked.");
         d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
-        setTimeout(function(){  d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x "); }, 200);
+        setTimeout(function(){  d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x "); }, step_speed);
         moveRace();
       }
 }

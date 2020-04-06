@@ -113,10 +113,37 @@ let b = Array.from(a);
 
 -- now need to change so that the logging is NOT done when running the GA itself... 
 
--- bah, getting the error Uncaught (in promise) TypeError: Assignment to constant variable.
+-- bah, getting the error Uncaught (in promise) TypeError: Assignment to constant variable. seems you can't mod anything that comes in from an export, so I have to assigne those to local vars instead
 
 -- enough for today... fixed one bug, now need to retest the game, currenlty it does seem to displat intstructions but...
 -- looks like the start_order is NOT being used now when i load settings via url- makes sense as it ALSO gets a start order from the settings and needs to make sure the url one is taken 
 
 -- also, fatigue dispaly looks suspicious, will need to look into wy it is 5/5 for the strong rider.
 
+-- wednesday 18th, day after P day. do one hour. also, do diary today. and get outside.
+
+-- created a new batch script to launch things quicker, now have START_TPURSUIT_APP.bat on the desktop to start mongo, node and chrome
+
+-- now try to change how settings are applied... basic problem=url start_order loaded, then db settings loaded that overwrite this.. split things up.
+-- 1, get id
+-- 2, load db settings
+-- 3, add start_order and instructions from url
+
+-- done BUT looks like the order is not used :-( will need to dig more. first switch off the logging to speedo speedo.
+
+-- balls, fixed some more BUT time still off... are the instructions being run? 
+
+-- ignores first two instrucitons??
+
+-- ok, it gets the instruction but the rider doesn't drop back... a rider is supposed to drop back only in certain track areas so the IF for this may be failing? will continue later, my hour is done and wellll done.
+
+-- -- monday april 6th
+-- to get back into it, add a vertical slider on the game page to adjust the SPEED of the game, i.e. the wait between moves... maybe in notches, 0-1 second
+
+-- 1 = slowest, maybe 1000
+-- 10 = quickest, maybe 1
+-- slider provides 1 - 10
+-- so what formula? (10-x)*100?
+
+-- first attempt, 200 is way too slow, need to rejig and shrink everything a bit. linear from 0 to 1000
+-- ok, so new formula is simply (10-x)*60. defaulted to 120. works ol. commit to git then
