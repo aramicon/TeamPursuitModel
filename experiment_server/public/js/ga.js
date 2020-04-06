@@ -4,6 +4,23 @@ let chosen_race_settings = {};
 let chosen_rider_settings = {};
 let selected_settings_id = 0;
 
+
+function showColName(c_name){
+  $("#race_result_col").html(c_name);
+  //console.log("aaaa");
+}
+
+function loadSingleRace(start_order,instructions){
+  instructions = instructions.replace(/QQ/g, '"');
+  $("#starting_order").val(start_order);
+  $("#instructions").val(instructions);
+
+}
+
+
+
+
+
 function run_single_race(){
   console.log("Run single race");
 
@@ -82,6 +99,7 @@ function run_ga(){
         let result_data = e.data;
         $("#race_result_stats").html("Test Duration " + (end_time - start_time)/1000 + " seconds.");
         $("#race_result").html(result_data);
+        showColName("bbb");
         $("#cogs").css({"visibility":"hidden"})
         //get rid of the thread
         gaWorker.terminate();
@@ -224,6 +242,9 @@ const updateExperimentSettings = () => {
 
 }
 
+
+
+
 const addNewExperimentSettings = () => {
 
   //only update if there's a selected id
@@ -281,7 +302,13 @@ else{
 
 
 
+
+
 $(document).ready(function() {
+
+
+showColName("aaa");
+
   //attach events
   $("#button_play_race").on("click", run_single_race);
   $("#button_evolve_instructions").on("click", run_ga);

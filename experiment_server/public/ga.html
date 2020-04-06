@@ -4,42 +4,52 @@
     <link rel="stylesheet" type = "text/css" href = "css/model3.css">
     <link rel="stylesheet" type = "text/css" href = "css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css" crossorigin="anonymous">
     <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
-    <script src = "js/ga.js" type="module"></script>
+    <script src = "js/ga.js"></script>
     <!-- <script src = "race_function_no_vis.js" type="module"></script> -->
   </head>
   <body>
     <div class="container">
-        <h1>Team Pursuit Model (no visualisation)</h1>
-        <p> <a href="tpgame" target='_blank'>Visual Model</a></p>
-        <p><div class="form-group">
-          <label for="sel1">Load Saved Experiment Settings | </label>
-            <div id = "database_connection_label" class="alert alert-primary">Checking Db connection</div>
-          <div class="form-group">
-          <select class="form-control" id="experiment_names">
-            <option value = "0">SELECT</option>
-          </select>
+      <div class="row">
+        <div class="col-9">
+            <h1><i class="fas fa-dna"></i> Team Pursuit GA Strategy Generator</h1>
         </div>
-        </div></p>
-        <div>
+        <div class="col-sm">
+            <p> <a href="tpgame" target='_blank'><i class="fas fa-gamepad"></i> Visual (Game) Model</a></p>
+        </div>
+      </div>
+
+      <div class="row">
+            <div class="col">
+              <div class="form-group">
+                  <div id = "database_connection_label" class="alert alert-primary">Checking Db connection</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="form-group">
+              <select class="form-control" id="experiment_names">
+                <option value = "0">SELECT</option>
+              </select>
+            </div>
+            </div>
+      </div>
           <div class="row">
-            <div class="col-lg-2"></div>
-            <div class="col-lg-8">
+            <div class="col-lg-9">
                 <div class="accordion" id="accordionExample">
                   <div class="card">
                     <div class="card-header" id="headingOne">
                       <h2 class="mb-0">
                         <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
-                        Global Settings
+                        <i class="fas fa-globe-asia"></i> Global Settings
                         </button>
                       </h2>
                     </div>
                     <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
                       <div class="card-body">
-                        <textarea rows="25" cols="100" id="global_settings"></textarea>
+                        <textarea rows="25" cols="100" id="global_settings">LOAD SETTINGS</textarea>
                       </div>
                     </div>
                   </div>
@@ -47,13 +57,13 @@
                     <div class="card-header" id="headingTwo">
                       <h2 class="mb-0">
                         <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
-                          Race Settings
+                          <i class="fas fa-circle-notch"></i> Race Settings
                         </button>
                       </h2>
                     </div>
                     <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
                       <div class="card-body">
-                          <textarea rows="25" cols="100" id="race_settings"></textarea>
+                          <textarea rows="25" cols="100" id="race_settings">LOAD SETTINGS</textarea>
                       </div>
                     </div>
                   </div>
@@ -61,77 +71,128 @@
                     <div class="card-header" id="headingThree">
                       <h2 class="mb-0">
                         <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
-                          Rider Settings
+                          <i class="fas fa-biking"></i> Rider Settings
                         </button>
                       </h2>
                     </div>
                     <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
                       <div class="card-body">
-                        <textarea rows="25" cols="100" id="rider_settings"></textarea>
+                        <textarea rows="25" cols="100" id="rider_settings">LOAD SETTINGS</textarea>
                       </div>
                     </div>
                   </div>
                   </div>
                   </div>
-            <div class="col-lg-2"></div>
-          </div>
-          <form  class="form-inline">
-        <button type="button" id="button_update_settings" class="btn btn-primary mb-2">
-          <i class="fas fa-save" style="color:#90ec78;"></i> Update
-        </button>
-        <div class="input-group mb-2 mr-sm-2">
-          <div class="input-group-prepend">
-            <div class="input-group-text">With Name: </div>
-          </div>
-          <input type="text" class="form-control" id="new_settings_name"  name="new_settings_name" placeholder="New Settings Name">
-        </div>
-        <button type="button" id="button_add_new_settings" class="btn btn-primary mb-2">
-          <i class="fas fa-plus-circle" style="color:#90ec78;"></i> Add As New
-        </button>
-      </form>
-      <div class="form-group">
-        <button type="button" id="button_evolve_instructions" class="btn btn-success">
-          <i class="far fa-play-circle" style="color:#e62e50;"></i> RUN GA FOR LOADED SETTINGS
-        </button>
-      </div>
-        <div class="current_activity" id = "current_activity"></div>
-      <div style="width:60px">
-          <div id = "cogs" class="three-cogs fa-1x">
-          <i class="fa fa-cog fa-spin fa-2x fa-fw"></i>
-          <i class="fa fa-cog fa-spin fa-1x fa-fw"></i>
-          <i class="fa fa-cog fa-spin fa-1x fa-fw"></i>
-        </div>
-      </div>
-          <h2>RESULTS</h2>
-          <div id = "race_result">no GA run</div>
-
-          <div id = "race_result_stats"></div>
-
-          <div id = "single_race_section">
-            <h3>Run Single Race</h3>
-          <div class="form-group">
-            <label for="starting_order">Starting Order:</label>
-            <input type="text" class="form-control" id="starting_order">
-          </div>
-          <div class="form-group">
-            <label for="instructions">Instructions:</label>
-            <textarea class="form-control" rows="5" id="instructions"></textarea>
-          </div>
-            <div>
-            Single Race
-            <button type="button" id="button_play_race" class="btn">
-              <i class="fa fa-play fa-3x " style="color:#90ec78;"></i>
+            <div class="col-lg-3">
+              <form>
+            <button type="button" id="button_update_settings" class="btn btn-primary mb-2">
+              <i class="fas fa-save" style="color:#90ec78;"></i> Update to Db
             </button>
+            <div class="form-group">
+                <label for"new_settings_name">With Name: </label>
+              <input type="text" class="form-control" id="new_settings_name"  name="new_settings_name" placeholder="New Settings Name">
+            </div>
+            <button type="button" id="button_add_new_settings" class="btn btn-primary mb-2">
+              <i class="fas fa-plus-circle" style="color:#90ec78;"></i> or Add As New
+            </button>
+          </form>
+              </div>
           </div>
-          <div>
-          Check robustness
-          <button type="button" id="button_check_race_robustness" class="btn">
-            <i class="fa fa-play fa-3x" style="color:#f9919a;"></i>
+
+        <div class="row">
+          <div class="col">
+            <div class="alert alert-info" role="alert">
+              Run GA after loading settings
+            </div>
+          </div>
+        </div>
+
+    <div class="row">
+      <div class="col-2">
+      </div>
+      <div class="col-6">
+        <div class="form-group">
+          <button type="button" id="button_evolve_instructions" class="btn btn-success btn-lg">
+            <i class="far fa-play-circle" style="color:#e62e50;"></i> RUN GA
           </button>
         </div>
-          Single race result: <div id = "single_race_result"></div>
-          Robustness check result: <div id = "robustness_check_result"></div>
+      </div>
+      <div class="col-1">
+        <div class="current_activity" id = "current_activity"></div>
+          <div style="width:60px">
+              <div id = "cogs" class="three-cogs fa-1x">
+                <i class="fa fa-cog fa-spin fa-2x fa-fw"></i>
+                <i class="fa fa-cog fa-spin fa-1x fa-fw"></i>
+                <i class="fa fa-cog fa-spin fa-1x fa-fw"></i>
+              </div>
+          </div>
+      </div>
+        <div class="col-3"> </div>
+    </div>
+
+    <div class="row">
+      <div class="col"><h4><i class="fas fa-table"></i> GA RESULTS</h4></div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+          <div id = "race_result">-- no GA run yet --</div>
+      </div>
+    </div>
+
+    <div onclick="window.showColName('hi')">TEST</div>
+
+    <div class="row">
+      <div class="col">
+        <div id = "race_result_stats" class="alert alert-info" role="alert"></div>
+      </div>
+      <div class="col">
+        <div id = "race_result_col" class="alert alert-secondary" role="alert"></div>
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="col"><h4>Run Single Race (GA race algorithm)</h4> (Double-click id column of generation)</div>
+    </div>
+
+    <div class="row">
+      <div class="col">
+        <div class="form-group">
+          <label for="starting_order">Starting Order:</label>
+          <input type="text" class="form-control" id="starting_order">
         </div>
+        <div class="form-group">
+          <label for="instructions">Instructions:</label>
+          <textarea class="form-control" rows="5" id="instructions"></textarea>
+        </div>
+      </div>
+      <div class="col">
+        <div class="form-group">
+
+          <button type="button" id="button_play_race" class="btn btn-info">
+             Run Single Race
+          </button>
+
+        </div>
+        <div class="form-group">
+            Single race result: <div id = "single_race_result">--not run--</div>
+        </div>
+        <div class="form-group">
+          <button type="button" id="button_check_race_robustness" class="btn btn-warning">
+            Check robustness
+          </button>
+        </div>
+          <div class="form-group">
+              Robustness check result: <div id = "robustness_check_result"> --not run--</div>
+          </div>
+      </div>
+    </div>
+
+
+
+
+
+
 
 
 </body>
