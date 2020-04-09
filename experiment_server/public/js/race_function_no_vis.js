@@ -252,6 +252,12 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   const population_size = settings_r.ga_population_size;
   const ga_population_size_first_generation = settings_r.ga_population_size_first_generation;
   const settings_id = settings_r._id;
+
+  let ga_results = {}; //results object
+  ga_results.start_time = new Date();
+  ga_results.generations = [];
+
+
   //warn user if the population_size is not an even square
   if(!Number.isInteger(Math.sqrt(population_size))){
     alert("Warning: ga_population_size of " + population_size + " should be a product of an integer squared, e.g. 9,25,36,3600")
@@ -291,7 +297,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     population.push(new_race);
   }
 
-  let table_text_info = "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>RACE</th><th>TIME</th><th>START</th><th>INSTRUCTIONS</th><th>VISUALISE</th> <th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
+
+
 
   for(let g=0;g<number_of_generations;g++){
     //run each race and track the scores.
@@ -340,12 +347,21 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
     //first, display the best time from this generation
 
+    let best_race_id = final_best_race_properties.variant_id+"_"+final_best_race_properties.id_generation+"_"+final_best_race_properties.id_type+"_"+final_best_race_properties.id_mutant_counter;
 
     console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " id "+final_best_race_properties.variant_id+"_"+final_best_race_properties.id_generation
     +"_"+final_best_race_properties.id_type+"_"+final_best_race_properties.id_mutant_counter
     + " time taken " + final_best_race_properties.time_taken);
 
-    table_text_info += "<tr><td style='background-color:#aaaaaa;' ondblclick=\"loadSingleRace('"+ final_best_race_properties.start_order+"','"+ JSON.stringify(final_best_race_properties.instructions).replace(/"/g, 'QQ') +"')\" onmouseover=\"showColName('Generation')\">" + g + "</td><td onmouseover=\"showColName('Average Race Time')\"> " + stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Best Race index (in population)')\">" + final_best_race_properties_index + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + final_best_race_properties.time_taken+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + final_best_race_properties.start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(final_best_race_properties.instructions) + "</td><td onmouseover=\"showColName('Run race in game model')\"><a  target='_blank' href = 'tpgame.html?settings_id=" + settings_id + "&startorder=" + encodeURI(final_best_race_properties.start_order) + "&instructions=" + encodeURI(JSON.stringify(final_best_race_properties.instructions)) + "'> Run </a></td>";
+    generation_results = {};
+    generation_results.generation_id = g;
+    generation_results.best_race_id = best_race_id;
+    generation_results.final_best_race_properties_index = final_best_race_properties_index;
+    generation_results.final_best_race_start_order = final_best_race_properties.start_order;
+    generation_results.final_best_race_instructions = final_best_race_properties.instructions;
+    generation_results.best_race_time = final_best_race_properties.time_taken;
+    generation_results.stats_average_time = stats_average_time;
+    generation_results.stats_average_number_of_instructions = stats_average_number_of_instructions;
 
     // create a new population based on the fitness
 
@@ -369,7 +385,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       population = new_population_tournament_selection(settings_r,population, stats,g+1);
 
 
-
       for(let j = 0; j< population.length;j++){
         number_of_instructions_added_total += population[j].stats.number_of_instructions_added;
         number_of_instructions_removed_total += population[j].stats.number_of_instructions_removed;
@@ -387,24 +402,42 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       }
 
 
-      table_text_info +="<td onmouseover=\"showColName('Total Number of Crossovers performed')\">" + stats.number_of_crossovers_total + "/" + population.length + "</td><td onmouseover=\"showColName('Average number of instructions added per race')\">" + (number_of_instructions_added_total/population.length) + "</td><td onmouseover=\"showColName('Average number of instructions removed per race')\">" + number_of_instructions_removed_total/population.length + "</td><td>" + number_of_instructions_moved_total/population.length + "</td><td onmouseover=\"showColName('Average number of effort instruction values changed per race')\">" + number_of_effort_instructions_changed_total/population.length + "</td><td onmouseover=\"showColName('Average number of drop instruction values changed per race')\">" + number_of_drop_instructions_changed_total/population.length + "</td><td onmouseover=\"showColName('Number of start order shuffles')\">" + number_of_start_order_shuffles_total/population.length  + "</td><td onmouseover=\"showColName('% of Drop instructions')\">" + number_of_drop_instructions_total + "/" + total_number_of_instructions + "</td><td onmouseover=\"showColName('Number of variants')\">" + variants.length+"</td>";
+      generation_results.population_size = population.length;
+      generation_results.variants_size = variants.length;
+      generation_results.number_of_instructions_added_total = number_of_instructions_added_total;
+      generation_results.number_of_instructions_removed_total = number_of_instructions_removed_total;
+      generation_results.number_of_instructions_moved_total = number_of_instructions_moved_total;
+      generation_results.number_of_effort_instructions_changed_total = number_of_effort_instructions_changed_total;
+      generation_results.number_of_drop_instructions_changed_total = number_of_drop_instructions_changed_total;
+      generation_results.number_of_start_order_shuffles_total = number_of_start_order_shuffles_total;
+      generation_results.number_of_start_order_shuffles_total = number_of_start_order_shuffles_total;
+      generation_results.number_of_drop_instructions_total = number_of_drop_instructions_total;
+      generation_results.total_number_of_instructions = total_number_of_instructions;
+      generation_results.number_of_crossovers_total = stats.number_of_crossovers_total;
     //  console.log("Generation " + g + " after mutations ");
     //  console.log(population);
-    table_text_info += "</tr>";
+
+      ga_results.generations.push(generation_results);
+
     }
   }
 
-  table_text_info += "</table>";
+
 
   //also add the variant_ids of the final generation
-  table_text_info += "<div class = 'variants'>";
-  for(let i = 0;i< population.length;i++){
-    table_text_info +=i + ": <strong>" + population[i].variant_id + "</strong> ("+population[i].time_taken+"), "
-  }
-  table_text_info += "</div>";
+  // table_text_info += "<div class = 'variants'>";
+  // for(let i = 0;i< population.length;i++){
+  //   table_text_info +=i + ": <strong>" + population[i].variant_id + "</strong> ("+population[i].time_taken+"), "
+  // }
+  // table_text_info += "</div>";
+  //console.log("********ga_results BEGIN*********");
+  //console.log(ga_results);
+  //console.log("********ga_results END*********");
 
-  return table_text_info;
+  //return table_text_info;
 
+  ga_results.end_time = new Date();
+  return ga_results;
   // if(settings_r.stats.crossover_instruction_sizes.length > 0){
   //   let stats_text = "settings_r.stats.crossover_instruction_sizes " + settings_r.stats.crossover_instruction_sizes.length + " " + settings_r.stats.crossover_instruction_sizes.reduce((a, b) => parseInt(a) + parseInt(b))/settings_r.stats.crossover_instruction_sizes.length + " " + JSON.stringify(settings_r.stats.crossover_instruction_sizes);
   //   $("#race_result_stats").html(stats_text);

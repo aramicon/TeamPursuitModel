@@ -4,7 +4,8 @@ const path = require('path');
 const Joi = require('joi');
 const db = require('./db');
 const app = express();
-const collection = "experiment_settings";
+const collectionSettings = "experiment_settings";
+const collectionResults = "experiment_results";
 
 const cors = require('cors');
 const corsOptions = {
@@ -16,6 +17,16 @@ const corsOptions = {
 
 const schema = Joi.object().keys({
 	name:Joi.string().required(),
+	global_settings:Joi.object().required(),
+	race_settings:Joi.object().required(),
+	rider_settings:Joi.array().required()
+});
+
+const schemaResults = Joi.object().keys({
+  ga_results:Joi.string().required(),
+  ga_settings_id:Joi.string().required(),
+	name:Joi.string().required(),
+	notes:Joi.string().allow(""),
 	global_settings:Joi.object().required(),
 	race_settings:Joi.object().required(),
 	rider_settings:Joi.array().required()
@@ -40,37 +51,37 @@ app.get('/tpgame',(req,res)=> {
 
 
 app.get('/getExperimentSettings',(req,res)=>{
-	db.getDB().collection(collection).find({}).toArray((err,documents)=>{
+	db.getDB().collection(collectionSettings).find({}).toArray((err,documents)=>{
 		if(err){
 			console.log("error getting collection err " + err);
 			res.json("error")
 		}
 		else{
-			console.log(documents);
+			console.log("getting all settings");
 			res.json(documents);
 		}
 	});
 });
 
 app.get('/getExperimentSettingNames',cors(corsOptions), (req,res)=>{
-	db.getDB().collection(collection).find({},{projection:{name : 1}}).toArray((err,documents)=>{
+	db.getDB().collection(collectionSettings).find({},{projection:{name : 1}}).toArray((err,documents)=>{
 		if(err){
 			console.log("error getting collection of names err " + err);
 		}
 		else{
-			console.log(documents);
+				console.log("getting list of setting names");
 			res.json(documents);
 		}
 	});
 });
 app.get('/getExperimentSettingFromID/:id',cors(corsOptions), (req,res)=>{
 	const todoID = req.params.id;
-	db.getDB().collection(collection).find({_id : db.getPrimaryKey(todoID)}).toArray((err,documents)=>{
+	db.getDB().collection(collectionSettings).find({_id : db.getPrimaryKey(todoID)}).toArray((err,documents)=>{
 		if(err){
 			console.log("error getting settings using ID " + err);
 		}
 		else{
-			console.log(documents);
+			console.log("getting settings for specific id");
 			res.json(documents);
 		}
 	});
@@ -78,12 +89,11 @@ app.get('/getExperimentSettingFromID/:id',cors(corsOptions), (req,res)=>{
 
 app.options('/update_race_settings/:id', cors())
 app.post('/update_race_settings/:id',cors(corsOptions),(req,res)=>{
-	console.log("update existing experiment using settings_id");
-	const settings_id = req.params.id;
+  const settings_id = req.params.id;
 	const userInput = req.body;
   console.log("updating existing settings  ", settings_id);
 
-	 db.getDB().collection(collection).findOneAndUpdate({_id : db.getPrimaryKey(settings_id)},{$set : {name : userInput.name,global_settings : userInput.global_settings, race_settings : userInput.race_settings, rider_settings : userInput.rider_settings}},{returnOriginal : false},(err,result)=>{
+	 db.getDB().collection(collectionSettings).findOneAndUpdate({_id : db.getPrimaryKey(settings_id)},{$set : {name : userInput.name,global_settings : userInput.global_settings, race_settings : userInput.race_settings, rider_settings : userInput.rider_settings}},{returnOriginal : false},(err,result)=>{
 	    if(err){
 			console.log("error when updating err = " + err);
 		}
@@ -96,7 +106,7 @@ app.post('/update_race_settings/:id',cors(corsOptions),(req,res)=>{
 app.options('/new_race_settings', cors())
 app.post("/new_race_settings",cors(),(req,res,next) => {
 	const userInput = req.body;
-	console.log("save experiment " + JSON.stringify(userInput));
+	console.log("save new settings");
 	Joi.validate(userInput, schema, (err,result) =>{
 		if(err){
 			const error = new Error("Invalid Input adding experiment");
@@ -110,7 +120,7 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
                         race_settings : userInput.race_settings,
                         rider_settings : userInput.rider_settings};
 
-			db.getDB().collection(collection).insertOne(newSettings,(err,result)=>{
+			db.getDB().collection(collectionSettings).insertOne(newSettings,(err,result)=>{
 				if(err){
 					const error = new Error("Failed to insert new experiment settings");
 					console.log(err);
@@ -126,10 +136,52 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
 
 });
 
+app.options('/new_experiment_results', cors())
+app.post("/new_experiment_results",cors(),(req,res,next) => {
+	const userInput = req.body;
+    	console.log("save new results");
+	//console.log("save experiment results " + JSON.stringify(userInput));
+	Joi.validate(userInput, schemaResults, (err,result) =>{
+		if(err){
+			const error = new Error("Invalid Input adding experiment results");
+			console.log(err);
+			error.status = 400;
+			next(error);
+		}
+		else{
+      let newExperimentResults = {
+                        ga_results: userInput.ga_results,
+                        ga_settings_id: userInput.ga_settings_id,
+                        settings_name : userInput.name,
+                        global_settings : userInput.global_settings,
+                        race_settings : userInput.race_settings,
+                        rider_settings : userInput.rider_settings};
+
+			db.getDB().collection(collectionResults).insertOne(newExperimentResults,(err,result)=>{
+				if(err){
+					const error = new Error("Failed to insert new experiment settings");
+					console.log(err);
+					error.status = 400;
+					next(error);
+				}
+				else{
+          console.log("$$$$$$$$$$$$$$$result.ops[0]$$$$$$$$$$$$$$$$$$$$");
+          console.log(result.ops[0]);
+          console.log("$$$$$$$$$$$$$$$result.ops[0]$$$$$$$$$$$$$$$$$$$$");
+					res.json({result:result.result, document: result.ops[0],msg:"Successfully inserted new experiment",err:null});
+				}
+			});
+		}
+	})
+
+});
+
+
+
 app.delete("/:id",(req,res)=>{
 	const todoID = req.params.id;
 	console.log("delete id " + todoID);
-	db.getDB().collection(collection).findOneAndDelete({_id : db.getPrimaryKey(todoID)},(err,result)=>{
+	db.getDB().collection(collectionSettings).findOneAndDelete({_id : db.getPrimaryKey(todoID)},(err,result)=>{
 		if(err){
 			console.log("problem deleting record err "+ err);
 		}

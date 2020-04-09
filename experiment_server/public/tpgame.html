@@ -1,125 +1,162 @@
 <html>
   <head>
-    <title>Team Pursuit Model</title>
+    <title>Team Pursuit Strategy Game</title>
     <link rel="stylesheet" type = "text/css" href = "css/model3.css">
     <link rel="stylesheet" type = "text/css" href = "css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
-    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.8.2/css/all.css" integrity="sha384-oS3vJWv+0UjzBfQzYUhtDYW+Pj2yciDJxpsK1OYPAYjqT085Qq/1cq5FLXAZQ7Ay" crossorigin="anonymous">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css" crossorigin="anonymous">
     <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
     <script src = "js/model3.js" type="module"></script>
   </head>
   <body>
-    <div class="container-fluid">
-        <h1>Team Pursuit Model</h1>
-        <p> <a href="ga" target='_blank'>GA Model</a>
-          <div id = "database_connection_label" class="alert alert-primary">Template settings loaded.</div></p>
-        <div class="race_info">
-          <div id="accordion">
-            <div class="card">
-              <div class="card-header" id="headingTwo">
-                <h5 class="mb-0">
-                  <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#raceSettings" aria-expanded="false" aria-controls="raceSettings">
-                    Race Settings
-                  </button>
-                </h5>
-              </div>
-              <div id="raceSettings" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
-                <div class="card-body">
-                  <div class="form-group">
-                    <label for="race_length">Race Length</label>
-                    <input type="text" class="form-control" id="input_race_length">
-                  </div>
-                  <div class="form-group">
-                    <label for="frontalArea">Frontal Area (all riders)</label>
-                    <input type="text" class="form-control" id="frontalArea">
-                  </div>
-                  <div class="form-group">
-                    <label for="teamorder">Team Order</label>
-                    <input type="text" class="form-control" id="teamorder">
+    <div class="container">
+      <div class="row">
+        <div class="col-9">
+            <h1><i class="fas fa-gamepad"></i> Team Pursuit Strategy Game</h1>
+        </div>
+        <div class="col">
+            <a href="ga" target='_blank'><i class="fas fa-dna"></i> Visual (Game) Model</a>
+        </div>
+
+      </div>
+
+      <div class="row">
+        <div class="col">
+              <div id = "database_connection_label" class="alert alert-primary">Template settings loaded.</div>
+                <div id = "race_info" class="alert alert-success">Run a race</div>
+        </div>
+        <div class="col">
+          <div class="race_info">
+            <div id="accordion">
+              <div class="card">
+                <div class="card-header" id="headingTwo">
+                  <h5 class="mb-0">
+                    <button class="btn btn-link collapsed" data-toggle="collapse" data-target="#raceSettings" aria-expanded="false" aria-controls="raceSettings">
+                      Race Settings
+                    </button>
+                  </h5>
+                </div>
+                <div id="raceSettings" class="collapse" aria-labelledby="headingTwo" data-parent="#accordion">
+                  <div class="card-body">
+                    <div class="form-group">
+                      <label for="race_length">Race Length</label>
+                      <input type="text" class="form-control" id="input_race_length">
+                    </div>
+                    <div class="form-group">
+                      <label for="frontalArea">Frontal Area (all riders)</label>
+                      <input type="text" class="form-control" id="frontalArea">
+                    </div>
+                    <div class="form-group">
+                      <label for="teamorder">Team Order</label>
+                      <input type="text" class="form-control" id="teamorder">
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
+          </div>
         </div>
-        <div>
-          <ul class="list-group">
-            <li class="list-group-item"><i class="fas fa-stopwatch"></i> TIME: </span><span id="race_info_clock">0</span> s</li>
-            <li class="list-group-item"><i class="fas fa-circle-notch"></i> LAP: </span><span id="race_info_lap">0</span> / <span id = "race_info_no_of_laps">0</span></li>
-            <li class="list-group-item"><i class="fas fa-clock"></i> Step Speed
-              <div class="range-slider">
-                <input class="input-range" orient="vertical" type="range" step="0.5" value="5" min="1" max="10">
-                <span class="range-value"></span>
-              </div>
-            </li>
-          </ul>
+      </div>
+      <div class="col">
+        <div class="form-group">
+          <label for="instructions">Instructions:</label>
+          <textarea class="form-control" rows="5" id="instructions"></textarea>
+        </div>
       </div>
       </div>
-        <div class="race_canvas">
-          <img src="images/cycling-track-markings.png" class = "canvas_background"/>
-          <canvas id="bikeCanvas" width="800" height="400">Your browser does not support the HTML5 canvas tag.</canvas>
-        </div>
-
-
-        <div class="race_actions" id = "race_actions">
+      <div class="row">
+        <div class="col">
           <div>
-
           <button type="button" id="button_play" class="btn">
-            <i class="fa fa-play fa-3x"></i>
+            <i class="fa fa-play fa-2x"></i>
           </button>
           <button type="button" id="button_fw" class="btn">
-            <i class="fa fa-forward fa-3x"></i>
+            <i class="fa fa-forward fa-2x"></i>
           </button>
           <button type="button" id="button_stop" class="btn">
-            <i class="fa fa-stop fa-3x"></i>
+            <i class="fa fa-stop fa-2x"></i>
           </button>
           <span class="current_activity" id = "current_activity"> <i class="fas fa-cog fa-2x" style="color:#999999"></i></span>
         </div>
 
-          <div class="btn-group-vertical ml-4 mt-4" role="group" aria-label="Basic example">
-    <div class="btn-group">
-        <div class="text-center form-control-lg mb-2" id="instruction_info">Change effort</div>
-    </div>
-    <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_1" >1</button>
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_2">2</button>
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_3">3</button>
-    </div>
-    <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_4">4</button>
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_5">5</button>
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_6">6</button>
-    </div>
-    <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_7">7</button>
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_8">8</button>
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_9">9</button>
-    </div>
-    <div class="btn-group">
-        <button type="button" class="btn btn-outline-secondary py-3" >x</button>
-        <button type="button" class="btn btn-outline-secondary py-3 set_effort" id="set_effort_0">0</button>
-        <button type="button" class="btn btn-outline-secondary py-3" onclick="">x</button>
-        <!-- <button type="button" class="btn btn-primary py-3" onclick="">Go</button> -->
-    </div>
-    <div class="btn-group">
-        <div class="text-center form-control-lg mb-2" id="instruction_info">Switch Lead</div>
-    </div>
-    <div class="btn-group">
-          <button type="button" class="btn btn-outline-secondary py-3 switch_lead" id="switch_lead_1">></button>
-        <button type="button" class="btn btn-outline-secondary py-3 switch_lead" id="switch_lead_2">>></button>
-        <button type="button" class="btn btn-outline-secondary py-3 switch_lead" id="switch_lead_3">>>></button>
-    </div>
-</div>
+          <div class="race_actions" id = "race_actions">
+
+            <div class="btn-group-vertical ml-4 mt-4" role="group" aria-label="Basic example">
+              <div class="btn-group">
+                  <div class="text-center form-control-lg mb-2" id="instruction_info">Change effort</div>
+              </div>
+              <div class="btn-group">
+                  <button type="button" class="btn btn-outline-secondary  set_effort" id="set_effort_1" >1</button>
+                  <button type="button" class="btn btn-outline-secondary  set_effort" id="set_effort_2">2</button>
+                  <button type="button" class="btn btn-outline-secondary  set_effort" id="set_effort_3">3</button>
+              </div>
+              <div class="btn-group">
+                  <button type="button" class="btn btn-outline-secondary  set_effort" id="set_effort_4">4</button>
+                  <button type="button" class="btn btn-outline-secondary set_effort" id="set_effort_5">5</button>
+                  <button type="button" class="btn btn-outline-secondary  set_effort" id="set_effort_6">6</button>
+              </div>
+              <div class="btn-group">
+                  <button type="button" class="btn btn-outline-secondary  set_effort" id="set_effort_7">7</button>
+                  <button type="button" class="btn btn-outline-secondary set_effort" id="set_effort_8">8</button>
+                  <button type="button" class="btn btn-outline-secondary set_effort" id="set_effort_9">9</button>
+              </div>
+              <div class="btn-group">
+                  <button type="button" class="btn btn-outline-secondary" style="color:#fff" >0</button>
+                  <button type="button" class="btn btn-outline-secondary set_effort" id="set_effort_0">0</button>
+                  <button type="button" class="btn btn-outline-secondary" style="color:#fff">0</button>
+                  <!-- <button type="button" class="btn btn-primary py-3" onclick="">Go</button> -->
+              </div>
+              <div class="btn-group">
+                  <div class="text-center form-control-lg mb-2" id="instruction_info">Switch Lead</div>
+              </div>
+              <div class="btn-group">
+                    <button type="button" class="btn btn-outline-secondary py-3 switch_lead" id="switch_lead_1">></button>
+                  <button type="button" class="btn btn-outline-secondary py-3 switch_lead" id="switch_lead_2">>></button>
+                  <button type="button" class="btn btn-outline-secondary py-3 switch_lead" id="switch_lead_3">>>></button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="col">
+          <div class="race_canvas">
+            <img src="images/cycling-track-markings.png" class = "canvas_background"/>
+            <canvas id="bikeCanvas" width="800" height="400">Your browser does not support the HTML5 canvas tag.</canvas>
+          </div>
         </div>
 
-          <div class="riders_info" id = "riders_info"></div>
-            <div id = "race_info" class="alert alert-success">Run a race</div></p>
+      </div>
 
-    <div class="form-group">
-      <label for="instructions">Instructions:</label>
-      <textarea class="form-control" rows="5" id="instructions"></textarea>
+      <div class="row">
+
+        <div class="col">
+
+        </div>
+        <div class="col">
+          <div>
+                <span class="badge  badge-primary"><span><i class="fas fa-stopwatch"></i> TIME: </span><span id="race_info_clock">0</span> s</span>
+                <span class="badge  badge-secondary">  <span><i class="fas fa-circle-notch"></i> LAP: </span><span id="race_info_lap">0</span> / <span id = "race_info_no_of_laps">0</span></span>
+                <span class="badge  badge-warning">  <span><i class="fas fa-clock"></i> Step Speed  </span>
+                  <span class="range-slider">
+                    <input class="input-range" orient="vertical" type="range" step="0.5" value="5" min="1" max="10">
+                    <span class="range-value"></span>
+                  </span>
+                </span>
+              </li>
+            </ul>
+        </div>
+        </div>
+      </div>
+
+    <div class="row">
+      <div class="col">
+          <div class="riders_info" id = "riders_info"></div>
+      </div>
     </div>
+
+
+
+
   </div>
 <div id="instruction_info"><i class="fas fa-cog fa-2x" style="color:#999999"></i> <span id = "instruction_info_text"></span> </div>
 </body>

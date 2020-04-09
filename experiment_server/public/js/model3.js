@@ -37,7 +37,7 @@ range.on('input', function(){
 
 function addRiderDisplay(){
   $("#riders_info" ).empty();
-  $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column'>Rider</div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div><div class='info_column'>Fatigue</div></div>");
+  $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column'>Rider <i class='fas fa-biking'></i></div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div><div class='info_column'>Fatigue</div></div>");
   for(let i=0;i<race.riders.length;i++){
     $("#riders_info" ).append("<div id='rider_values_"+i+"' class='info_row'></div>" );
   }
@@ -644,7 +644,7 @@ function moveRace(){
       display_rider.distance_from_rider_in_front = min_distance;
       display_rider.number_of_riders_in_front = number_of_riders_in_front;
       //display the rider properties
-       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " </div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div");
+       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + "<span class = 'rider_aim'>" + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' <i class="fas fa-flag-checkered"></i>':'') + " </span></div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div");
 
       if(settings.log_each_step){
         logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
@@ -817,18 +817,18 @@ function playRace() {
     if(race_state=='stop'){
       race_state='play';
       var button = d3.select("#button_play").classed('btn-success', true);
-      button.select("i").attr('class', "fa fa-pause fa-3x");
+      button.select("i").attr('class', "fa fa-pause fa-2x");
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
     }
     else if(race_state=='play' || race_state=='resume'){
       race_state = 'pause';
       update_race_settings();
-      d3.select("#button_play i").attr('class', "fa fa-play fa-3x");
+      d3.select("#button_play i").attr('class', "fa fa-play fa-2x");
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x ");
     }
     else if(race_state=='pause'){
       race_state = 'resume';
-          d3.select("#button_play i").attr('class', "fa fa-pause fa-3x");
+          d3.select("#button_play i").attr('class', "fa fa-pause fa-2x");
       d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
     }
       moveRace();
@@ -838,7 +838,7 @@ function playRace() {
 function stopRace(){
     race_state = 'stop';
     var button = d3.select("#button_play").classed('btn-success', false);
-    button.select("i").attr('class', "fa fa-play fa-3x");
+    button.select("i").attr('class', "fa fa-play fa-2x");
     d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x");
     console.log("button stop invoked.");
     update_race_settings();

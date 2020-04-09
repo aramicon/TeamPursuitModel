@@ -3,6 +3,7 @@ let chosen_global_settings = {};
 let chosen_race_settings = {};
 let chosen_rider_settings = {};
 let selected_settings_id = 0;
+let ga_results = {};
 
 
 function showColName(c_name){
@@ -10,15 +11,12 @@ function showColName(c_name){
   //console.log("aaaa");
 }
 
-function loadSingleRace(start_order,instructions){
+function loadSingleRace(start_order,instructions, id){
   instructions = instructions.replace(/QQ/g, '"');
   $("#starting_order").val(start_order);
   $("#instructions").val(instructions);
-
+  $("#single_race_label").html("Selected best race generation " + id)
 }
-
-
-
 
 
 function run_single_race(){
@@ -96,10 +94,14 @@ function run_ga(){
       var gaWorker = new Worker("js/race_function_no_vis.js");
       gaWorker.onmessage = function(e) {
         let end_time = new Date().getTime();
-        let result_data = e.data;
+        ga_results = e.data;
         $("#race_result_stats").html("Test Duration " + (end_time - start_time)/1000 + " seconds.");
-        $("#race_result").html(result_data);
-        showColName("bbb");
+
+
+        console.log("**results**");
+        console.log(ga_results);
+        build_results_table(ga_results);
+
         $("#cogs").css({"visibility":"hidden"})
         //get rid of the thread
         gaWorker.terminate();
@@ -141,6 +143,33 @@ function run_ga(){
 }
 }
 
+function build_results_table(ga_results){
+  console.log("build results table");
+  console.log("**ga_results**");
+  console.log(ga_results);
+  let results_html = "<div>Start time: "+ga_results.start_time + " End Time: " + ga_results.end_time +  "</div>";
+  results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>RACE</th><th>TIME</th><th>START</th><th>INSTRUCTIONS</th><th>VISUALISE</th> <th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
+
+  for(g=0;g<ga_results.generations.length;g++){
+
+    results_html += "<tr><td style='background-color:#aaaaaa;' ondblclick=\"loadSingleRace('"+ ga_results.generations[g].final_best_race_start_order+"','"+ JSON.stringify(ga_results.generations[g].final_best_race_instructions).replace(/"/g, 'QQ') +"','"+g+": "+ga_results.generations[g].best_race_id+ "(" + ga_results.generations[g].best_race_time +")"+ "')\" onmouseover=\"showColName('Generation')\">" + g + "</td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Run race in game model')\"><a  target='_blank' href = 'tpgame.html?settings_id=" + selected_settings_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_instructions)) + "'> Run </a></td>";
+
+    //stats columns
+    pop = ga_results.generations[g].population_size;
+
+    results_html +="<td onmouseover=\"showColName('Total Number of Crossovers performed')\">" + ga_results.generations[g].number_of_crossovers_total + "/" + pop + "</td><td onmouseover=\"showColName('Average number of instructions added per race')\">" + (ga_results.generations[g].number_of_instructions_added_total/pop) + "</td><td onmouseover=\"showColName('Average number of instructions removed per race')\">" + ga_results.generations[g].number_of_instructions_removed_total/pop + "</td><td>" + ga_results.generations[g].number_of_instructions_moved_total/pop + "</td><td onmouseover=\"showColName('Average number of effort instruction values changed per race')\">" + ga_results.generations[g].number_of_effort_instructions_changed_total/pop + "</td><td onmouseover=\"showColName('Average number of drop instruction values changed per race')\">" + ga_results.generations[g].number_of_drop_instructions_changed_total/pop + "</td><td onmouseover=\"showColName('Number of start order shuffles')\">" + ga_results.generations[g].number_of_start_order_shuffles_total/pop  + "</td><td onmouseover=\"showColName('% of Drop instructions')\">" + ga_results.generations[g].number_of_drop_instructions_total + "/" + ga_results.generations[g].total_number_of_instructions + "</td><td onmouseover=\"showColName('Number of variants')\">" + ga_results.generations[g].variants_size+"</td>";
+
+    results_html += "</tr>";
+
+  }
+  results_html += "</table>";
+
+  console.log(results_html);
+
+  $("#race_result").html(results_html);
+
+}
+
 function run_robustness_check(){
   let start_time = 0;
 
@@ -170,7 +199,7 @@ function run_robustness_check(){
     }
 
     if (window.Worker){
-      var gaWorker = new Worker("race_function_no_vis.js");
+      var gaWorker = new Worker("js/race_function_no_vis.js");
       gaWorker.onmessage = function(e) {
         let end_time = new Date().getTime();
         let result_data = e.data;
@@ -300,6 +329,65 @@ else{
 
 }
 
+const  saveResults = () => {
+
+  let serverURL = 'http://127.0.0.1:3003/new_experiment_results';
+    $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
+
+    let current_settings_global = $("#global_settings").val();
+    let current_settings_race = $("#race_settings").val();
+    let current_settings_rider = $("#rider_settings").val();
+    let current_settings_option = $("#experiment_names").val();
+      let notes = "";
+      if ($("#save_results_notes").val()){
+        notes = $("#save_results_notes").val();
+      }
+
+
+    if (ga_results.start_time && current_settings_global.length > 0 && current_settings_race.length > 0 && current_settings_rider.length > 0 && current_settings_option.length > 0){
+
+      let dataToSend = {
+              "ga_results":JSON.stringify(ga_results),
+              "ga_settings_id":selected_settings_id,
+              "global_settings":current_settings_global,
+              "race_settings":current_settings_race,
+              "rider_settings":current_settings_rider,
+              "name":$("#new_settings_name").val(),
+              "notes": notes
+            };
+    let jsonToSendS = JSON.stringify(dataToSend);
+
+      $("#race_results_stats").html("Attempting to save results");
+
+    fetch(serverURL,{
+      method : 'post',
+      headers: {
+    'Content-Type': 'application/json',
+      },
+      mode : 'cors',
+      body : jsonToSendS
+    }).then((response)=>{
+      console.log(response);
+      return response.json();
+      if (!response.ok) {
+            throw Error(response.statusText);
+      }
+    }).then((data)=>{
+      console.log('data ' + JSON.stringify(data));
+
+      $("#race_results_stats").html("results saved, id ")
+
+    }).catch((error) => {
+      console.log("Error savinf results on experiment server");
+      $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
+      console.log(error)
+    });
+
+  }
+  else{
+  alert("Cannot add new experiment results: check that settings are loaded and GA run")
+  }
+}
 
 
 
@@ -315,6 +403,8 @@ showColName("aaa");
   $("#button_check_race_robustness").on("click", run_robustness_check);
   $("#button_update_settings").on("click", updateExperimentSettings);
   $("#button_add_new_settings").on("click", addNewExperimentSettings);
+
+  $("#button_save_results").on("click",saveResults);
 
 
   //try to load settings from the experiment server

@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Team Pursuit No VIS Model</title>
+    <title>Team Pursuit GA</title>
     <link rel="stylesheet" type = "text/css" href = "css/model3.css">
     <link rel="stylesheet" type = "text/css" href = "css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
@@ -139,9 +139,24 @@
           <div id = "race_result">-- no GA run yet --</div>
       </div>
     </div>
-
-    <div onclick="window.showColName('hi')">TEST</div>
-
+    <div class="row">
+      <div class="col">
+        <label for ="button_save_results" >Save Experiment Results to Database</label>
+        <div class = "form-group">
+            <button type="button" id="button_save_results" class="btn btn-info">
+               Save
+            </button>
+        </div>
+      </div>
+      <div class="col">
+        <div class = "form-group">
+          <div class = "form-group">
+            <label for="save_results_notes">Notes:</label>
+            <textarea class="form-control" name = "save_results_notes" id ="save_results_notes"></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
     <div class="row">
       <div class="col">
         <div id = "race_result_stats" class="alert alert-info" role="alert"></div>
@@ -152,7 +167,11 @@
     </div>
 
     <div class="row">
-      <div class="col"><h4>Run Single Race (GA race algorithm)</h4> (Double-click id column of generation)</div>
+      <div class="col"><h4>Run Single Race (GA race algorithm)</h4>
+        <div class="alert alert-light" role="alert" id = "single_race_label">
+        (Double-click id column of generation in results table to load race)
+      </div>
+    </div>
     </div>
 
     <div class="row">

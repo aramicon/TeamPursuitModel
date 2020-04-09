@@ -147,3 +147,65 @@ let b = Array.from(a);
 
 -- first attempt, 200 is way too slow, need to rejig and shrink everything a bit. linear from 0 to 1000
 -- ok, so new formula is simply (10-x)*60. defaulted to 120. works ol. commit to git then
+-- done, a/G_6
+
+-- try to make the GA page a 3 column design as opposed to just 1
+-- put rows and cols into the GA page
+-- add tooltop text to the table
+--fuckkk... massive problems caused by <script src = "js/ga.js" type="module"></script>
+-- why was type="module" included? still seems to work without it and fixes painful funciton not defined bug
+
+-- ok, added column names, and also added a double-click event that updates the single race settings
+
+--robustness check not working
+-- page looks much neater: do the same for the race page itself.
+
+-- tuesday April 7th., home. coronatime
+
+-- first get the robustness going. was throwing an error.
+
+-- ui. when you double-click an id, have note saying 'generation 23 best race loaded'
+
+-- done, beter comment, robustness works, also added id to results.
+
+-- remove the unused info from the end of the results table
+
+-- move to the game view and start improving
+-- add bootstrap row/cols 
+
+-- stuff won't fit, need to move things about
+
+-- ok, better now, need to look ahead
+
+-- aim is to have d3.js drawring a bunch of different graphs... need to be able to get the data to d3
+-- could look at
+-- 1: returning the data from the worker as pure json
+-- 2: parsing that json, i.e. doing the display code on the front JS
+-- 3: saving that results json to mongo
+-- 4: adding enough info when saving to be able to list and retrive again, such that it is somewhat replicable, e.g. all settings used 
+-- 5: having another page accessed from the panel that would allow me to go through the results and start building graphs for the data
+-- first graph: fitness from generation to generation (simple line)
+-- need to be able to save/export the graph as jpen/png
+-- as usual commit to git
+
+-- wednesday april 8th.
+
+-- so far a shit day for productivity. pure muck. and already 5PM 5PM that's fuckign crazy
+
+-- changed bat file to also load this file.
+
+-- work on saving results to mongo after running a 'test'.
+-- need to save the date_time plus all of the settings used... 
+-- added a button but big change needed to save results: need to return the results as a JSON array, not as HTML, dameet.
+
+-- Thursday. work until 3 at getting json results and then trying to save them
+-- now returns json but have to put the table drawring code in
+
+-- ok, results now show and are available as json. SO i now can look at storing them
+-- add a date_time to the results (maybe start time and end_time?
+
+-- ok, the damn things now save
+-- add a message tot he front end to say it has saved
+--oh, forgot to add the notes field: what other user input might be needed?
+
+-- notes added, awkward to get the joi to work, not yet returning the _id and printing 'new results added'
