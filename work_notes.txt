@@ -209,3 +209,25 @@ let b = Array.from(a);
 --oh, forgot to add the notes field: what other user input might be needed?
 
 -- notes added, awkward to get the joi to work, not yet returning the _id and printing 'new results added'
+
+-- Friday April 10th
+-- spend a good hour at it right now to try and make progress
+-- results ARE saving but no way to view them 
+-- first test saving again and make sure the messages are ok
+
+-- ok result is back. notes are not being saved...
+-- was missing a line in app.js. they are saving now
+
+-- add a new page to look at results... will need a way to search for them?
+-- first, list all
+-- make a menu for the three pages, make the whole thing like a site
+
+-- why do I have to use results.html but can just do ga and not ga.html?
+
+-- long break. now have a menu bar and a 5 pages. need to add content but go look at the results
+
+-- add a new JS file for this
+
+-- aim 1: display a table with results.
+
+-- need to add a date created to the results (not the ga results inside?)

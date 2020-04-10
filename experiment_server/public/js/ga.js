@@ -339,8 +339,11 @@ const  saveResults = () => {
     let current_settings_rider = $("#rider_settings").val();
     let current_settings_option = $("#experiment_names").val();
       let notes = "";
+
+
       if ($("#save_results_notes").val()){
         notes = $("#save_results_notes").val();
+
       }
 
 
@@ -353,12 +356,12 @@ const  saveResults = () => {
               "race_settings":current_settings_race,
               "rider_settings":current_settings_rider,
               "name":$("#new_settings_name").val(),
-              "notes": notes
+              "notes": notes,
+              "date_created": new Date()
             };
     let jsonToSendS = JSON.stringify(dataToSend);
 
-      $("#race_results_stats").html("Attempting to save results");
-
+      $("#race_result_stats").html("Attempting to save results");
     fetch(serverURL,{
       method : 'post',
       headers: {
@@ -375,7 +378,7 @@ const  saveResults = () => {
     }).then((data)=>{
       console.log('data ' + JSON.stringify(data));
 
-      $("#race_results_stats").html("results saved, id ")
+      $("#race_result_stats").html("results saved, id " + data.document._id);
 
     }).catch((error) => {
       console.log("Error savinf results on experiment server");

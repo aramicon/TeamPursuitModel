@@ -29,7 +29,8 @@ const schemaResults = Joi.object().keys({
 	notes:Joi.string().allow(""),
 	global_settings:Joi.object().required(),
 	race_settings:Joi.object().required(),
-	rider_settings:Joi.array().required()
+	rider_settings:Joi.array().required(),
+  date_created: Joi.string().required()
 });
 
 app.use(bodyParser.json());
@@ -48,7 +49,12 @@ app.get('/ga',(req,res)=> {
 app.get('/tpgame',(req,res)=> {
 	res.sendFile(path.join(__dirname,'public/tpgame.html'));
 });
-
+app.get('/results',(req,res)=> {
+	res.sendFile(path.join(__dirname,'public/results.html'));
+});
+app.get('/about',(req,res)=> {
+	res.sendFile(path.join(__dirname,'public/about.html'));
+});
 
 app.get('/getExperimentSettings',(req,res)=>{
 	db.getDB().collection(collectionSettings).find({}).toArray((err,documents)=>{
@@ -155,7 +161,9 @@ app.post("/new_experiment_results",cors(),(req,res,next) => {
                         settings_name : userInput.name,
                         global_settings : userInput.global_settings,
                         race_settings : userInput.race_settings,
-                        rider_settings : userInput.rider_settings};
+                        rider_settings : userInput.rider_settings,
+                        notes : userInput.notes,
+                        date_created: userInput.date_created};
 
 			db.getDB().collection(collectionResults).insertOne(newExperimentResults,(err,result)=>{
 				if(err){
@@ -167,8 +175,9 @@ app.post("/new_experiment_results",cors(),(req,res,next) => {
 				else{
           console.log("$$$$$$$$$$$$$$$result.ops[0]$$$$$$$$$$$$$$$$$$$$");
           console.log(result.ops[0]);
+          let id = result.ops[0]._id;
           console.log("$$$$$$$$$$$$$$$result.ops[0]$$$$$$$$$$$$$$$$$$$$");
-					res.json({result:result.result, document: result.ops[0],msg:"Successfully inserted new experiment",err:null});
+					res.json({result:result.result, document: {_id:id},msg:"Successfully inserted new experiment",err:null});
 				}
 			});
 		}
@@ -209,4 +218,18 @@ db.connect((err)=>{
 			console.log('connected to database... listening on port 3003');
 		});
 	}
+});
+
+/******RESUlTS**********/
+
+app.get('/getResults',cors(corsOptions), (req,res)=>{
+	db.getDB().collection(collectionResults).find({},{projection:{settings_name : 1, date_created: 1, notes:1}}).toArray((err,documents)=>{
+		if(err){
+			console.log("error getting collection of result names:  err " + err);
+		}
+		else{
+				console.log("getting list of results");
+			  res.json(documents);
+		}
+	});
 });
