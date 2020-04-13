@@ -8,7 +8,6 @@ let ga_results = {};
 
 function showColName(c_name){
   $("#race_result_col").html(c_name);
-  //console.log("aaaa");
 }
 
 function loadSingleRace(start_order,instructions, id){
@@ -396,9 +395,6 @@ const  saveResults = () => {
 
 
 $(document).ready(function() {
-
-
-showColName("aaa");
 
   //attach events
   $("#button_play_race").on("click", run_single_race);

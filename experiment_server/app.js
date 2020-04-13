@@ -33,7 +33,7 @@ const schemaResults = Joi.object().keys({
   date_created: Joi.string().required()
 });
 
-app.use(bodyParser.json());
+app.use(bodyParser.json({limit: '50mb'}));
 
 app.use(express.static(__dirname + '/public'));
 
@@ -173,10 +173,10 @@ app.post("/new_experiment_results",cors(),(req,res,next) => {
 					next(error);
 				}
 				else{
-          console.log("$$$$$$$$$$$$$$$result.ops[0]$$$$$$$$$$$$$$$$$$$$");
-          console.log(result.ops[0]);
+          //console.log("$$$$$$$$$$$$$$$result.ops[0]$$$$$$$$$$$$$$$$$$$$");
+          //console.log(result.ops[0]);
           let id = result.ops[0]._id;
-          console.log("$$$$$$$$$$$$$$$result.ops[0]$$$$$$$$$$$$$$$$$$$$");
+          console.log("saved new results entry with id " + id);
 					res.json({result:result.result, document: {_id:id},msg:"Successfully inserted new experiment",err:null});
 				}
 			});
@@ -230,6 +230,19 @@ app.get('/getResults',cors(corsOptions), (req,res)=>{
 		else{
 				console.log("getting list of results");
 			  res.json(documents);
+		}
+	});
+});
+
+app.get('/getResult/:id',cors(corsOptions), (req,res)=>{
+	const resultID = req.params.id;
+	db.getDB().collection(collectionResults).find({_id : db.getPrimaryKey(resultID)}).toArray((err,documents)=>{
+		if(err){
+			console.log("error getting results using ID " + err);
+		}
+		else{
+			console.log("getting results for specific id");
+			res.json(documents);
 		}
 	});
 });
