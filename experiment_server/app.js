@@ -56,6 +56,11 @@ app.get('/about',(req,res)=> {
 	res.sendFile(path.join(__dirname,'public/about.html'));
 });
 
+app.get('/saveSvgAsPng.js', function(req, res) {
+    res.sendFile(__dirname + '/node_modules/save-svg-as-png/lib/saveSvgAsPng.js');
+});
+
+
 app.get('/getExperimentSettings',(req,res)=>{
 	db.getDB().collection(collectionSettings).find({}).toArray((err,documents)=>{
 		if(err){

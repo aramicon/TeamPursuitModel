@@ -231,3 +231,89 @@ let b = Array.from(a);
 -- aim 1: display a table with results.
 
 -- need to add a date created to the results (not the ga results inside?)
+
+-- draws simple list of result names.... date_created is not being saved. What columns do I need to include?
+
+-- MOnday 13th. fuck already too alte. ah jeez
+
+-- need to get data: generation and fitness of best race.
+-- be able to select a result: return all data
+-- then have a dropdown to select a graph to draw 
+-- first graph = best race fitness per generation line graph
+-- a thi8s stage will need D3.js
+
+-- added button that calls load_results() 
+-- need a new fetch and rest endpoint
+
+-- now loading data for results using id
+-- can use the same funciton as in the ga page to show the results but also need to load all other details?
+
+-- yay, got first graph to appear, best race time per generation. looks mud but better than 0
+
+-- shit, get a payload too large error if i try to save it for 200 generations
+
+-- tuesday. home of course. get a better grip on d3 and learn how to save them as images
+
+-- seems to bean npm package for saving them
+
+-- https://github.com/exupero/saveSvgAsPng
+
+-- npm install save-svg-as-png
+
+-- ok, had to muck a bit but can now save them. hurrah.
+
+-- now make the file name generation more smart: have the graph name and the results id and the date/time in there?
+
+-- done, graph name, results id, and datetime added.
+
+-- added x.y labels and colour legend
+
+-- need to add another graph... what other figures are interesting?
+
+-- runnign more ga's and they all seem so.. similar. dumb even. What am I trying to show again?
+
+-- bug 1: make all riders normal. best score can get slower by a second after X generations. why?
+
+-- bug 2: wrong settigns id stored. I think this happens if I adjust an existing set and save them as new: it doesn't updated the selected settings id.
+
+-- fixed bug 2, i think. set the settings id after adding new settings.
+
+-- try to hit bug 1 again
+
+-- try running same setup 5 times and compare the final instruction sets
+
+-- thursday, i think, april 30th
+
+-- need to email COlm. What's the least I can do for now to get the ball rolling? 
+
+-- restart the tests for basic conditions, send on screenshots and graphs?
+
+-- also load up overleaf and write up another section of that 'paper'
+
+-- need to work on a video
+
+-- need to add more graphs- UI looks fine
+
+-- monday 4th. of may. fuck. just get the ball at least rolling. make a second graph showing somethign dumb.
+
+-- change the draw_graph function to make it more general, i.e. so that it can qctually draw different graphs rather than copyint/pasting it with tiny changes
+
+-- each graph: title, x_label, y_label, line_label_1, x_data_1, y_data_1, line_label_2, x_data_2, y_data_2... second set of data optional
+
+-- yikes, that sucked, too much work, need to now add a second LINE graph.
+-- can use  FALL-THROUGH in the switch case statement 
+
+-- idea: average length of instructions + average instructions to added race per generation  
+call this graph Change in Instructions
+
+-- second graph now 'exists' but looks poo
+
+-- need a Clear Canvas button
+
+-- added button. now get graph 2 to work a little better. title of graph 1 not drawn
+
+-- bisschen besser, now add a third line to the second one, for instrucitons removed. will need to make sure that this covers ALL instrucitons and not just effort or drop ones
+
+-- actually, add two more lines: one for the avg. # of effort instructions, one for avg. # instrucitons removed.
+
+-- ok, do another quick graph on the number of variants in each generation

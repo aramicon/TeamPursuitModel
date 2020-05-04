@@ -11,6 +11,8 @@
 
     <script src="https://d3js.org/d3.v4.js"></script>
 
+    <script src="/saveSvgAsPng.js"></script>
+
     <script src = "js/Results.js"></script>
     <!-- <script src = "race_function_no_vis.js" type="module"></script> -->
   </head>
@@ -75,9 +77,11 @@
       <div class="row">
         <div class="form-group">
           <label for="select_graph">Select a Graph</label>
-          <select class="form-control" id="select_graph" onchange = 'draw_graph()'>
+          <select class="form-control" id="select_graph" onchange = 'draw_line_graph()'>
             <option value = "0">--SELECT--</option>
-            <option value = "best_fitness_per_generation">Best Fitness per Generation</option>
+            <option value = "best_fitness_per_generation">Best Fitness per Generation (LINE)</option>
+            <option value = "instructions_change_per_generation">Changes in Instructions over Generations (LINE)</option>
+            <option value = "variants_per_generation">Number of Variants per Generations (LINE)</option>
             <option value = '0'>Need to add more graphs!</option>
           </select>
           </div>
@@ -90,10 +94,15 @@
         <div class="col">
           <div id = "graph"></div>
         </div>
-
       </div>
-
-
+      <div class="row">
+        <div class="col">
+          <button type="button" class="btn btn-outline-success" id = "saveGraphAsPng">Save as PNG</button>
+        </div>
+        <div class="col">
+          <button type="button" class="btn btn-outline-danger" id = "clearCanvas">Clear Canvas</button>
+        </div>
+      </div>
 
     </div>
 

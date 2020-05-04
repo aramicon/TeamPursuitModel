@@ -261,13 +261,10 @@ const updateExperimentSettings = () => {
       $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
       console.log(error)
   });
-
   }
   else{
-
-    alert("Invalid Settings ID, sols.")
+    alert("Invalid Settings ID, cannot save, sols.")
   }
-
 }
 
 
@@ -275,9 +272,7 @@ const updateExperimentSettings = () => {
 
 const addNewExperimentSettings = () => {
 
-  //only update if there's a selected id
-
-    let serverURL = 'http://127.0.0.1:3003/new_race_settings';
+      let serverURL = 'http://127.0.0.1:3003/new_race_settings';
       $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
 
       let current_settings_global = $("#global_settings").val();
@@ -286,7 +281,6 @@ const addNewExperimentSettings = () => {
       let current_settings_option = $("#experiment_names").val();
 
       if (current_settings_global.length > 0 && current_settings_race.length > 0 && current_settings_rider.length > 0 && current_settings_option.length > 0){
-
 
       let dataToSend = {
               "global_settings":current_settings_global,
@@ -312,8 +306,11 @@ const addNewExperimentSettings = () => {
     }).then((data)=>{
       //console.log('data ' + JSON.stringify(data));
 
+      $("#database_connection_label").text("setting updated");
 
-      $("#database_connection_label").text("setting updated")
+      //need to make sure the correct ID (of the new settings) is updated
+      console.log("saved as new settigns with data " +  data.document._id);
+      selected_settings_id =data.document._id;
 
     }).catch((error) => {
       console.log("Error updating settings on experiment server");
