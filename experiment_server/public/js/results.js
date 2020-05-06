@@ -22,98 +22,6 @@ const saveGraphAsPng = () => {
 
 }
 
-const draw_graph = () =>{
-  let graph_name = $("#select_graph").val();
-  console.log("draw graph " + graph_name);
-
-  switch(graph_name) {
-  case "best_fitness_per_generation":
-    console.log("draw basic line graph ");
-    //D3
-    // set the dimensions and margins of the graph
-        var margin = {top: 10, right: 30, bottom: 30, left: 60},
-            width = 660 - margin.left - margin.right,
-            height = 400 - margin.top - margin.bottom;
-
-        // append the svg object to the body of the page
-        var svg = d3.select("#graph")
-          .append("svg")
-            .attr("width", width + margin.left + margin.right)
-            .attr("height", height + margin.top + margin.bottom)
-          .append("g")
-            .attr("transform",
-                  "translate(" + margin.left + "," + margin.top + ")");
-
-            data = selected_ga_results;
-
-            // Add X axis --> it is a date format
-            var x = d3.scaleLinear()
-              .domain([0, data.generations.length])
-              .range([ 0, width ]);
-            svg.append("g")
-              .attr("transform", "translate(0," + height + ")")
-              .call(d3.axisBottom(x));
-
-            // Add Y axis
-            var y = d3.scaleLinear()
-              .domain([100, d3.max(data.generations, function(d) { return +d.stats_average_time; })])
-              .range([ height, 0 ]);
-            svg.append("g")
-              .call(d3.axisLeft(y));
-
-            // Add the line
-            svg.append("path")
-              .datum(data.generations)
-              .attr("fill", "none")
-              .attr("stroke", "#0000ff")
-              .attr("stroke-width", 1.5)
-              .attr("d", d3.line()
-                .x(function(d) { return x(d.generation_id) })
-                .y(function(d) { return y(d.best_race_time) })
-              );
-
-              svg.append("path")
-                .datum(data.generations)
-                .attr("fill", "none")
-                .attr("stroke", "#ff0000")
-                .attr("stroke-width", 1.5)
-                .attr("d", d3.line()
-                  .x(function(d) { return x(d.generation_id) })
-                  .y(function(d) { return y(d.stats_average_time) })
-                );
-
-                // X and Y labels
-                svg.append("text")
-                .attr("class", "x label")
-                .attr("text-anchor", "end")
-                .attr("x", width)
-                .attr("y", height - 6)
-                .text("GA Generation");
-
-                svg.append("text")
-                .attr("class", "y label")
-                .attr("text-anchor", "end")
-                  .attr("x", -220)
-                .attr("y", 6)
-                .attr("dy", ".75em")
-                .attr("transform", "rotate(-90)")
-                .text("Race Finish Time (s)");
-
-                //Colour Legend
-                svg.append("circle").attr("cx",width - 100).attr("cy",6).attr("r", 6).style("fill", "#ff0000")
-                svg.append("circle").attr("cx",width - 100).attr("cy",40).attr("r", 6).style("fill", "#0000ff")
-                svg.append("text").attr("x", width - 80).attr("y", 6).text("Average Race").style("font-size", "15px").attr("alignment-baseline","middle")
-                svg.append("text").attr("x", width - 80).attr("y", 40).text("Fastest Race").style("font-size", "15px").attr("alignment-baseline","middle");
-
-    break;
-
-  default:
-  console.log("graph " + graph_name + " not found: nothing drawn");
-}
-
-
-}
-
 const clearCanvas = () => {
   //clear the canvas
   console.log("Clear the canvas");
@@ -127,7 +35,6 @@ const draw_line_graph = () =>{
   case "instructions_change_per_generation":
   case "variants_per_generation":
   case "best_fitness_per_generation":
-    console.log("draw basic line graph ");
 
     let graph_title ="unknown";
     let graph_data_1 = {};
@@ -237,9 +144,9 @@ const draw_line_graph = () =>{
 
     //D3
     // set the dimensions and margins of the graph
-        var margin = {top: 10, right: 30, bottom: 30, left: 60},
+        var margin = {top: 30, right: 30, bottom: 30, left: 60},
             width = 660 - margin.left - margin.right,
-            height = 400 - margin.top - margin.bottom;
+            height = 420 - margin.top - margin.bottom;
 
         // append the svg object to the body of the page
         var svg = d3.select("#graph")
@@ -249,7 +156,6 @@ const draw_line_graph = () =>{
           .append("g")
             .attr("transform",
                   "translate(" + margin.left + "," + margin.top + ")");
-
           //  data = selected_ga_results;
 
             // Add X axis --> it is a date format
@@ -351,8 +257,14 @@ const draw_line_graph = () =>{
                     svg.append("text").attr("x", width - 80).attr("y", 80).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
                 }
 
-
-
+                //add a title
+                svg.append("text")
+                .attr("x", (width / 2))
+                .attr("y", 0 - (margin.top / 2))
+                .attr("text-anchor", "middle")
+                .style("font-size", "16px")
+                .style("font-style", "italic")
+                .text(selected_settings_name + ": " + graph_title);
     break;
 
   default:
@@ -440,7 +352,13 @@ const load_results = (id) =>{
     }
   }).then((data)=>{
     draw_results(data);
+
     $("#results_info_label").text(data.length + " settings found.");
+
+
+
+    $("#race_result_message").html("Loaded Results " + id + " | <strong>" + selected_settings_name + "</strong>" + "<ul><li>Run Date: " + selected_ga_results.start_time + "</li><li>Generations: " + selected_ga_results.generations.length + "</li><li>Population: " +  selected_ga_results.generations[0].population_size + "</li></ul>" );
+
   }).catch((error) => {
     console.log("Error loading results from server");
     $("#results_info_label").text("ERROR CONNECTING TO SERVER " + error)

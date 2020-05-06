@@ -488,14 +488,31 @@ function new_population_tournament_selection(settings_r,current_population, stat
         //note: make sure the starting order of this race doesn not change!
       }
       else{ //otherwise add a mutant of the gorup winner
+        //note: no crossover going on here at all!
         new_race = current_population[best_time_index];
-        new_race = mutate_race(new_race,settings_r,generation);
-        settings_r.mutant_counter++;
+        //dk2020: add crossover effect
+        if (Math.random() < settings_r.ga_p_crossover){
+          //console.log("Generating CROSSOVER strategy");
+          new_race = crossover(new_race,current_population[(i+k)],settings_r,generation,i+k);
+          stats.number_of_crossovers_total++;
+          //need to make sure that the stats properties exist and are set to zero, unlike in a mutation
+          new_race.stats = {};
+          new_race.stats.number_of_instructions_added = 0;
+          new_race.stats.number_of_instructions_removed = 0;
+          new_race.stats.number_of_instructions_moved = 0;
+          new_race.stats.number_of_effort_instructions_changed = 0;
+          new_race.stats.number_of_drop_instructions_changed = 0;
+          new_race.stats.number_of_start_order_shuffles = 0;
+          new_race.stats.number_of_drop_instructions = 0;
+        }
+        else{
+          new_race = mutate_race(new_race,settings_r,generation);
+          settings_r.mutant_counter++;
+        }
       }
       //console.log("New pop race id group " + i + " (of size "+ group_size + ") best race in group ("+best_time_player.variant_id + "_" + best_time_player.id_generation + "_" + best_time_player.id_type + "_" + best_time_player.id_mutant_counter+") " + new_race.variant_id + "_" + new_race.id_generation + "_" + new_race.id_type + "_" + new_race.id_mutant_counter);
       new_population.push(new_race);
     }
-
   }
 
   //shuffle the array to stop the same groups from simply repeating
@@ -554,7 +571,7 @@ function new_population_best_squares(settings_r,current_population, stats,genera
       }
       else{
         if (Math.random() < settings_r.ga_p_crossover){
-          new_race = crossover(current_population[parent_population[i]],current_population[parent_population[k]],settings_r);
+          new_race = crossover(current_population[parent_population[i]],current_population[parent_population[k]],settings_r,generation,i+k);
           stats.number_of_crossovers_total++;
           new_race.stats = {};
           new_race.stats.number_of_instructions_added = 0;
@@ -564,14 +581,12 @@ function new_population_best_squares(settings_r,current_population, stats,genera
           new_race.stats.number_of_drop_instructions_changed = 0;
           new_race.stats.number_of_start_order_shuffles = 0;
           new_race.stats.number_of_drop_instructions = 0;
-
         }
         else{
           new_race = current_population[parent_population[i]];
           new_race = mutate_race(new_race,settings_r,generation);
         }
       }
-
       new_population.push(new_race);
       // if (new_race.instructions.length != new_race.stats.number_of_drop_instructions){
       //   debugger;
@@ -582,14 +597,46 @@ function new_population_best_squares(settings_r,current_population, stats,genera
 
 }
 
-function crossover(parent1,parent2,settings_r){
+function crossover(parent1,parent2,settings_r,generation,population_index){
   let new_race_details = {};
   new_race_details.start_order = [...parent1.start_order];
   if(Math.random() > 0.5){
     new_race_details.start_order = [...parent2.start_order];
   }
   //set the variant id
-  new_race_details.variant_id = ""+parent1.variant_id+"|"+parent2.variant_id;
+  //dk202: this gets too long as crossover kids will combine with crossover kids as generations slog by
+  //check if the parent is a crossover kid
+  new_race_details.variant_id = "";
+  parent_1_variant = "";
+  parent_2_variant = "";
+
+  if (parent1.variant_id.toString().includes("||")){
+      //strip out everything up to and including the || part, we don't want ever-elongating ids
+      parent_1_variant = parent1.variant_id.substring(parent1.variant_id.indexOf("||")+2);
+  }
+  else{
+    parent_1_variant = parent1.variant_id;
+  }
+
+  if (parent2.variant_id.toString().includes("||")){
+      //strip out everything up to and including the || part, we don't want ever-elongating ids
+      parent_2_variant = parent2.variant_id.substring(parent2.variant_id.indexOf("||")+2);
+  }
+  else{
+    parent_2_variant = parent2.variant_id;
+  }
+
+
+  new_race_details.variant_id += parent_1_variant + "|" + parent_2_variant;
+
+  //append a unique child identifier based on the current generation and population index
+  new_race_details.variant_id += "||" + "G"+generation+"I"+population_index;
+
+  new_race_details.id_generation = generation;
+  new_race_details.id_type = 2;
+  new_race_details.id_mutant_counter = 0;
+
+
 
   //let instruction_1_locations = parent1.instructions.map(a=>a[0]);
 //  let instruction_2_locations = parent2.instructions.map(a=>a[0]);
@@ -615,13 +662,11 @@ function crossover(parent1,parent2,settings_r){
         new_instructions.push(parent2.instructions[inst_2_counter]);
         //console.log("inst 1 done adding inst 2 " + parent2.instructions[inst_2_counter][0] + " " + parent2.instructions[inst_2_counter][1]);
         inst_2_counter++;
-
       }
       else if(inst_2_counter == (parent2.instructions.length)){
         new_instructions.push(parent1.instructions[inst_1_counter])
         //console.log("inst 2 done adding inst 1 " + parent1.instructions[inst_1_counter][0] + " " + parent1.instructions[inst_1_counter][1]);
         inst_1_counter++;
-
       }
       else{
         if(parent1.instructions[inst_1_counter][0] < parent2.instructions[inst_2_counter][0]){
@@ -646,7 +691,6 @@ function crossover(parent1,parent2,settings_r){
           }
             inst_1_counter++;
             inst_2_counter++;
-
         }
       }
     }

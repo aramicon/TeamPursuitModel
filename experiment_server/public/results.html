@@ -57,18 +57,27 @@
       </div>
       <div class="row">
         <div class="col">
-            <div id = "results_list">-- no Results loaded yet... --</div>
+          <div id = "results_list" >-- no Results loaded yet... --</div>
         </div>
       </div>
 
       <div class="row">
         <div class="col">
-            <div id = "race_result">-- no Results selected (click id) --</div>
+            <p>
+              <a class="btn btn-primary" data-toggle="collapse" href="#collapseResults" role="button" aria-expanded="false" aria-controls="collapseResults">
+                  Show Loaded Results
+                </a>
+            <div class="collapse" id="collapseResults">
+              <div id = "race_result">-- no Results selected (click id) --</div>
+            </div>
+          </p>
+
+
         </div>
       </div>
       <div class="row">
         <div class="col">
-          <div id = "race_result_stats" class="alert alert-info" role="alert"></div>
+          <div id = "race_result_message" class="alert alert-info" role="alert"></div>
         </div>
         <div class="col">
           <div id = "race_result_col" class="alert alert-secondary" role="alert"></div>
