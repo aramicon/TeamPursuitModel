@@ -19,7 +19,8 @@ onmessage = function(e) {
     result = run_track_race_ga(e.data[1], e.data[2], e.data[3]);
   }
   else if(messageType == "run_robustness_check"){
-    result = run_robustness_check(e.data[1], e.data[2], e.data[3]);
+    robustnessresult = run_robustness_check(e.data[1], e.data[2], e.data[3]);
+    result = robustnessresult.message;
   }
   else{
     console.log("Unknown request type " + messageType);
@@ -112,6 +113,7 @@ function mutate_race(r, settings_r,gen){
   new_race.stats.number_of_drop_instructions = 0;
 
 
+
   if(Math.random() < p_shuffle_start){
     //note that shuffling in place may cause bugs
     shuffleArray(new_race.start_order);
@@ -201,7 +203,8 @@ function new_random_instruction(timestep, settings_r){
 function run_track_race(settings_r, race_r, riders_r){
   //include a run type to know how this race is being run
   settings_r.run_type = "single_race";
-  return run_race(settings_r,race_r,riders_r);
+  let race_results = run_race(settings_r,race_r,riders_r)
+  return race_results.time_taken;
 
   //$("#race_result").text('Finish Time = ' + time_taken);
 }
@@ -213,7 +216,8 @@ function run_robustness_check(settings_r, race_r, riders_r){
 
   //get the time of the original
   settings_r.run_type = "robustness_check";
-  race_r.time_taken = run_race(settings_r,race_r,riders_r);
+  let race_results = run_race(settings_r,race_r,riders_r);
+  race_r.time_taken = race_results.time_taken;
   let original_time_taken = race_r.time_taken;
 
   //now set up a population of mutants
@@ -224,14 +228,25 @@ function run_robustness_check(settings_r, race_r, riders_r){
   //now run each race and store results
   let population_stats = [];
   let race_result = 0;
+  let fittest_mutant_time_taken = 100000;
+  let unfittest_mutant_time_taken = 0;
 
   for(i=0;i<population.length;i++){
     let load_race_properties = population[i];
     race_r.race_instructions_r = [...load_race_properties.instructions];
     race_r.start_order = [...load_race_properties.start_order];
     settings_r.run_type = "robustness_check";
-    load_race_properties.time_taken = run_race(settings_r,race_r,riders_r);
+    let race_results = run_race(settings_r,race_r,riders_r);
+    load_race_properties.time_taken = race_results.time_taken;
     population_stats.push(load_race_properties.time_taken);
+
+    //update best and worst if needs be
+    if (load_race_properties.time_taken > unfittest_mutant_time_taken){
+      unfittest_mutant_time_taken = load_race_properties.time_taken;
+    }
+    if (load_race_properties.time_taken < fittest_mutant_time_taken){
+      fittest_mutant_time_taken = load_race_properties.time_taken;
+    }
   }
 
   //return the stats
@@ -241,7 +256,13 @@ function run_robustness_check(settings_r, race_r, riders_r){
     total+=population_stats[i];
   }
 
-  return "Robustness Check:  Original race time taken " + original_time_taken + ". Average time of " + population.length + " mutants = " + total/population_stats.length;
+  robustness_result={};
+  robustness_result.message = "Robustness Check:  Original race time taken " + original_time_taken + ". Average time of " + population.length + " mutants = " + total/population_stats.length;
+  robustness_result.original_time_taken = original_time_taken;
+  robustness_result.average_mutant_time_taken = total/population_stats.length;
+  robustness_result.unfittest_mutant_time_taken = unfittest_mutant_time_taken;
+  robustness_result.fittest_mutant_time_taken = fittest_mutant_time_taken;
+  return robustness_result;
 }
 
 function run_track_race_ga(settings_r, race_r, riders_r){
@@ -259,9 +280,10 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
 
   //warn user if the population_size is not an even square
-  if(!Number.isInteger(Math.sqrt(population_size))){
-    alert("Warning: ga_population_size of " + population_size + " should be a product of an integer squared, e.g. 9,25,36,3600")
-  }
+  //dk2020: commenting this out as it is relevant only for the original perfect squares populaiton generation
+  // if(!Number.isInteger(Math.sqrt(population_size))){
+  //   alert("Warning: ga_population_size of " + population_size + " should be a product of an integer squared, e.g. 9,25,36,3600")
+  // }
   const team_size = settings_r.ga_team_size;
   const number_of_generations = settings_r.ga_number_of_generations;
 
@@ -312,6 +334,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     //need to find the best solution from the whole population
     let final_best_race_properties_index = 0;
     let final_best_race_properties = population[0];
+    let best_race_rider_power = [];
 
     for(let i = 0;i<population.length;i++){
       //reset any race properties
@@ -326,7 +349,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       race_r.start_order = [...load_race_properties.start_order];
       //run the actual race, i.e. the fitness function, returning just a time taken
       settings_r.run_type = "ga";
-      load_race_properties.time_taken = run_race(settings_r,race_r,riders_r);
+      let race_results = run_race(settings_r,race_r,riders_r);
+      load_race_properties.time_taken = race_results.time_taken;
+
       stats_total_time += load_race_properties.time_taken;
       stats_total_number_of_instructions += load_race_properties.instructions.length;
       //update best race if a new best is found
@@ -335,6 +360,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       if(population[i].time_taken < final_best_race_properties.time_taken){
         final_best_race_properties_index = i;
         final_best_race_properties = population[i];
+        best_race_rider_power = race_results.power_output;
       }
 
 
@@ -362,6 +388,35 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     generation_results.best_race_time = final_best_race_properties.time_taken;
     generation_results.stats_average_time = stats_average_time;
     generation_results.stats_average_number_of_instructions = stats_average_number_of_instructions;
+    generation_results.robustness_check_number_of_mutants = 0;
+    generation_results.robustness_check_average_mutant_time_taken = 0;
+    generation_results.robustness_check_best_mutant_time_taken = 0;
+    generation_results.robustness_check_worst_mutant_time_taken = 0;
+
+
+    //get the power data of the best race
+    generation_results.best_race_rider_power = best_race_rider_power;
+
+    //before looking at next generation can work out the robustness check of the current BEST strategy, IF required
+    if(settings_r.ga_run_robustness_check==1){
+
+      console.log("Run robustness check");
+
+      race_r.drop_instruction = 0;
+      race_r.live_instructions = [];
+      race_r.race_instructions = [];
+      race_r.race_instructions_r = [];
+
+      let load_race_properties = population[final_best_race_properties_index];
+      race_r.race_instructions_r = [...load_race_properties.instructions];
+      race_r.start_order = [...load_race_properties.start_order];
+
+      let robustness_check_results = run_robustness_check(settings_r, race_r, riders_r);
+      generation_results.robustness_check_number_of_mutants = settings_r.robustness_check_population_size;
+      generation_results.robustness_check_average_mutant_time_taken = robustness_check_results.average_mutant_time_taken;
+      generation_results.robustness_check_best_mutant_time_taken = robustness_check_results.fittest_mutant_time_taken;
+      generation_results.robustness_check_worst_mutant_time_taken = robustness_check_results.unfittest_mutant_time_taken;
+    }
 
     // create a new population based on the fitness
 
@@ -378,7 +433,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let total_number_of_instructions = 0;
       let variants = [];
       let stats = {};
-      stats.number_of_crossovers_total = 0;
+      stats.number_of_crossovers_total = 0; //crossovers done in the generation/evolution
+      stats.number_of_mutants_added_total = 0;
+      stats.number_of_direct_copies = 0;
 
       // population = new_population_best_squares(settings_r,population, stats,g);
       settings_r.mutant_counter = 0
@@ -414,6 +471,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       generation_results.number_of_drop_instructions_total = number_of_drop_instructions_total;
       generation_results.total_number_of_instructions = total_number_of_instructions;
       generation_results.number_of_crossovers_total = stats.number_of_crossovers_total;
+      generation_results.number_of_direct_copies = stats.number_of_direct_copies;
+      generation_results.number_of_mutants_added_total = stats.number_of_mutants_added_total;
     //  console.log("Generation " + g + " after mutations ");
     //  console.log(population);
 
@@ -485,10 +544,12 @@ function new_population_tournament_selection(settings_r,current_population, stat
         new_race.stats.number_of_drop_instructions_changed = 0;
         new_race.stats.number_of_start_order_shuffles = 0;
         new_race.stats.number_of_drop_instructions = 0;
+
+        stats.number_of_direct_copies++;
         //note: make sure the starting order of this race doesn not change!
       }
-      else{ //otherwise add a mutant of the gorup winner
-        //note: no crossover going on here at all!
+      else{ //otherwise add a mutant Or a crossover child of the gorup winner
+
         new_race = current_population[best_time_index];
         //dk2020: add crossover effect
         if (Math.random() < settings_r.ga_p_crossover){
@@ -504,10 +565,12 @@ function new_population_tournament_selection(settings_r,current_population, stat
           new_race.stats.number_of_drop_instructions_changed = 0;
           new_race.stats.number_of_start_order_shuffles = 0;
           new_race.stats.number_of_drop_instructions = 0;
+
         }
         else{
           new_race = mutate_race(new_race,settings_r,generation);
-          settings_r.mutant_counter++;
+          stats.number_of_mutants_added_total++;
+          settings_r.mutant_counter++; //dk2020 this may be doing something just like the line above :-(
         }
       }
       //console.log("New pop race id group " + i + " (of size "+ group_size + ") best race in group ("+best_time_player.variant_id + "_" + best_time_player.id_generation + "_" + best_time_player.id_type + "_" + best_time_player.id_mutant_counter+") " + new_race.variant_id + "_" + new_race.id_generation + "_" + new_race.id_type + "_" + new_race.id_mutant_counter);
@@ -568,6 +631,7 @@ function new_population_best_squares(settings_r,current_population, stats,genera
       if(i==k){
         new_race = current_population[parent_population[i]];
         new_race = mutate_race(new_race,settings_r,generation);
+        number_of_direct_copies++;
       }
       else{
         if (Math.random() < settings_r.ga_p_crossover){
@@ -581,10 +645,12 @@ function new_population_best_squares(settings_r,current_population, stats,genera
           new_race.stats.number_of_drop_instructions_changed = 0;
           new_race.stats.number_of_start_order_shuffles = 0;
           new_race.stats.number_of_drop_instructions = 0;
+
         }
         else{
           new_race = current_population[parent_population[i]];
           new_race = mutate_race(new_race,settings_r,generation);
+          number_of_mutants_added_total++;
         }
       }
       new_population.push(new_race);
@@ -706,7 +772,52 @@ function crossover(parent1,parent2,settings_r,generation,population_index){
       shuffleArray(random_array);
       //console.log("random array " + random_array);
 
-      let random_array_ordered_and_halved = random_array.slice(0,Math.round(total_size_of_arrays/2)).sort((a,b)=>a-b);
+      //donalK2020: we don't want to just HALVE the instructions, we want to use some lenght between that of the parents Plus/minus some possible (small) deviation either side.
+
+      let new_instruction_set_size = 0;
+      let smaller_length = parent1.instructions.length;
+      let larger_length = parent2.instructions.length;
+      if (larger_length < smaller_length){
+        let temp_length = smaller_length;
+        smaller_length = larger_length;
+        larger_length = temp_length;
+      }
+      new_instruction_set_size = smaller_length + Math.floor(Math.random()*(larger_length+1-smaller_length));
+      let random_adjustment = 0; //for some probability introduce a length change
+      let max_adjustment_size = 3;
+      //we want adjustments of 1 to be much more likely so will put the adjustment in a loop to control the probability
+
+      let crossover_length_adjustment_probability = 0.5;
+      if (typeof(settings_r.ga_crossover_length_adjustment_probability) != "undefined"){
+        crossover_length_adjustment_probability = settings_r.ga_crossover_length_adjustment_probability;
+      }
+      //console.log("***************SETTINGS R START***********");
+    //  console.log(JSON.stringify(settings_r));
+      //  console.log("***************SETTINGS R END***********");
+
+      for (let i = 0; i<max_adjustment_size; i++){
+        if (Math.random() < crossover_length_adjustment_probability){
+            random_adjustment += 1;
+        }
+        else{
+          break;
+        }
+
+      }
+      //now give it a negative sign half the time
+        if (Math.random() >= 0.5){
+            random_adjustment =random_adjustment*-1;
+        }
+
+
+      console.log("****CROSSOVER LENGTH CALCULATION*****");
+      console.log("smaller parent size " + smaller_length + " larger parent size " + larger_length + " new length random size " + new_instruction_set_size + " random adjustment " + random_adjustment);
+      if (new_instruction_set_size + random_adjustment > 1){
+        new_instruction_set_size += random_adjustment;
+      }
+
+
+      let random_array_ordered_and_halved = random_array.slice(0,new_instruction_set_size).sort((a,b)=>a-b);
       //settings_r.stats.crossover_instruction_sizes.push(random_array_ordered_and_halved.length);
       //console.log("random_array_ordered_and_halved " + random_array_ordered_and_halved);
 
@@ -714,7 +825,7 @@ function crossover(parent1,parent2,settings_r,generation,population_index){
       for(let i =0;i<random_array_ordered_and_halved.length;i++){
         new_instructions_reduced.push(new_instructions[random_array_ordered_and_halved[i]])
       }
-      //console.log("new_instructions_reduced " +JSON.stringify(new_instructions_reduced));
+      console.log("new_instructions_reduced from crossover " +JSON.stringify(new_instructions_reduced));
       new_instructions = new_instructions_reduced;
     }
 
@@ -807,6 +918,12 @@ function run_race(settings_r,race_r,riders_r){
   settings_r.race_bend_distance = Math.PI * settings_r.track_bend_radius;
   race_r.instructions = [];
   race_r.instructions_t = [];
+
+  //prepare to record the power output for each rider at each timestep
+  rider_power = [];  //added 2020May26 to start trackign rider power output
+  for(let i = 0;i<race_r.start_order.length;i++){
+    rider_power.push([]); //add an empty array for each rider, so that we can store the power outputs (watts) for each rider/timestep
+  }
 
   // Set up the switch range points: this is where riders can start to drop back
   // I added settings_r.switch_prebend_start_addition to allow the swithc to start before the bend proper (speed up switches)
@@ -902,6 +1019,7 @@ function run_race(settings_r,race_r,riders_r){
 
     for(let i=0;i<race_r.current_order.length;i++){
       let race_rider = race_r.riders_r[race_r.current_order[i]];
+
       //work out how far the race_rider can go in this time step
       //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
 
@@ -1000,17 +1118,30 @@ function run_race(settings_r,race_r,riders_r){
         }
         race_rider.power_out = powerv;
 
+        //can now save this power
+        rider_power[race_r.current_order[i]].push(powerv);
+
         //add fatigue if going harder than the threshold or recover if going under it
         //recover if going under the threshold
 
         if (race_rider.power_out < race_rider.threshold_power){
           if (race_rider.endurance_fatigue_level > 0){
-            race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power)
+
+              let recovery_power_rate = 1;
+              if (settings_r.recovery_power_rate){
+                recovery_power_rate = settings_r.recovery_power_rate;
+              }
+
+              race_rider.endurance_fatigue_level -= race_rider.recovery_rate * Math.pow(( (race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
+              //race_rider.endurance_fatigue_level -= race_rider.recovery_rate * ( (race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power);
+
             if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
           }
         }
         else if(race_rider.power_out > race_rider.threshold_power){
-          let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings_r.fatigue_power_rate);
+          //let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings_r.fatigue_power_rate);
+          //dk2020: updated this formula as it seems to apply exponent poorly and NOT behave as expected
+          let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings_r.fatigue_power_rate);
           race_rider.endurance_fatigue_level += fatigue_rise;
           race_rider.accumulated_fatigue += fatigue_rise;
         }
@@ -1163,6 +1294,9 @@ function run_race(settings_r,race_r,riders_r){
         }
         race_rider.power_out = powerv;
 
+        //can now save this power
+        rider_power[race_r.current_order[i]].push(powerv);
+
         if(race_rider.power_out < 0){
           console.log("crap! race_rider.power_out = " + race_rider.power_out);
           debugger;
@@ -1172,7 +1306,16 @@ function run_race(settings_r,race_r,riders_r){
         if (race_rider.power_out < race_rider.threshold_power ){
           //recover if going under the threshold
           if (race_rider.endurance_fatigue_level > 0){
-            race_rider.endurance_fatigue_level -= race_rider.recovery_rate*( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power)
+
+              let recovery_power_rate = 1;
+
+              if (settings_r.recovery_power_rate){
+                recovery_power_rate = settings_r.recovery_power_rate;
+              }
+
+              race_rider.endurance_fatigue_level -= race_rider.recovery_rate * Math.pow(((race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
+            //  race_rider.endurance_fatigue_level -= race_rider.recovery_rate * ((race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power);
+
             if ( race_rider.endurance_fatigue_level < 0){
               race_rider.endurance_fatigue_level = 0;
             }
@@ -1180,7 +1323,9 @@ function run_race(settings_r,race_r,riders_r){
         }
         else{
           //add fatigue if going harder than the threshold
-          let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings_r.fatigue_power_rate);
+          //let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings_r.fatigue_power_rate);
+          //dk2020:updated
+            let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings_r.fatigue_power_rate);
           race_rider.endurance_fatigue_level += fatigue_rise;
           race_rider.accumulated_fatigue += fatigue_rise;
         }
@@ -1242,5 +1387,6 @@ function run_race(settings_r,race_r,riders_r){
 
   }
   //return the final finish time (seconds)
-  return race_r.race_clock;
+
+  return {time_taken: race_r.race_clock, power_output:rider_power};
 }

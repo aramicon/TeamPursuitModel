@@ -317,3 +317,223 @@ call this graph Change in Instructions
 -- actually, add two more lines: one for the avg. # of effort instructions, one for avg. # instrucitons removed.
 
 -- ok, do another quick graph on the number of variants in each generation
+
+-- one final test before dinner: can I actually add crossover back in? Does it crash it? If not, does it add new variants as time goes by?
+
+-- ok so crossover is NOT being applied in this new_population_tournament_selection() approach. could add it?
+
+-- tuesday 5th.
+
+-- 1: read emails about grc
+
+-- ok so have to upload 1) your short (~10min) video (.mp4) and 2) your presentation slides (.pdf or .pptx). to https://drive.google.com/drive/folders/131jgcF_VbkFCKRNFqCA5OKF291TIAFOi?usp=sharing
+
+-- that's only 3 days including today. need to wrap up as much as possible today
+
+-- My GRC with Sam Redfern, John Newell, and Pilib, is on for May 14th 09:30-10. I need to make contact with all three (CC) beforehand to share contact details. Need to send these the 'annual student report' as well, for/about which I need to email Colm.
+
+-- where are GAs used?
+
+-- optimisation problems
+-- e.g. bank loan decisions https://www.sciencedirect.com/science/article/pii/S0957417417301677?casa_token=J_urCRXu6ioAAAAA:t2x-HW2zgq4TzPhbCIJP0C14Sgta5O00TAVnd_EnBjQYce0UAT4sdUcVOkIlSvzsuYlq3oc6
+
+-- or airline crew pairing https://arxiv.org/pdf/2003.03792.pdf
+
+-- or task allocation in multicomputers https://laur.lau.edu.lb:8443/xmlui/handle/10725/7957
+
+-- Solving matrix game with rough payoffs using genetic algorithm   https://www.researchgate.net/profile/Sankar_Roy/publication/282545132_Solving_matrix_game_with_rough_payoffs_using_genetic_algorithm/links/5804b26b08ae293d3680c679/Solving-matrix-game-with-rough-payoffs-using-genetic-algorithm.pdf
+
+-- wednesday may 6th.lotssss to do.
+
+-- find last years slides and make a copy
+
+-- done, needs a lot of labour
+
+-- look at getting crossover to run in the new_population_tournament_selection() option.
+
+-- variant IDs of crossover strats are wayyyy too long: the parent ids are combined... this gradually gets longer and longer
+
+-- need to create variant ids that can be used to trace lineage (if needed) but don't keep elongating
+
+-- gen 1: ids 1, 2, 3,4,etc
+-- gen 2: ids 1_2,1_3,3_4, etc
+-- gen 3: ids 1_2_1_3, 3_4_7_9, etc
+
+change to
+-- gen 1: ids 1, 2, 3,4,etc
+-- gen 2: ids 1_2|G2I0,1_3|G2I1,3_4|G2I2, etc
+-- gen 3: ids G2I0_G2I1|G3I0, etc... this is as long as the variant ids can get and technically you can trace lineage
+
+
+-- try OBS software for screen capture... don't want to use screencast-o-matic
+
+--ok, shorter variant ids, BUT undefined_undefined_undefined is appearing at the end. how is this being appended again?
+
+-- seems to work now... but with crossover it does find a good solution, just as fast as the mutation. eeeek.
+
+-- variants count stays HIGH and fluctuates a lot with crossover... need to know HOW much crossover is happening per generation, i.e. a new graph, and check to see if it all makes sense.
+
+-- first, add more feedback in the results page when a results set is loaded: can't tell which one was just loaded. Need to see the name over where the graphs are, or even better as titles under each graph
+
+-- also add a bit more info here, like the number of generations, the population size, and the date it was run 
+
+-- ok, seeeems to look a bit better
+
+-- now hide the results table in an accordian container to provide more space for the graphing
+
+-- better... commit to git.
+
+-- now, add another graph showing the number of crossover vs mutant members of a population 
+-- done: might be more interesting to show more about the composition of a generation, i.e. new crossover, new mutants, total crossover, total mutants 
+
+-- also, extend the graph width as text is truncated...
+
+-- do ai need that daft square root populaiton error anymore?
+
+-- add a new global setting: ga_run_robustness_check
+-- if this is set to 1, for each generation, take the BEST strategy and run the robustness check some number of times
+-- use anothe rglobal variable to control this, ga_run_robustness_check_number_of_mutants:100
+
+-- oops, already have this last setting, called robustness_check_population_size
+=
+-- note, the ga_tournament_selection_group_size setting was set to 3, which seems too small. Try 7
+
+-- robsutness averagr seems to be too high- always seems to score badly... but... it is an average, so should also track the BEST and WORST to see if better ones are sometimes found
+
+-- after, look at counting the number of direct copies and mutations done at each generation. could express as a % so that the y axis can just be 100.
+
+-- works, though worst robustness is VERY HIGH, can't even see the BEST one thanks to the daft scale
+
+-- right, now shows mutants/crossover/direct being added per generation. Can't tell from which set the better times are coing but that would take effort I think. 
+
+-- ideally would have at least one non-line graph.
+
+-- need slides/script and test of screen capturing
+
+-- Thursday 7th. have to upload slides and video today. big effort needed.
+
+-- first, set up and run a sequence of more consistent tests with
+-- all normal
+-- 1 strong 
+-- 2 strong 
+-- 3 strong 
+-- all strong
+
+-- keep all other settings the same. #
+
+-- with all strong there is an inconsistent result, when I run the final strat on the visualiser a 2nd rider gets dropped and the time is slower :-( 
+
+-- run it again and see if it finds the same problem: does it happen if I run it from the GA page non-vis?
+
+-- second run doesn't have this problem- final time is a little slower... will need to investigate further but not now, for reference the problem is the final strategy in results 5eb3f07e49a604007c07cc5d | T1_THREE_STRONG
+
+-- now back to the slides/video
+
+-- ok, time to give the video a go 
+
+-- Monday 11th...
+
+-- have to prep for the GRC. Need to email them about how to share.
+-- need to write at least some form of paper 
+-- need to fix more bugs: issue with inconsistent time (above) and issue with worst case race being massive. is it legit?
+
+-- Thursday 14th.
+-- clean up and reorganise the file structure: will need to make sure the research flder is BACKED UP. main code is on GIT but would still be a pain to recover the rest of it.
+-- grc. eek. 09:30-10 or so.
+
+--idea: based on the Kevin Norton 2014 paper, have the visual model output each rider's power as a graph, or, even save it then be able to generate the graph after. Compare this with what is being found in that paper. Then, aim to get the settings/model closer to its general findings about the team pursuit and track racing in general.
+
+-- let's make a basic app for saving references? can store notes and findings about papers and get it to generate the refs in different formats. ideally it would be able to store and display the papers themselves so you could 'upload' them into it.
+
+-- datacamp access to do courses via NUIG that might give me credits
+
+-- grc meetign notes. present, me, Sam Redfern, JOhn Newell, Pilib O' Broin.
+
+-- issues to note: I have to get on top of the box-ticking parts of the structured phd program, i.e. accumulate all the module points that are needed.
+
+-- I will have to be able to defend my work in the space of genetic algorithms research. This is most likely the 'home' for my work. IN this regard I need to do a ton of reading and study.
+
+-- I need to finsih paper 1 and find references to add to it. 
+
+-- think about this time next year- what would be the minimum requirements for getting through? minimum is two papers at least plus a bunuch more directions explored.
+
+-- So, will need to start reading much more systematically
+
+-- save power info for each rider in each race: then save this for the fastest race for each ga generation
+-- create a graph that can be run for each generation that draws the power outputs for each of the 4 riders.
+
+-- tuesday may 26th.
+
+-- look at outputting and graphing the power of riders...
+
+-- is javaScript pass by value or reference? https://stackoverflow.com/questions/518000/is-javascript-a-pass-by-reference-or-pass-by-value-language
+
+--so, I cannot just set the power values as an attribute of the object (race_r) passed in... I have to return them. Now, I already return the time_taken... this means I needs to change this and return an object containing both time-taken AND rider_power??
+
+"It's always pass by value, but for objects the value of the variable is a reference. Because of this, when you pass an object and change its members, those changes persist outside of the function. This makes it look like pass by reference. But if you actually change the value of the object variable you will see that the change does not persist, proving it's really pass by value."
+
+-- so, return a more complex object like {time_taken: 123, power_output:[[100,200],[200,220]]} 
+
+-- ok, so output now gets returned from the ga for each generation best race, and it gets saved to the db
+
+-- next step is to draw it... can't put it in the main graph dropdown as the data is there for every generation
+-- so add a new button/link to each line in the data results? "Power Graph" ?
+
+-- cool, have power graph for all 4 riders... looks wrong tho, why is rider[0] all-powerful?
+-- is data[0] storing the power of the rider on the front? must be... 
+-- yup, looks dodge, can store power separate for each rider then bung em into the results ofter?
+-- wait, can I not jsut use [race_r.current_order[i]] instead of just [i]?
+
+-- Thursday 28th
+
+-- added a new fatigue formula... old one was a bit bonkers
+-- do i also need to look at the recovery?? same thing right?
+
+-- changed recovery formula to include a global property like with the fatigue.
+
+-- June 02
+
+-- read, or at least scan, Alex's paper.
+
+--line 61 "to be a 1000;" should "be to be 1000;"?
+
+-- line 87 "The a nodes, a' and b nodes" should be The a, a', and b nodes OR The a nodes, a' nodes, and b nodes?
+
+-- line 180/181: (the largest minimum value of a from a solution 181 was a=12445). The 3 a's make this a bit confusing... could the variable name a be in bold?
+
+-- 199/200 making it so that all cooperators will revert to being defectors. Maybe " which results in all cooperators eventually becoming defectors"?
+
+
+-- done. basic idea is a particular graph topology that defines a few types of nodes joined by key nodes that ensure that if all nodes start with stragey A, then perturbing one node to stratgey B will eventually return back to all A. These are known as 'resiliant' graphs. Seems well written though not massively readable- but that's academic writing for ya
+
+-- try to get weak rider to be dropped
+-- bug on line 275
+
+-- how do i check if an object has a property or exists again?
+-- use typeof... if it returns undefined then there's a problem
+-- spit out console info if typeof is undefined
+-- use JSON.stringify() to log the object
+
+-- doesn't include data for power for last generation... but only for this run... works for other experiments
+
+-- MOnday June 8th. Jeepurs I've done nothing. Need to work on the paper and actually write shit.
+
+-- is there any way I could change how the power is used so that a more accurate start can be modelled. In my version I simply limit the power being output at any timestep, and it can rise or fall at a certain rate, while in reality there is a more instantaneous power. 
+
+-- Also, it seems that general strategies would be to put out a lot of power early on to get-up-to-speed. 
+
+-- Was I not intending to have TWO energy systems, not wholly independent but yet somewhat, basiclaly the sprint and the aerobic?
+
+-- Also need to see if I can access the NUIG intranet to get papers.
+
+-- you will be reduced. you will be... ah hells.
+
+-- monday june 15th.
+-- try to get crossover to use some random length between the length of the two parents...
+
+-- ok, so worked on the length of crossover children...this is now done in two steps
+-- 1, get random number in range betwen parent sizes (inclusive)
+-- 2: adjust this in some cases in range (-3,+3) with decreasing probability of size. 
+-- E.g. chance of 0 = 0.5, chance of 1 or -1 = 0.5, chance of 2 or -2 = 0.25, chance of 3 or +3 = 0.125
+-- make this 0.5 a global setting that defaults to 0.5?
+
