@@ -536,4 +536,238 @@ change to
 -- 2: adjust this in some cases in range (-3,+3) with decreasing probability of size. 
 -- E.g. chance of 0 = 0.5, chance of 1 or -1 = 0.5, chance of 2 or -2 = 0.25, chance of 3 or +3 = 0.125
 -- make this 0.5 a global setting that defaults to 0.5?
+-- "ga_crossover_length_adjustment_probability":0.5
 
+-- ok, it vurks 
+
+-- shuld it not (probabilistically) mutate also AFTER crossover??
+
+-- add another param and test what happens if crossover is the dominant method?
+
+- tuesday 16th BLOOMSDAY 2020
+-- need to start writing on Overleaf- meeting with COlm in one hour
+
+-- add a reference to the witley paper, maybe write it yourself to get to grips with the format?
+-- Whitley, D. A genetic algorithm tutorial. Stat Comput 4, 65–85 (1994). https://doi.org/10.1007/BF00175354
+
+-- there's a more recent Whitley work too. Whitley, D. (2001). An overview of evolutionary algorithms: practical issues and common pitfalls. Information and software technology, 43(14), 817-831. https://www.sciencedirect.com/science/article/pii/S0950584901001884?casa_token=EZ6sKJq50YcAAAAA:b8yHRoERz6a1bUB57_wSmpPww1RInjlwCwyvktxyqSmj1GFbjHnLCLPEGpgrCMw7XU8konp92Q
+
+-- added paragraphs in a few sections. struggled with Latex. some progress tho
+
+-- wednesdayy 17th. bloomsday uncelebrated. another un gun
+
+-- results from most recent tests are odd. may
+
+-- wednesday 24th. fuck. did nothing. spent ages looking at reinforcement learning but don't understand that either.
+
+-- at least add anew graph of the ordered race result/fitness for each gen.
+
+-- added this graph. looks like in every gen there are a low number of real outliers that take ages... would need to know what is going on with these strategies, can take thousands of seconds to complete the race...
+
+-- dursday 25th june 2020
+-- save instructions of WORST race in each generation
+-- aved worst and found a fukking BUG! If you set a low power and keep doing drop instructions, the power gets halved each time, so the rider goes slower and slower. When a rider takes over at the front they are supposed to MATCH the speed, not reduce it
+
+-- seems to be HALVING the power when assuming the lead! balls. This will have a huge effect on the race. How to debug? Need to look at what happens when a rider drops back
+
+-- technically when a rider takes over the lead, it is the speed  they want to match and not the power? E.g. that rider might be much heavier and so need to produce more power for the same speed?
+
+-- looks like the issue is in here mapPowerToEffort(settings.threshold_power_effort_level, current_leader_power, new_leader.threshold_power, new_leader.max_power)
+
+-- i improved the mapping of effort to power but did NOT update this reverse function. why does it end up being exactly half though?
+
+3 parts to this: mapPowerToEffort
+UNDER threshold
+  effort_level = ((rider_power*threshold_effort_level)/rider_threshold)
+ AT threshold
+ effort_level = threshold_effort_level;
+OVER threshold
+  effort_level = ((rider_power - rider_threshold )*(9-threshold_effort_level))/(rider_max - rider_threshold) + threshold_effort_level;
+  
+ I need to compare these with the three ways to do the opposite (middle should be same same)
+ mapEffortToPower
+UNDER threshold
+power_from_effort = rider_threshold*(rider_effort)/10;
+AT threshold
+  power_from_effort = rider_threshold;
+OVER threshold
+power_from_effort = rider_threshold + (rider_max - rider_threshold)  * ((rider_effort-threshold_effort_level)/(9-threshold_effort_level));
+
+need to do these up in Excel to ensure they are all allez korrekt
+-- friyay 26th
+
+=(IF(C15<$B$5,($B$7*(C15/10)),IF(C15=$B$5,$B$7,($B$7+($B$3-$B$7)*((C15-$B$5)/(9-($B$5)))))))
+
+-- initial findings: formula is 'ok' BUT not linear. need to graph and rebuild... but first determine the source of the BUG
+-- must be in the mapPowerToEffort funciton
+-- write a test for this in the JS, that copies this Excel data. YOu shoudl get the same values, and then ALSO convert back into effort from power...
+
+-- done,and it looks bad for lower values. check compare these two:
+e to p: rider_threshold*(rider_effort)/10
+p to e: ((rider_power*threshold_effort_level)/rider_threshold)
+
+-- yup, looks odd. first is linear as though we were using rider effort of 0 to 10. Are we not using 0 to 9? Does this matter?
+-- ANd in any case, the second is based on a linear from 0 to the threshold level, i.e. 6. These do NOT match up. Two different forms. Need to graph both then test then choose best then test again.
+
+-- added graph... bug looks pretty obvious now, big kink in slope as effort approached threshold level 6
+-- add formula for p to e
+
+=(IF(D4<$B$8,(D4*$B$6/$B$8),IF(D4=$B$8,$B$6,$B$6+((D4-$B$8)*(9-$B$6)/($B$4-$B$8)))))
+-- ok can now SEE the error. add a version for the corrected power formula
+=(IF(E4<$B$8,(E4*$B$6/$B$8),IF(E4=$B$8,$B$6,$B$6+((E4-$B$8)*(9-$B$6)/($B$4-$B$8)))))
+
+-- yup, this 'fixes' it though the graph is odd. Fix it, check the tests in JS that they match, then run some GAs and look at the worst performers.
+-- note, also need fix in the game version
+
+-- IMPROVEMENT; worst race perofrmance is now MUCH better, doesn't get stuck in that slowening grip
+
+-- note, key lines related to the fatigue
+  if(race_rider.endurance_fatigue_level >= failure_level){
+        race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
+      }
+-- noticing that the worst races simply set a very low effort. makes sense I guess. If riders go too hard they still finish with an ok time, but I can tweak that by increasing recovery_effort_level_reduction?
+
+-- was set to 1. Try setting it to 3 and run the same ga
+
+-- now try a crazy high punishment, like set them to effort of < 1, so recovery_effort_level_reduction = 5.5
+
+-- oops. threshold_power_effort_level is set to 5 not 6. why? How does this affect the graphs?
+
+-- monday june 29 2020. later than ya think
+
+-- so, the power-to-effort and effort-to-power should now by symmetric. what next?
+
+-- do i want a steeper curve mapping effort to power when above  Surely, 5, which has very little change, is ideal?
+
+-- this does mean that instructions are VERY rider-dependent... curve changes... but of course it is rider-dependent.
+
+-- now, the question is... should I not be trying to match the SPEED and not the POWER... but this might not be as hard as I fear?
+-- Let's say I know the target speed... how do I work out the power that a different rider needs to put out to match it?
+
+-- it should be an easier calc right?
+
+-- note, this will only have an affect if a rider has a different weight/frontal area?
+
+-- need to translate speed to power to effort level when a rider takes the lead... assume transition from shelter to non-shelter is instantaneous 
+
+key lines from http://bikecalculator.com/
+
+if(!calcMode) {	// we calculate velocity from power when calcMode = 0
+			powerv = eval(power.value);
+			
+			v = newton(A2, headwindv, tres, transv, powerv) * 3.6;      // convert to km/h
+			if (v > 0.0) t = 60.0* distancev / v;
+				else t = 0.0;  // don't want any div by zero errors
+			
+			velocity.value = makeDecimal2(v * (units ? 0.6214 : 1.0) );
+			
+		} else {  // we calculate power from velocity
+			v = eval(velocity.value) / 3.6 * (units ? 1.609 : 1.0);  // converted to m/s;
+			tv = v + headwindv; 
+			var A2Eff = (tv > 0.0) ? A2 : -A2; // wind in face, must reverse effect
+			powerv = (v * tres + v * tv * tv * A2Eff) / transv;
+			
+			if (v > 0.0) t = 16.6667 * distancev / v;  // v is m/s here, t is in minutes
+			else t = 0.0;  // don't want any div by zero errors
+
+			power.value = makeDecimal0(powerv);
+			dragSlider.setValue(powerv/500.0);
+		}
+make a new funciton called power_from_velocity()
+
+-- ok, basic draft version created, now need to call this with the right params, and form where exactly?
+
+-- ok, it seems to do something! But it looks like the velocity is ALREADY in m/s
+
+-- note, to convert from km/h to m/s, you DIVIDE BY 3.6, i.e. multiply by (1000m/3600s)
+
+--ok, removed conversion in function and it now seems to return a legit power, though it has many digits
+-- do i needs to do rounding?
+
+-- need to go back over how the sheltering is done :-( 
+
+-- initial test fails- speed is LOWER after switch when done step by step... should be identical
+
+-- hmmm, much bugs... the final velocity DOES seem very very close to the initial velocity BUT it is too slow
+-- is the initial velocity wrong? Could I use the rider's OWN velocity but make sure that it is losing the aero savings? 
+
+-- why would the velocity of the old leader be too slow? perhaps they have already started slowign down?
+
+-- ok, so it seems that the SHELTER is being taken into account when working out the power needed to match the velocity... so we need to make sure that we use a non-sheltered value here
+ace_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter_effect_strength*level_of_shelter))*10000)/10000;
+-- which we are re-calculating at every step
+  race_rider.aero_A2 = Math.round((0.5 * settings.frontalArea * race_rider.aero_density)*10000)/10000;
+  
+  -- hmmm maybe just recalcualte this... plus frontalArea should be a rider setting not a global?
+  
+  -- ok, this seems to work. but the whole process seems fierce fragile
+  
+  -- in any cases, copy these changes to the GA race and see if a ga will run.
+  
+  -- there is defo too much of a DIP in speed during a switch. This may cause GA's to avoid switching? Seems like the whole physics model used is meh. Acceleration not good enough: riders could increase power faster? But power should be a level seperatd from speed? power can increase much quicker than speed? And they have momentum so keeping a speed is easier. That transition to the lead is important. HIgh cost will punich changes.
+  
+  -- watched women's race from 2012 olympics... they change on every lap. my whole model is a joke.
+  
+  -- but let's tweak the fatigue/recovery to see if more swithces emerge?
+  -- fatigue set with
+    let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings_r.fatigue_power_rate);
+	
+	let's do up an exel sheet to look at different values of fatigue_rate and fatigue_power_rate? oh wait, this is what I had already done :-) 
+	
+	ok, attempt 1 with linear fatige is v. high- ga finds no improvements.
+	
+	-- tuesday june 30th LAST LAST LAST fukk
+	
+	-- ned to do a couple of hours of writing today
+	
+	-- where was i? Ran some tests varying the fatigue/recovery, now need to get past that
+	
+	-- fukk. test 5efa00620fe486250c87d434  gen 28, ga says time 252 but if I play race I get 277 :-( :-( these fukking errors will never go away.
+	
+	fatigue 10 recovery 20 for all riders
+	
+	start order: [1,2,0,3]
+	[[19,"effort=6.72"],[39,"drop=2"],[61,"drop=2"],[96,"drop=1"],[143,"effort=7.75"],[148,"drop=2"],[172,"drop=3"],[187,"effort=8.05"],[206,"effort=2.4699999999999998"],[209,"effort=9.57"],[227,"effort=6.2"],[232,"effort=8.17"]]
+	
+	ok, phew, figured this out! the play race pulls the settings from the db and since doing it I changed those fatigue/recovery, so it is no longer identical... meaning things are not as 'repeatable' as I thought?
+	
+	-- no, it does look like i am saving the settings with each result, but I must be loading them wrong? I need to send the id of the results, not the settings, when trying to run a game FROM THE RESULTS BUT NOT FROM THE GA: so there are TWO ways not one. SO I need to send extra information to say RUNNING FROM RESULTS PAGE 
+	--easy to code so do it.
+	-- in results JS added source=results to args sent. also changed id from settings_it to results_id
+	-- add source=ga to ga JS
+	-- done, now add a big IF in the part in game where settings be loaded
+	
+	-- ok, not tooo bad, seems to work ok, same times when running from ga or results page
+	
+	-- now need to find settings that somewhat mimic the fast switching of a real race--- lots of fatigue?
+	-- maybe there are not enough instructions involved? 
+	
+	-- try tweaking
+	"ga_probability_of_instruction_per_timestep_lower":0.01,
+	"ga_probability_of_instruction_per_timestep_upper":0.03,
+		"ga_probability_of_drop_instruction":0.5,
+		"ga_p_crossover":0.2,
+		"ga_p_shuffle_start":0.001,
+		"ga_p_add_instruction":0.006,
+	"ga_p_delete_instruction":0.16,
+	"ga_p_change_effort":0.012,
+	"ga_p_change_drop":0.012,
+	"ga_p_move_instruction":0.012,
+	"ga_range_to_move_instruction":10,
+	"ga_range_to_change_effort":2,
+	to
+	"ga_probability_of_instruction_per_timestep_lower":0.02,
+	"ga_probability_of_instruction_per_timestep_upper":0.04,
+		"ga_probability_of_drop_instruction":0.6,
+		"ga_p_crossover":0.3,
+	"ga_p_shuffle_start":0.002,
+	"ga_p_add_instruction":0.009,
+	"ga_p_delete_instruction":0.2,
+	"ga_p_change_effort":0.015,
+	"ga_p_change_drop":0.015,
+	"ga_p_move_instruction":0.015,
+	"ga_range_to_move_instruction":12,
+	"ga_range_to_change_effort":2.5,
+	
+-- damm, crashing when i try to run 100 gens, seems to run some number of gens then go awol
+-- looks like an infiloop? fan starts up, stuck on gen 21/100, jumped to code but inside a seemingly innocuous FOR loop

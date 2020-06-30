@@ -46,7 +46,7 @@ function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold,
   let power_from_effort = 0;
 
   if (rider_effort < threshold_effort_level){
-    power_from_effort = rider_threshold*(rider_effort)/10;
+    power_from_effort = rider_threshold*(rider_effort)/threshold_effort_level;
   }
   else if(rider_effort == threshold_effort_level){
     power_from_effort = rider_threshold;
@@ -77,6 +77,15 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
   }
   //console.log("mapped power " + rider_power + " to effort " + effort_level);
   return effort_level;
+}
+
+//test mapPowerToEffort() and mapEffortToPower()
+console.log("************TEST mapEffortToPower and back via mapPowerToEffort************")
+for(let i = 0;i <= 18;i++){
+  let powerFromEffort =  mapEffortToPower(6, i/2, 400, 1000 );
+  console.log("mapEffortToPower(6," + i/2 + ",400,1000) = " + powerFromEffort);
+  let effortFromPower =   mapPowerToEffort(6,powerFromEffort,400,1000);
+  console.log("mapPowerToEffort(6," + powerFromEffort + ",400,1000) = " + effortFromPower);
 }
 
 function mutate_race(r, settings_r,gen){
@@ -330,11 +339,15 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let stats_total_time = 0;
     let stats_average_time = 0;
     let stats_total_number_of_instructions = 0;
+    let race_fitness_all = [];
     let stats_average_number_of_instructions = 0;
     //need to find the best solution from the whole population
     let final_best_race_properties_index = 0;
     let final_best_race_properties = population[0];
+    let final_worst_race_properties_index = 0;
+    let final_worst_race_properties = population[0];
     let best_race_rider_power = [];
+    let worst_race_rider_power = [];
 
     for(let i = 0;i<population.length;i++){
       //reset any race properties
@@ -354,6 +367,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
       stats_total_time += load_race_properties.time_taken;
       stats_total_number_of_instructions += load_race_properties.instructions.length;
+
+      race_fitness_all.push(race_results.time_taken); //add all times to an arroar to be able to analyse laterz
+
       //update best race if a new best is found
         //console.log("race run, id " + population[i].variant_id + "_" + population[i].id_generation + "_" + population[i].id_type + "_" + population[i].id_mutant_counter + " " +population[i].time_taken + " seconds | start_order " +  population[i].start_order);
 
@@ -361,6 +377,13 @@ function run_track_race_ga(settings_r, race_r, riders_r){
         final_best_race_properties_index = i;
         final_best_race_properties = population[i];
         best_race_rider_power = race_results.power_output;
+      }
+
+      //DonalK2020 june 25: also track the WORST race to see what kind of instructions it is using
+      if(population[i].time_taken > final_worst_race_properties.time_taken){
+        final_worst_race_properties_index = i;
+        final_worst_race_properties = population[i];
+        worst_race_rider_power = race_results.power_output;
       }
 
 
@@ -379,6 +402,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     +"_"+final_best_race_properties.id_type+"_"+final_best_race_properties.id_mutant_counter
     + " time taken " + final_best_race_properties.time_taken);
 
+    console.log("SLOWEST RACE generation  " + g + " was race " + final_worst_race_properties_index + " id "+final_worst_race_properties.variant_id+"_"+final_worst_race_properties.id_generation
+    +"_"+final_worst_race_properties.id_type+"_"+final_worst_race_properties.id_mutant_counter
+    + " time taken " + final_worst_race_properties.time_taken);
+
+
     generation_results = {};
     generation_results.generation_id = g;
     generation_results.best_race_id = best_race_id;
@@ -386,12 +414,18 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     generation_results.final_best_race_start_order = final_best_race_properties.start_order;
     generation_results.final_best_race_instructions = final_best_race_properties.instructions;
     generation_results.best_race_time = final_best_race_properties.time_taken;
+
+    generation_results.final_worst_race_start_order = final_worst_race_properties.start_order;
+    generation_results.final_worst_race_instructions = final_worst_race_properties.instructions;
+    generation_results.worst_race_time = final_worst_race_properties.time_taken;
+
     generation_results.stats_average_time = stats_average_time;
     generation_results.stats_average_number_of_instructions = stats_average_number_of_instructions;
     generation_results.robustness_check_number_of_mutants = 0;
     generation_results.robustness_check_average_mutant_time_taken = 0;
     generation_results.robustness_check_best_mutant_time_taken = 0;
     generation_results.robustness_check_worst_mutant_time_taken = 0;
+    generation_results.race_fitness_all = race_fitness_all;
 
 
     //get the power data of the best race
@@ -555,6 +589,13 @@ function new_population_tournament_selection(settings_r,current_population, stat
         if (Math.random() < settings_r.ga_p_crossover){
           //console.log("Generating CROSSOVER strategy");
           new_race = crossover(new_race,current_population[(i+k)],settings_r,generation,i+k);
+          //also mutate if the mutate_crossover is set (again, probabilitsic)
+          if (typeof(settings_r.crossover_apply_mutation_probability) != "undefined"){
+            if (Math.random() < settings_r.crossover_apply_mutation_probability){
+              new_race = mutate_race(new_race,settings_r,generation);
+              //console.log("****MUTATING CROSSOVER****");
+            }
+          }
           stats.number_of_crossovers_total++;
           //need to make sure that the stats properties exist and are set to zero, unlike in a mutation
           new_race.stats = {};
@@ -636,6 +677,12 @@ function new_population_best_squares(settings_r,current_population, stats,genera
       else{
         if (Math.random() < settings_r.ga_p_crossover){
           new_race = crossover(current_population[parent_population[i]],current_population[parent_population[k]],settings_r,generation,i+k);
+          if (typeof(settings_r.crossover_apply_mutation_probability) != "undefined"){
+            if (Math.random() < settings_r.crossover_apply_mutation_probability){
+              new_race = mutate_race(new_race,settings_r,generation);
+              //console.log("****MUTATING CROSSOVER 2****");
+            }
+          }
           stats.number_of_crossovers_total++;
           new_race.stats = {};
           new_race.stats.number_of_instructions_added = 0;
@@ -810,8 +857,8 @@ function crossover(parent1,parent2,settings_r,generation,population_index){
         }
 
 
-      console.log("****CROSSOVER LENGTH CALCULATION*****");
-      console.log("smaller parent size " + smaller_length + " larger parent size " + larger_length + " new length random size " + new_instruction_set_size + " random adjustment " + random_adjustment);
+      //console.log("****CROSSOVER LENGTH CALCULATION*****");
+      //console.log("smaller parent size " + smaller_length + " larger parent size " + larger_length + " new length random size " + new_instruction_set_size + " random adjustment " + random_adjustment);
       if (new_instruction_set_size + random_adjustment > 1){
         new_instruction_set_size += random_adjustment;
       }
@@ -825,7 +872,7 @@ function crossover(parent1,parent2,settings_r,generation,population_index){
       for(let i =0;i<random_array_ordered_and_halved.length;i++){
         new_instructions_reduced.push(new_instructions[random_array_ordered_and_halved[i]])
       }
-      console.log("new_instructions_reduced from crossover " +JSON.stringify(new_instructions_reduced));
+      //console.log("new_instructions_reduced from crossover " +JSON.stringify(new_instructions_reduced));
       new_instructions = new_instructions_reduced;
     }
 
@@ -860,6 +907,16 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is 
 		return 0.0;  // failed to converge
 }
 
+function power_from_velocity(aero, headwind, total_resistance, transv, target_velocity){
+  // returns a power in watts needed to produce a certain velocity for the given rider
+  //target_velocity needs to be in m/s
+  //let velocity_ms = target_velocity / 3.6;  // converted to m/s; (this is already done)
+  let total_velocity = target_velocity + headwind;
+  let aeroEff = (total_velocity > 0.0) ? aero : -aero; // wind in face; reverse effect
+  let powerv = (target_velocity * total_resistance + target_velocity * total_velocity * total_velocity * aeroEff) / transv;
+  return powerv;
+}
+
 
 function setEffort(settings_r, race_r,riders_r, effort){ //actually update the effort level
   let leadingRider = race_r.riders_r[race_r.current_order[0]];
@@ -875,6 +932,7 @@ function switchLead(settings_r, race_r,riders_r, positions_to_drop_back){
   let current_leader = race_r.current_order[0];
   race_r.riders_r[current_leader].current_aim = "drop"; //separate status whilst dropping back
   let current_leader_power = race_r.riders_r[current_leader].power_out; //try to get the new leader to match this velocity
+  let current_leader_velocity = race_r.riders_r[current_leader].velocity;
 
   let new_order = race_r.current_order.slice(1,positions_to_drop_back+1);
   new_order.push(race_r.current_order[0]);
@@ -891,7 +949,14 @@ function switchLead(settings_r, race_r,riders_r, positions_to_drop_back){
   new_leader.current_power_effort = current_leader_power;
   let current_threshold = new_leader.threshold_power;
 
-  new_leader.output_level = mapPowerToEffort(settings_r.threshold_power_effort_level, current_leader_power, new_leader.threshold_power, new_leader.max_power)
+  //note: The version of this in the model3 code has more comments and logging.
+  //Changed from using leader power as a target direclty and instead work out what power the new leader will need to produce the same velocity (with no shelter)
+  // should aim for power to produce the target speed WITHOUT SHELTER so need to make sure the correct aero_A2 value is used
+  let aero_A2_no_shelter = Math.round((0.5 * settings_r.frontalArea * new_leader.aero_density)*10000)/10000;
+  //now work out the power needed for this new leader using that target velocity
+  let target_power = power_from_velocity(aero_A2_no_shelter, settings_r.headwindv, new_leader.aero_tres, settings_r.transv, current_leader_velocity);
+  //now work out the output level that will transalte to that power (which can take some time to reach)
+  new_leader.output_level = mapPowerToEffort(settings_r.threshold_power_effort_level, target_power, new_leader.threshold_power, new_leader.max_power)
 
 
   if (new_leader.output_level < 0){
@@ -1010,7 +1075,10 @@ function run_race(settings_r,race_r,riders_r){
     if(race_r.drop_instruction > 0){
       if (race_r.riders_r.filter(a=>a.current_aim == "drop").length == 0){   //if no  rider is dropping back
         let lead_rider_distance_on_lap = race_r.riders_r[race_r.current_order[0]].distance_covered % settings_r.track_length;
-        if ((lead_rider_distance_on_lap > race_r.bend1_switch_start_distance && lead_rider_distance_on_lap < race_r.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race_r.bend2_switch_start_distance && lead_rider_distance_on_lap < race_r.bend2_switch_end_distance)){
+        let distance_travelled_last_step = race_r.riders_r[race_r.current_order[0]].velocity; //dk2020 need to watch for cases where the switch gap is skipped due to high speed
+      //if ((lead_rider_distance_on_lap > race_r.bend1_switch_start_distance && lead_rider_distance_on_lap < race_r.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race_r.bend2_switch_start_distance && lead_rider_distance_on_lap < race_r.bend2_switch_end_distance))
+          if ((lead_rider_distance_on_lap > race_r.bend1_switch_start_distance && lead_rider_distance_on_lap < race_r.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race_r.bend1_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race_r.bend1_switch_start_distance) || (lead_rider_distance_on_lap > race_r.bend2_switch_start_distance && lead_rider_distance_on_lap < race_r.bend2_switch_end_distance) || (lead_rider_distance_on_lap > race_r.bend2_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race_r.bend2_switch_start_distance) )
+        {
           switchLead(settings_r, race_r,riders_r, race_r.drop_instruction);
           race_r.drop_instruction = 0;
         }
@@ -1372,14 +1440,37 @@ function run_race(settings_r,race_r,riders_r){
     //work out the distance covered of the second last rider
     //get the 2nd last rider (whose time is the one that counts)
     let second_last_rider = race_r.riders_r[race_r.current_order[race_r.current_order.length-2]];
+
+    //DK2020 adding an extra check to avoid edge cases where all riders have done > distance but some are still BEHIND the second-to-last rider in the formal ordering.
+    //Just get the minimum distance covered from all riders
+    let min_distance_travelled = race_r.riders_r[0].distance_covered;
+    for (let xi = 1; xi<race_r.riders_r.length;xi++){
+      if(race_r.riders_r[xi] < min_distance_travelled){
+        min_distance_travelled = race_r.riders_r[xi];
+      }
+    }
+
+    let over_travelled_maximum = 2000; //want to catch any race that seems to be going rogue and not finishing.
+
     if (second_last_rider.distance_covered > race_r.distance ){
-      //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on...
+      //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on... assumming some riders have not finished yet
+
       let all_riders_ahead = true;
-      for (let x = 0;x<race_r.current_order.length-2;x++ ){
+
+      if (min_distance_travelled > (race_r.distance + over_travelled_maximum)){ //if some rider has yet to finish despite the second-to-last being done
+          //weird, shouldn't happen, so log some info
+          console.log("###### warning: min_distance_travelled " + min_distance_travelled + " ######");
+          console.log("Start order " + JSON.stringify(race_r.start_order));
+          console.log("Instructions " + JSON.stringify(race_r.race_instructions_r));
+
+      }
+      else{
+      for (let x = 0;x<race_r.current_order.length-2;x++ ){ //check that the riders that dhould be in front of second-to-last ARE
         if(race_r.riders_r[race_r.current_order[x]].distance_covered < second_last_rider.distance_covered){
           all_riders_ahead = false;
         }
       }
+    }
       if(all_riders_ahead){
         continue_racing = false;
       }

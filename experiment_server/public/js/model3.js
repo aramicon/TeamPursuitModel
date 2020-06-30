@@ -11,7 +11,8 @@ import {riders_template} from './riders_template.js';
 let settings = settings_template;
 let race = race_template;
 let riders = riders_template;
-let selected_settings_id = 0;
+let selected_settings_id = 0; // unused?
+let selected_results_id = 0; // unused?
 
 let newton_lookup = []; //used to store newton() function calculations to avoid tons of needless calls
 
@@ -55,7 +56,7 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is 
 		let TOL = 0.05;     // tolerance
 		for(let i_n=1; i_n < MAX; i_n++) {
 			let tv = vel + hw;
-			let aeroEff = (tv > 0.0) ? aero : -aero; // wind in face, must reverse effect
+			let aeroEff = (tv > 0.0) ? aero : -aero; // wind in face, so reverse effect
 			let f = vel * (aeroEff * tv * tv + tr) - tran * p; // the function
 			let fp = aeroEff * (3.0 * vel + hw) * tv + tr;     // the derivative
 			let vNew = vel - f / fp;
@@ -65,11 +66,21 @@ function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is 
 		return 0.0;  // failed to converge
 }
 
+function power_from_velocity(aero, headwind, total_resistance, transv, target_velocity){
+  // returns a power in watts needed to produce a certain velocity for the given rider
+  //target_velocity needs to be in m/s
+  //let velocity_ms = target_velocity / 3.6;  // converted to m/s; (this is already done)
+  let total_velocity = target_velocity + headwind;
+  let aeroEff = (total_velocity > 0.0) ? aero : -aero; // wind in face; reverse effect
+  let powerv = (target_velocity * total_resistance + target_velocity * total_velocity * total_velocity * aeroEff) / transv;
+  return powerv;
+}
+
 function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold, rider_max ){
   let power_from_effort = 0;
 
   if (rider_effort < threshold_effort_level){
-    power_from_effort = rider_threshold*(rider_effort)/10;
+    power_from_effort = rider_threshold*(rider_effort)/threshold_effort_level;
   }
   else if(rider_effort == threshold_effort_level){
     power_from_effort = rider_threshold;
@@ -132,7 +143,8 @@ function switchLead(positions_to_drop_back){
 
   let current_leader = race.current_order[0];
   race.riders[current_leader].current_aim = "drop"; //separate status whilst dropping back
-  let current_leader_power = race.riders[current_leader].power_out; //try to get the new leader to match this velocity
+  let current_leader_power = race.riders[current_leader].power_out; //try to get the new leader to match this power
+  let current_leader_velocity = race.riders[current_leader].velocity;
 
   let new_order = race.current_order.slice(1,positions_to_drop_back+1);
   new_order.push(race.current_order[0]);
@@ -149,7 +161,29 @@ function switchLead(positions_to_drop_back){
   new_leader.current_power_effort = current_leader_power;
   let current_threshold = new_leader.threshold_power;
 
-  new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, current_leader_power, new_leader.threshold_power, new_leader.max_power)
+  //originally we tried to set the new leader's effort to match the POWER of the former leader... BUT we really should be working it out based on the VELOCITY, i.e. that unless another instruciton is given, the rider will try to go at the same speed.
+
+  //console.log("************ WORK OUT POWER REQUIRED TO MAINTAIN SPEED AFTER SWITCH **********");
+  //console.log("Target Velocity = " + current_leader_velocity + " (" + current_leader_velocity*3.6 + ") new_leader.aero_A2 " + new_leader.aero_A2 + " settings.headwindv " + settings.headwindv + " new_leader.aero_tres " + new_leader.aero_tres + " settings.transv " + settings.transv);
+
+  // should aim for power to produce the target speed WITHOUT SHELTER so need to make sure the correct aero_A2 value is used
+  let aero_A2_no_shelter = Math.round((0.5 * settings.frontalArea * new_leader.aero_density)*10000)/10000;
+
+  let target_power = power_from_velocity(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, current_leader_velocity);
+  //console.log("power_from_velocity returns " + target_power + " watts");
+
+  //now figure out what effort level will equate to this power, and aim for that
+  new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, target_power, new_leader.threshold_power, new_leader.max_power);
+  //console.log("Maps to output_level " + new_leader.output_level);
+
+  //test: map this output level back to power and see what velocity it produces
+  //let power_from_effort = mapEffortToPower(settings.threshold_power_effort_level, new_leader.output_level, new_leader.threshold_power, new_leader.max_power );
+  //console.log("power_from_effort " + power_from_effort);
+
+  //let velocity_from_power = newton(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, power_from_effort);
+  //console.log("velocity_from_power " + velocity_from_power + " ("+ velocity_from_power*3.6 +  ")");
+  //console.log("************");
+
 
   if (new_leader.output_level < 0){
     console.log("new_leader.output_level < 0");
@@ -177,14 +211,17 @@ function moveRace(){
   //add any stored instructions if found
   let new_instructions = race.race_instructions_r.filter(a=>parseInt(a[0]) == race.race_clock);
   if(new_instructions.length > 0){
+
     for(let i=0;i<new_instructions.length;i++){
       let inst = new_instructions[i][1].split("=");
       if (inst.length=2){
         if(inst[0]=="effort"){
           race.live_instructions.push(["effort",parseFloat(inst[1])]);
+          console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
         }
         else if(inst[0]=="drop"){
           race.drop_instruction = parseInt(inst[1]);
+          console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
         }
       }
     }
@@ -197,15 +234,20 @@ function moveRace(){
     if(instruction[0]=="effort"){
       setEffort(instruction[1]);
       $("#instruction_info_text").text(race.race_clock + " - Effort updated to " + instruction[1]);
+      console.log(race.race_clock + " Effort instruction " + instruction[1] + " applied ")
     }
   }
 
   //also look at the drop instruciton: this can only be done at the beginnings of bends where the track is banked
   if(race.drop_instruction > 0){
-    console.log("clock "+ race.race_clock+ " drop instruction " + race.drop_instruction);
-    if (race.riders.filter(a=>a.current_aim == "drop").length == 0){   //if no  rider is dropping back
+    console.log(race.race_clock + " drop instruction queued " + race.drop_instruction);
+    if (race.riders.filter(a=>a.current_aim == "drop").length == 0){   //if no  rider is currently dropping back
       let lead_rider_distance_on_lap = race.riders[race.current_order[0]].distance_covered % settings.track_length;
-      if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance)){
+      let distance_travelled_last_step = race.riders[race.current_order[0]].velocity;
+      console.log(race.race_clock + "distance_travelled_last_step " + distance_travelled_last_step + " lead_rider_distance_on_lap " + lead_rider_distance_on_lap + ", race.bend1_switch_start_distance " + race.bend1_switch_start_distance + ", race.bend1_switch_end_distance" + race.bend1_switch_end_distance + ", race.bend2_switch_start_distance" + race.bend2_switch_start_distance + ", race.bend2_switch_end_distance " + race.bend2_switch_end_distance);
+
+      if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend1_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend1_switch_start_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend2_switch_start_distance) ){
+        console.log(race.race_clock +  " OK TO DROP BACK: switchLead(race.drop_instruction) ");
         switchLead(race.drop_instruction);
         $("#instruction_info_text").text(race.race_clock + " - DROP back " + race.drop_instruction);
         race.drop_instruction = 0;
@@ -868,52 +910,111 @@ function forwardStep() {
 
 function load_details_from_url(){
   //should get the info needed to run the test: may also get an id, if it does, needs to load the settings from the db
+
+  //note that we load settigns differently if we run from ga/results pages
   let url = new URL(window.location);
   if(url.search.length > 0){
-    let settings_id = url.searchParams.get("settings_id");
-    console.log("settings_id " + settings_id);
-    //if we get a settigns id we should try to load the settings from the db
-    if (settings_id){
-      //make a call to get the settings
-      fetch('http://127.0.0.1:3003/getExperimentSettingFromID/' + settings_id,{method : 'get'}).then((response)=>{
-        return response.json()
-      }).then((data)=>{
-      //  console.log('data ' + JSON.stringify(data));
-        //console.log('data ' + JSON.stringify(data[0].global_settings) );
-        console.log(data);
-        race = JSON.parse(data[0].race_settings);
-        settings = JSON.parse(data[0].global_settings);
-        riders = JSON.parse(data[0].rider_settings);
+    let source = url.searchParams.get("source");
+    if(source == "ga"){
+      //load settings from settings id
+      let settings_id = url.searchParams.get("settings_id");
+      console.log("settings_id " + settings_id);
+      //if we get a settigns id we should try to load the settings from the db
+      if (settings_id){
+        //make a call to get the settings
+        fetch('http://127.0.0.1:3003/getExperimentSettingFromID/' + settings_id,{method : 'get'}).then((response)=>{
+          return response.json()
+        }).then((data)=>{
+        //  console.log('data ' + JSON.stringify(data));
+          //console.log('data ' + JSON.stringify(data[0].global_settings) );
+          console.log(data);
+          race = JSON.parse(data[0].race_settings);
+          settings = JSON.parse(data[0].global_settings);
+          riders = JSON.parse(data[0].rider_settings);
 
-        $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id);
-        $("#new_settings_name").val(data[0].name);
+          $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id);
+          $("#new_settings_name").val(data[0].name);
 
-        //set the id (global)
-        selected_settings_id = data[0]._id;
+          //set the id (global)
+          selected_settings_id = data[0]._id;
 
 
-        //set the start order and instructions
-        let start_order = url.searchParams.get("startorder");
-        let instructions = url.searchParams.get("instructions");
-        if(start_order.length > 0){
-          console.log("loaded start_order from URL: " + start_order);
-          $("#teamorder").val(start_order);
-        }
-        if(instructions.length > 0){
-          console.log("loaded instructions from URL: " + instructions);
-          $("#instructions").val(instructions);
-        }
+          //set the start order and instructions
+          let start_order = url.searchParams.get("startorder");
+          let instructions = url.searchParams.get("instructions");
+          if(start_order.length > 0){
+            console.log("loaded start_order from URL: " + start_order);
+            $("#teamorder").val(start_order);
+          }
+          if(instructions.length > 0){
+            console.log("loaded instructions from URL: " + instructions);
+            $("#instructions").val(instructions);
+          }
 
-        //need to make sure the race is loaded AFTER we get the settings
+          //need to make sure the race is loaded AFTER we get the settings
+          update_race_settings();
+          load_race();
+      })}
+      else{
+        $("#database_connection_label").html("<strong>No Settings loaded</strong>, will use template file settings.");
+
         update_race_settings();
         load_race();
-    })}
-    else{
-      $("#database_connection_label").html("<strong>No Settings loaded</strong>, will use template file settings.");
+      }
 
-      update_race_settings();
-      load_race();
+
     }
+    else if (source=="results") {
+      //load settigns from the results as the original settings may have been changed since
+      let results_id = url.searchParams.get("results_id");
+      console.log("results_id " + results_id);
+      //if we get a settings id we should try to load the settings from the db
+      if (results_id){
+        //make a call to get the settings FROM THE RESULTS
+        let serverURL = 'http://127.0.0.1:3003/getResult/'+results_id;
+        fetch(serverURL,{method : 'get'}).then((response)=>{
+          return response.json()
+        }).then((data)=>{
+        //  console.log('data ' + JSON.stringify(data));
+          //console.log('data ' + JSON.stringify(data[0].global_settings) );
+          console.log(data);
+          race = JSON.parse(data[0].race_settings);
+          settings = JSON.parse(data[0].global_settings);
+          riders = JSON.parse(data[0].rider_settings);
+
+          $("#database_connection_label").html("<strong>Loaded Settings From Results"+data[0].settings_name+"</strong> + [ "+ data[0].notes +" ] | _id | <span id = 'settings_id'>"+data[0]._id);
+          $("#new_settings_name").val(data[0].settings_name);
+
+          //set the id (global)
+          selected_results_id = data[0]._id;
+
+
+          //set the start order and instructions
+          let start_order = url.searchParams.get("startorder");
+          let instructions = url.searchParams.get("instructions");
+          if(start_order.length > 0){
+            console.log("loaded start_order from URL: " + start_order);
+            $("#teamorder").val(start_order);
+          }
+          if(instructions.length > 0){
+            console.log("loaded instructions from URL: " + instructions);
+            $("#instructions").val(instructions);
+          }
+
+          //need to make sure the race is loaded AFTER we get the settings
+          update_race_settings();
+          load_race();
+      })}
+      else{
+        $("#database_connection_label").html("<strong>No Settings loaded</strong>, will use template file settings.");
+
+        update_race_settings();
+        load_race();
+      }
+
+    }
+
+
 
 
 

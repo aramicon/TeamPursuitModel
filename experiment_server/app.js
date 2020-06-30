@@ -228,7 +228,7 @@ db.connect((err)=>{
 /******RESUlTS**********/
 
 app.get('/getResults',cors(corsOptions), (req,res)=>{
-	db.getDB().collection(collectionResults).find({},{projection:{settings_name : 1, date_created: 1, notes:1}}).toArray((err,documents)=>{
+	db.getDB().collection(collectionResults).find({},{projection:{settings_name : 1, date_created: 1, notes:1}}).sort({_id:-1}).toArray((err,documents)=>{
 		if(err){
 			console.log("error getting collection of result names:  err " + err);
 		}
