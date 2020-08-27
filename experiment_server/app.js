@@ -75,7 +75,7 @@ app.get('/getExperimentSettings',(req,res)=>{
 });
 
 app.get('/getExperimentSettingNames',cors(corsOptions), (req,res)=>{
-	db.getDB().collection(collectionSettings).find({},{projection:{name : 1}}).toArray((err,documents)=>{
+	db.getDB().collection(collectionSettings).find({},{projection:{name : 1}}).sort({_id:-1}).toArray((err,documents)=>{
 		if(err){
 			console.log("error getting collection of names err " + err);
 		}

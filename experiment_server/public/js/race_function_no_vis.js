@@ -22,6 +22,10 @@ onmessage = function(e) {
     robustnessresult = run_robustness_check(e.data[1], e.data[2], e.data[3]);
     result = robustnessresult.message;
   }
+  else if(messageType == "run_consistency_check"){
+    consistencyresult = run_consistency_check(e.data[1], e.data[2], e.data[3]);
+    result = consistencyresult.message;
+  }
   else{
     console.log("Unknown request type " + messageType);
   }
@@ -80,13 +84,13 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
 }
 
 //test mapPowerToEffort() and mapEffortToPower()
-console.log("************TEST mapEffortToPower and back via mapPowerToEffort************")
-for(let i = 0;i <= 18;i++){
-  let powerFromEffort =  mapEffortToPower(6, i/2, 400, 1000 );
-  console.log("mapEffortToPower(6," + i/2 + ",400,1000) = " + powerFromEffort);
-  let effortFromPower =   mapPowerToEffort(6,powerFromEffort,400,1000);
-  console.log("mapPowerToEffort(6," + powerFromEffort + ",400,1000) = " + effortFromPower);
-}
+// console.log("************TEST mapEffortToPower and back via mapPowerToEffort************")
+// for(let i = 0;i <= 18;i++){
+//   let powerFromEffort =  mapEffortToPower(6, i/2, 400, 1000 );
+//   console.log("mapEffortToPower(6," + i/2 + ",400,1000) = " + powerFromEffort);
+//   let effortFromPower =   mapPowerToEffort(6,powerFromEffort,400,1000);
+//   console.log("mapPowerToEffort(6," + powerFromEffort + ",400,1000) = " + effortFromPower);
+// }
 
 function mutate_race(r, settings_r,gen){
   let new_race = {};
@@ -212,7 +216,7 @@ function new_random_instruction(timestep, settings_r){
 function run_track_race(settings_r, race_r, riders_r){
   //include a run type to know how this race is being run
   settings_r.run_type = "single_race";
-  let race_results = run_race(settings_r,race_r,riders_r)
+  let race_results = run_race(settings_r,race_r,riders_r);
   return race_results.time_taken;
 
   //$("#race_result").text('Finish Time = ' + time_taken);
@@ -233,6 +237,9 @@ function run_robustness_check(settings_r, race_r, riders_r){
   for(i=0;i<settings_r.robustness_check_population_size;i++){
     population.push(mutate_race(race_r,settings_r,1001));
   }
+
+  let one_fifth = Math.floor(settings_r.robustness_check_population_size/5);
+  let one_fifth_count = 0;
 
   //now run each race and store results
   let population_stats = [];
@@ -256,6 +263,11 @@ function run_robustness_check(settings_r, race_r, riders_r){
     if (load_race_properties.time_taken < fittest_mutant_time_taken){
       fittest_mutant_time_taken = load_race_properties.time_taken;
     }
+
+    if (i % one_fifth == 0){
+      console.log(one_fifth_count*25 + "% done");
+      one_fifth_count++;
+    }
   }
 
   //return the stats
@@ -272,6 +284,49 @@ function run_robustness_check(settings_r, race_r, riders_r){
   robustness_result.unfittest_mutant_time_taken = unfittest_mutant_time_taken;
   robustness_result.fittest_mutant_time_taken = fittest_mutant_time_taken;
   return robustness_result;
+}
+
+function run_consistency_check(settings_r, race_r, riders_r){
+
+  //get the time of the original
+  settings_r.run_type = "consistency_check";
+
+  //repeatedly run the same race to check if it always returns the same time
+  let consistency_check_population_size_used = 1000;
+  if (settings_r.consistency_check_population_size){
+    consistency_check_population_size_used = settings_r.consistency_check_population_size
+  }
+
+  let race_results_all = [];
+
+  for(i=0;i<consistency_check_population_size_used;i++){
+    race_r.drop_instruction = 0;
+    race_r.live_instructions = [];
+    race_r.race_instructions = [];
+
+    let race_results = run_race(settings_r,race_r,riders_r);
+    race_results_all.push(race_results.time_taken);
+  }
+
+  console.log("race_results_all" + race_results_all);
+  //return the stats
+  consistency_result={};
+  consistency_result_dict = {};
+  for(i=0;i<race_results_all.length;i++){
+    if (race_results_all[i] in consistency_result_dict){
+      consistency_result_dict[race_results_all[i]]++;
+    }
+    else{
+      consistency_result_dict[race_results_all[i]] = 1;
+    }
+
+  }
+
+
+  consistency_result.message = "Consistency Check: Ran race " + consistency_check_population_size_used + " times. Race times " + JSON.stringify(consistency_result_dict);
+  consistency_result.result = consistency_result_dict;
+
+  return consistency_result;
 }
 
 function run_track_race_ga(settings_r, race_r, riders_r){
@@ -329,7 +384,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   }
 
 
+  let segment_size = 10;
+  let one_segment = Math.floor(number_of_generations/segment_size);
+  let one_segment_count = 0;
 
+  let race_tracker = {}; //store ids of every race run to try find cases where the times differ
 
   for(let g=0;g<number_of_generations;g++){
     //run each race and track the scores.
@@ -344,10 +403,21 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     //need to find the best solution from the whole population
     let final_best_race_properties_index = 0;
     let final_best_race_properties = population[0];
+    let best_race_rider_power = [];
+    let best_race_distance_2nd_last_timestep = 0;
+    let best_race_distance_last_timestep = 0;
+
+
     let final_worst_race_properties_index = 0;
     let final_worst_race_properties = population[0];
-    let best_race_rider_power = [];
     let worst_race_rider_power = [];
+
+    //print progress ever segment %
+    if (g % one_segment == 0){
+      console.log(one_segment_count*(100/segment_size) + "% done");
+      one_segment_count++;
+    }
+
 
     for(let i = 0;i<population.length;i++){
       //reset any race properties
@@ -360,14 +430,52 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let load_race_properties = population[i];
       race_r.race_instructions_r = [...load_race_properties.instructions];
       race_r.start_order = [...load_race_properties.start_order];
+
+      // let race_tracker_id = JSON.stringify(  race_r.start_order) +  (JSON.stringify(  race_r.race_instructions_r));
+      // race_tracker_id = race_tracker_id.replace(/\W/g, ''); //remove any non-aplhanumeric values
+      // race_tracker_id = race_tracker_id.replace(/effort/g,'e');
+      // race_tracker_id = race_tracker_id.replace(/drop/g,'d');
+
       //run the actual race, i.e. the fitness function, returning just a time taken
       settings_r.run_type = "ga";
-      let race_results = run_race(settings_r,race_r,riders_r);
-      load_race_properties.time_taken = race_results.time_taken;
+      //console.log("riders " + JSON.stringify(riders_r));
 
+      //create a copy of the 3 arguments to monitor changes (may be slow)
+      let settings_r_copy = (JSON.stringify(settings_r));
+      let race_r_copy = (JSON.stringify(race_r));
+      let riders_r_copy = (JSON.stringify(riders_r));
+
+      let race_results = run_race(settings_r,race_r,riders_r);
+
+      //now check if the exact race was already run and if so if the time is different. if it is log information.
+
+      // commented out to save on processing
+
+      // if(race_tracker.hasOwnProperty(race_tracker_id)){
+      //   //this exact race was run before
+      // //  console.log("Race ran before");
+      // //  console.log("Race ID " + race_tracker_id );
+      //   let last_run_time = race_tracker[race_tracker_id]; //should be the finish time
+      //   if (race_results.time_taken != last_run_time){
+      //       // run times differ
+      //       console.log("RUN TIMES for same race differ from " + last_run_time + " to " + race_results.time_taken);
+      //       // console.log("Race ID " + race_tracker_id );
+      //       console.log("START SETTINGS");
+      //       console.log(settings_r_copy)
+      //       console.log(race_r_copy);
+      //       console.log(riders_r_copy);
+      //   }
+      // }
+      // else{
+      //   race_tracker[race_tracker_id] = race_results.time_taken;
+      // }
+
+      //let's check the 3 arguments to see if anything is changing as the ga loops through the population
+
+
+      load_race_properties.time_taken = race_results.time_taken;
       stats_total_time += load_race_properties.time_taken;
       stats_total_number_of_instructions += load_race_properties.instructions.length;
-
       race_fitness_all.push(race_results.time_taken); //add all times to an arroar to be able to analyse laterz
 
       //update best race if a new best is found
@@ -377,6 +485,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
         final_best_race_properties_index = i;
         final_best_race_properties = population[i];
         best_race_rider_power = race_results.power_output;
+        best_race_distance_2nd_last_timestep = race_results.distance_2nd_last_timestep;
+        best_race_distance_last_timestep = race_results.distance_last_timestep;
       }
 
       //DonalK2020 june 25: also track the WORST race to see what kind of instructions it is using
@@ -398,13 +508,13 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
     let best_race_id = final_best_race_properties.variant_id+"_"+final_best_race_properties.id_generation+"_"+final_best_race_properties.id_type+"_"+final_best_race_properties.id_mutant_counter;
 
-    console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " id "+final_best_race_properties.variant_id+"_"+final_best_race_properties.id_generation
-    +"_"+final_best_race_properties.id_type+"_"+final_best_race_properties.id_mutant_counter
-    + " time taken " + final_best_race_properties.time_taken);
+    //console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " id "+final_best_race_properties.variant_id+"_"+final_best_race_properties.id_generation
+    //+"_"+final_best_race_properties.id_type+"_"+final_best_race_properties.id_mutant_counter
+    //+ " time taken " + final_best_race_properties.time_taken);
 
-    console.log("SLOWEST RACE generation  " + g + " was race " + final_worst_race_properties_index + " id "+final_worst_race_properties.variant_id+"_"+final_worst_race_properties.id_generation
-    +"_"+final_worst_race_properties.id_type+"_"+final_worst_race_properties.id_mutant_counter
-    + " time taken " + final_worst_race_properties.time_taken);
+    //console.log("SLOWEST RACE generation  " + g + " was race " + final_worst_race_properties_index + " id "+final_worst_race_properties.variant_id+"_"+final_worst_race_properties.id_generation
+    //+"_"+final_worst_race_properties.id_type+"_"+final_worst_race_properties.id_mutant_counter
+  //  + " time taken " + final_worst_race_properties.time_taken);
 
 
     generation_results = {};
@@ -430,6 +540,10 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
     //get the power data of the best race
     generation_results.best_race_rider_power = best_race_rider_power;
+    //get distances covered for last and 2nd last timesteps
+    generation_results.best_race_distance_2nd_last_timestep = best_race_distance_2nd_last_timestep;
+    //console.log(g + " generation_results.best_race_distance_2nd_last_timestep " + generation_results.best_race_distance_2nd_last_timestep)
+    generation_results.best_race_distance_last_timestep = best_race_distance_last_timestep;
 
     //before looking at next generation can work out the robustness check of the current BEST strategy, IF required
     if(settings_r.ga_run_robustness_check==1){
@@ -514,6 +628,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
     }
   }
+
+  // console.log(JSON.stringify(race_tracker));
 
 
 
@@ -999,6 +1115,9 @@ function run_race(settings_r,race_r,riders_r){
 
   //console.log("race_r.start_order.length "+race_r.start_order.length)
 
+  let distance_2nd_last_timestep = 0;
+  let distance_last_timestep = 0;
+
   //Reset rider properties that change during the race
   for(let i = 0;i<race_r.start_order.length;i++){
     let load_rider = riders_r[race_r.start_order[i]];
@@ -1022,6 +1141,12 @@ function run_race(settings_r,race_r,riders_r){
     load_rider.burst_fatigue_level = 0;
     load_rider.accumulated_fatigue = 0;
     load_rider.output_level=settings_r.threshold_power_effort_level;
+
+    load_rider.distance_from_rider_in_front=0;
+    load_rider.number_of_riders_in_front=0;
+
+    load_rider.output_level=load_rider.start_output_level; //new addition to try address bug
+
     if (i==0){
       load_rider.current_aim = "lead";
     }
@@ -1044,6 +1169,8 @@ function run_race(settings_r,race_r,riders_r){
 
 
   let continue_racing = true;
+
+  //now the race begins
   while(continue_racing){
     //update the race clock, check for instructions, then move the riders based on the current order
 
@@ -1107,7 +1234,6 @@ function run_race(settings_r,race_r,riders_r){
           accumulated_effect = (settings_r.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings_r.accumulated_fatigue_maximum;
         }
           let failure_level = settings_r.fatigue_failure_level*accumulated_effect;
-
 
         if(race_rider.endurance_fatigue_level >= failure_level){
           race_rider.output_level = (settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction);
@@ -1250,7 +1376,7 @@ function run_race(settings_r,race_r,riders_r){
         let tv = target_velocity + settings_r.headwindv;
         //to work out the shelter, distance from the rider in front is needed
 
-        let level_of_shelter = 1;//maximum shelte
+        let level_of_shelter = 1;//maximum shelter
         let shelter_effect_strength = settings_r.drafting_effect_on_drag;
         if (race_rider.number_of_riders_in_front == 2){
           shelter_effect_strength += settings_r.two_riders_in_front_extra_shelter;
@@ -1436,7 +1562,7 @@ function run_race(settings_r,race_r,riders_r){
     }
       if(settings_r.ga_log_each_step && settings_r.run_type == "single_race"){console.log(logMessage);}
 
-    race_r.race_clock++;
+
     //work out the distance covered of the second last rider
     //get the 2nd last rider (whose time is the one that counts)
     let second_last_rider = race_r.riders_r[race_r.current_order[race_r.current_order.length-2]];
@@ -1452,10 +1578,16 @@ function run_race(settings_r,race_r,riders_r){
 
     let over_travelled_maximum = 2000; //want to catch any race that seems to be going rogue and not finishing.
 
+    distance_2nd_last_timestep = distance_last_timestep; //recording this to test exact distances being covered, have offByOne error in some cases
+    distance_last_timestep = second_last_rider.distance_covered;
+
+
     if (second_last_rider.distance_covered > race_r.distance ){
       //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on... assumming some riders have not finished yet
 
       let all_riders_ahead = true;
+
+
 
       if (min_distance_travelled > (race_r.distance + over_travelled_maximum)){ //if some rider has yet to finish despite the second-to-last being done
           //weird, shouldn't happen, so log some info
@@ -1476,8 +1608,13 @@ function run_race(settings_r,race_r,riders_r){
       }
     }
 
+    //only increment the clock if the race goes on
+    if(continue_racing){
+        race_r.race_clock++;
+    }
+
   }
   //return the final finish time (seconds)
 
-  return {time_taken: race_r.race_clock, power_output:rider_power};
+  return {time_taken: race_r.race_clock, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep};
 }

@@ -151,7 +151,7 @@ function build_results_table(ga_results){
 
   for(g=0;g<ga_results.generations.length;g++){
 
-    results_html += "<tr><td style='background-color:#aaaaaa;' ondblclick=\"loadSingleRace('"+ ga_results.generations[g].final_best_race_start_order+"','"+ JSON.stringify(ga_results.generations[g].final_best_race_instructions).replace(/"/g, 'QQ') +"','"+g+": "+ga_results.generations[g].best_race_id+ "(" + ga_results.generations[g].best_race_time +")"+ "')\" onmouseover=\"showColName('Generation')\">" + g + "</td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Run race in game model')\"><a  target='_blank' href = 'tpgame.html?source=ga&settings_id=" + selected_settings_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_instructions)) + "'> Run </a></td>";
+    results_html += "<tr><td style='background-color:#aaaaaa;' ondblclick=\"loadSingleRace('"+ ga_results.generations[g].final_best_race_start_order+"','"+ JSON.stringify(ga_results.generations[g].final_best_race_instructions).replace(/"/g, 'QQ') +"','"+g+": "+ga_results.generations[g].best_race_id+ "(" + ga_results.generations[g].best_race_time +")"+ "')\" onmouseover=\"showColName('Generation')\">" + g + "</td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time (distance 2nd last/last timestep)')\">" + ga_results.generations[g].best_race_time + "(" + ga_results.generations[g].best_race_distance_2nd_last_timestep + "," +  ga_results.generations[g].best_race_distance_last_timestep  + ") </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Run race in game model')\"><a  target='_blank' href = 'tpgame.html?source=ga&settings_id=" + selected_settings_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_instructions)) + "'> Run </a></td>";
 
     //stats columns
     pop = ga_results.generations[g].population_size;
@@ -175,6 +175,14 @@ function run_robustness_check(){
     console.log("Run Robustness Check for given start order and instructions race");
 
     $("#robustness_check_result").html("Running robustness check... wait...");
+
+    let current_settings_global = JSON.parse($("#global_settings").val());
+    let current_settings_race = JSON.parse($("#race_settings").val());
+    let current_settings_rider = JSON.parse($("#rider_settings").val());
+    let current_settings_option = $("#experiment_names").val();
+    chosen_global_settings = current_settings_global;
+    chosen_race_settings = current_settings_race;
+    chosen_rider_settings = current_settings_rider;
 
     //update settings
     let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
@@ -207,9 +215,67 @@ function run_robustness_check(){
         //get rid of the thread
         gaWorker.terminate();
       }
+      console.log("robustness chosen_rider_settings " + JSON.stringify(chosen_rider_settings));
+
       gaWorker.postMessage(["run_robustness_check",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
       start_time =  new Date().getTime();
       console.log('Robustness Check Message posted to worker');
+    }
+    else{
+      console.log("Worker cannot be created, maybe not supported by this browser?");
+    }
+
+}
+
+function run_consistency_check(){
+  let start_time = 0;
+
+    console.log("Run Consistency Check for given start order and instructions race");
+
+    let current_settings_global = JSON.parse($("#global_settings").val());
+    let current_settings_race = JSON.parse($("#race_settings").val());
+    let current_settings_rider = JSON.parse($("#rider_settings").val());
+    let current_settings_option = $("#experiment_names").val();
+    chosen_global_settings = current_settings_global;
+    chosen_race_settings = current_settings_race;
+    chosen_rider_settings = current_settings_rider;
+
+    $("#robustness_check_result").html("Running consistency check... wait...");
+
+    //update settings
+    let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
+    if(input_teamOrder.length > 0){
+      chosen_race_settings.start_order = input_teamOrder;
+      //console.log("updated race.start_order " + race.start_order )
+    }
+    chosen_race_settings.drop_instruction = 0;
+    chosen_race_settings.live_instructions = [];
+    chosen_race_settings.race_instructions = [];
+    chosen_race_settings.race_instructions_r = [];
+
+    let instructions_t = [];
+    let new_instructions = $('#instructions').val();
+    if(new_instructions.length > 5){
+      //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+      instructions_t = JSON.parse(new_instructions);
+    }
+    if (instructions_t.length > 0){
+      chosen_race_settings.race_instructions_r = instructions_t;
+    }
+
+    if (window.Worker){
+      var gaWorker = new Worker("js/race_function_no_vis.js");
+      gaWorker.onmessage = function(e) {
+        let end_time = new Date().getTime();
+        let result_data = e.data;
+        console.log("Consistency Test Duration " + (end_time - start_time)/1000 + " seconds.");
+        $("#robustness_check_result").html(result_data);
+        //get rid of the thread
+        gaWorker.terminate();
+      }
+      gaWorker.postMessage(["run_consistency_check",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
+      start_time =  new Date().getTime();
+      console.log('Consistency Check Message posted to worker');
     }
     else{
       console.log("Worker cannot be created, maybe not supported by this browser?");
@@ -397,6 +463,7 @@ $(document).ready(function() {
   $("#button_play_race").on("click", run_single_race);
   $("#button_evolve_instructions").on("click", run_ga);
   $("#button_check_race_robustness").on("click", run_robustness_check);
+  $("#button_check_race_consistency").on("click", run_consistency_check);
   $("#button_update_settings").on("click", updateExperimentSettings);
   $("#button_add_new_settings").on("click", addNewExperimentSettings);
 

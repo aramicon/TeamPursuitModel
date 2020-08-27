@@ -22,6 +22,8 @@ let race_state = 'stop';
 
 let step_speed = 120;
 
+let rider_power_data = []; //record power outpur of each rider to generate graph
+
 
 console.log("Track bend radius = 22m");
 console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/2 );
@@ -33,6 +35,12 @@ range.on('input', function(){
     step_speed =(10 - this.value) * 60;
     console.log("step_speed "+ step_speed);
 });
+
+
+
+function dddd(){
+  console.log("hi");
+}
 
 
 
@@ -190,7 +198,7 @@ function switchLead(positions_to_drop_back){
     debugger;
   }
 
-  console.log("new_leader.output_level = "+ new_leader.output_level);
+  //console.log("new_leader.output_level = "+ new_leader.output_level);
 
   for(let i=1;i<new_order.length;i++){
     if (new_order[i] != current_leader){ //don't update the dropping back rider
@@ -199,13 +207,15 @@ function switchLead(positions_to_drop_back){
       race.riders[new_order[i]].current_power_effort = race.riders[new_order[i]].threshold_power;
     }
   }
-  console.log("Move lead rider back " + positions_to_drop_back + " positions in order, new order " + new_order);
+  //console.log("Move lead rider back " + positions_to_drop_back + " positions in order, new order " + new_order);
 }
 
 function moveRace(){
   //update the race clock, check for instructions, then move the riders based on the current order
 
   $("#race_info_clock").text(race.race_clock);
+
+
   ctx.clearRect(0, 0, c.width, c.height);
 
   //add any stored instructions if found
@@ -217,11 +227,11 @@ function moveRace(){
       if (inst.length=2){
         if(inst[0]=="effort"){
           race.live_instructions.push(["effort",parseFloat(inst[1])]);
-          console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
+          //console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
         }
         else if(inst[0]=="drop"){
           race.drop_instruction = parseInt(inst[1]);
-          console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
+          //console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
         }
       }
     }
@@ -234,20 +244,20 @@ function moveRace(){
     if(instruction[0]=="effort"){
       setEffort(instruction[1]);
       $("#instruction_info_text").text(race.race_clock + " - Effort updated to " + instruction[1]);
-      console.log(race.race_clock + " Effort instruction " + instruction[1] + " applied ")
+      //console.log(race.race_clock + " Effort instruction " + instruction[1] + " applied ")
     }
   }
 
   //also look at the drop instruciton: this can only be done at the beginnings of bends where the track is banked
   if(race.drop_instruction > 0){
-    console.log(race.race_clock + " drop instruction queued " + race.drop_instruction);
+  //  console.log(race.race_clock + " drop instruction queued " + race.drop_instruction);
     if (race.riders.filter(a=>a.current_aim == "drop").length == 0){   //if no  rider is currently dropping back
       let lead_rider_distance_on_lap = race.riders[race.current_order[0]].distance_covered % settings.track_length;
       let distance_travelled_last_step = race.riders[race.current_order[0]].velocity;
-      console.log(race.race_clock + "distance_travelled_last_step " + distance_travelled_last_step + " lead_rider_distance_on_lap " + lead_rider_distance_on_lap + ", race.bend1_switch_start_distance " + race.bend1_switch_start_distance + ", race.bend1_switch_end_distance" + race.bend1_switch_end_distance + ", race.bend2_switch_start_distance" + race.bend2_switch_start_distance + ", race.bend2_switch_end_distance " + race.bend2_switch_end_distance);
+      //console.log(race.race_clock + " distance_travelled_last_step " + distance_travelled_last_step + " lead_rider_distance_on_lap " + lead_rider_distance_on_lap + ", race.bend1_switch_start_distance " + race.bend1_switch_start_distance + ", race.bend1_switch_end_distance" + race.bend1_switch_end_distance + ", race.bend2_switch_start_distance" + race.bend2_switch_start_distance + ", race.bend2_switch_end_distance " + race.bend2_switch_end_distance);
 
       if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend1_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend1_switch_start_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend2_switch_start_distance) ){
-        console.log(race.race_clock +  " OK TO DROP BACK: switchLead(race.drop_instruction) ");
+        //console.log(race.race_clock +  " OK TO DROP BACK: switchLead(race.drop_instruction) ");
         switchLead(race.drop_instruction);
         $("#instruction_info_text").text(race.race_clock + " - DROP back " + race.drop_instruction);
         race.drop_instruction = 0;
@@ -314,6 +324,8 @@ function moveRace(){
 
       //round power output to 2 decimal places
       powerv = Math.round((powerv)*100)/100;
+
+
       //check the lookup table
       let lookup_velocity = -1;
       if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
@@ -344,6 +356,9 @@ function moveRace(){
         race_rider.velocity = lookup_velocity;
       }
       race_rider.power_out = powerv;
+
+      //can now save this power
+      rider_power_data[race.current_order[i]].push(powerv);
 
       //add fatigue if going harder than the threshold or recover if going under it
       //recover if going under the threshold
@@ -512,6 +527,9 @@ function moveRace(){
         }
       }
       race_rider.power_out = powerv;
+
+      //can now save this power
+      rider_power_data[race.current_order[i]].push(powerv);
 
       //fatigue if over the threshold, recover if under
       if (race_rider.power_out < race_rider.threshold_power ){
@@ -715,8 +733,11 @@ function moveRace(){
 
   let continue_racing = true;
 
+    //console.log("FINISH RACE? second_last_rider.distance_covered " + second_last_rider.distance_covered);
+
   if (second_last_rider.distance_covered > race.distance ){
-    //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on...
+
+    //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on... (ignore the last rider)
     let all_riders_ahead = true;
 
     for (let x = 0;x<race.current_order.length-2;x++ ){
@@ -847,6 +868,11 @@ function load_race(){
   race.riders = riders;
 
   addRiderDisplay();
+
+  rider_power_data = []; //reset power data for graph
+  for(let i = 0;i<race.start_order.length;i++){
+    rider_power_data.push([]); //add an empty array for each rider, so that we can store the power outputs (watts) for each rider/timestep
+  }
 }
 
 $(document).ready(function() {
@@ -861,6 +887,10 @@ $(document).ready(function() {
   $("#button_fw").on("click", forwardStep);
   $(".set_effort").on("click", setEffortInstruction);
   $(".switch_lead").on("click", switchLeadInstruction);
+
+  $("#draw_power").on("click",draw_power_graph);
+  $("#saveGraphAsPng").on('click',saveGraphAsPng);
+  $("#clearCanvas").on('click',clearCanvas);
 
   load_details_from_url();
 
@@ -1013,15 +1043,239 @@ function load_details_from_url(){
       }
 
     }
+  }
+}
+function draw_power_graph(){
+  draw_line_graph("power_graph");
+
+}
 
 
+function draw_line_graph(graph_name_opt){
 
+    let graph_name = graph_name_opt;
 
+    switch(graph_name) {
+    case "power_graph":
 
+      let graph_title ="unknown";
+      let graph_data_1 = {};
+      let graph_data_2 = {};
+      let graph_data_3 = {};
+      let graph_data_4 = {};
 
+      //set the data based on the selection
+      if (graph_name=="power_graph"){
 
+        graph_title = "Rider Power Output";
+        graph_data_1 = {};
+
+        graph_data_1.title = "Rider 1";
+
+        graph_data_1.x_label = "Watts";
+        graph_data_1.y_label = "Timestep";
+
+        graph_data_1.x_scale_from = 0;
+
+        //need to get the max power used by any rider
+        let max_p = 0;
+        for(let i = 0; i< rider_power_data.length;i++){
+          let max_i = d3.max(rider_power_data[i]);
+          if (max_i > max_p){
+            max_p = max_i;
+          }
+        }
+
+        if (typeof(rider_power_data[0]) == "undefined") {
+          console.log("Error trying to draw power graph");
+          console.log("rider_power_data  = " + rider_power_data);
+        }
+
+        graph_data_1.x_scale_to = rider_power_data[0].length;
+
+        graph_data_1.y_scale_from = 0;
+        graph_data_1.y_scale_to = max_p;
+
+        graph_data_1.data = [];
+        for (let i=0;i<rider_power_data[0].length;i++){
+          graph_data_1.data.push({x:i, y:rider_power_data[0][i]});
+        }
+
+        graph_data_2 = {};
+        graph_data_2.title = "Rider 2";
+        graph_data_2.data = [];
+        for (let i=0;i<rider_power_data[1].length;i++){
+          graph_data_2.data.push({x:i, y:rider_power_data[1][i]});
+        }
+
+        graph_data_3 = {};
+        graph_data_3.title = "Rider 3";
+        graph_data_3.data = [];
+        for (let i=0;i<rider_power_data[2].length;i++){
+          graph_data_3.data.push({x:i, y:rider_power_data[2][i]});
+        }
+
+        graph_data_4 = {};
+        graph_data_4.title = "Rider 4";
+        graph_data_4.data = [];
+        for (let i=0;i<rider_power_data[3].length;i++){
+          graph_data_4.data.push({x:i, y:rider_power_data[3][i]});
+        }
+      }
+
+      //D3
+      // set the dimensions and margins of the graph
+        let totalWidth = 900;
+        let totalHeight = 440;
+        let legendLeftIndent = 280;
+        let bulletIndent = 20;
+
+          var margin = {top: 30, right: legendLeftIndent, bottom: 30, left: 60},
+              width = totalWidth - margin.left - margin.right,
+              height = totalHeight - margin.top - margin.bottom;
+
+          // append the svg object to the body of the page
+          var svg = d3.select("#graph")
+            .append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+              .attr("transform",
+                    "translate(" + margin.left + "," + margin.top + ")");
+            //  data = selected_ga_results;
+
+              // Add X axis --> it is a date format
+              var x = d3.scaleLinear()
+                .domain([graph_data_1.x_scale_from, graph_data_1.x_scale_to])
+                .range([ 0, width ]);
+              svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+              // Add Y axis
+              var y = d3.scaleLinear()
+                .domain([graph_data_1.y_scale_from, graph_data_1.y_scale_to])
+                .range([ height, 0 ]);
+              svg.append("g")
+                .call(d3.axisLeft(y));
+
+              // Add the line 1
+              svg.append("path")
+                .datum(graph_data_1.data)
+                .attr("fill", "none")
+                .attr("stroke", "#0000ff")
+                .attr("stroke-width", 1.5)
+                .attr("d", d3.line()
+                  .x(function(d) { return x(d.x) })
+                  .y(function(d) { return y(d.y) })
+                );
+
+                if (!jQuery.isEmptyObject(graph_data_2)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_2.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#ff0000")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
+
+                if (!jQuery.isEmptyObject(graph_data_3)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_3.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#00ff00")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
+                if (!jQuery.isEmptyObject(graph_data_4)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_4.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#000000")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
+
+                  // X and Y labels
+                  svg.append("text")
+                  .attr("class", "x label")
+                  .attr("text-anchor", "end")
+                  .attr("x", width)
+                  .attr("y", height - 6)
+                  .text(graph_data_1.x_label); // e.g. "GA Generation"
+
+                  svg.append("text")
+                  .attr("class", "y label")
+                  .attr("text-anchor", "end")
+                    .attr("x", -220)
+                  .attr("y", 6)
+                  .attr("dy", ".75em")
+                  .attr("transform", "rotate(-90)")
+                  .text(graph_data_1.y_label); // e.g. "Race Finish Time (s)"
+
+                  //Colour Legend
+                  svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",6).attr("r", 6).style("fill", "#0000ff");
+
+                  svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 6).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
+
+                  if (!jQuery.isEmptyObject(graph_data_2)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",40).attr("r", 6).style("fill", "#ff0000");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 40).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
+                  if (!jQuery.isEmptyObject(graph_data_3)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",60).attr("r", 6).style("fill", "#00ff00");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 60).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
+                  if (!jQuery.isEmptyObject(graph_data_4)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",80).attr("r", 6).style("fill", "#000000");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 80).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
+
+                  //add a title
+                  svg.append("text")
+                  .attr("x", (width / 2))
+                  .attr("y", 0 - (margin.top / 2))
+                  .attr("text-anchor", "middle")
+                  .style("font-size", "16px")
+                  .style("font-style", "italic")
+                  .text(graph_title);
+      break;
+
+    default:
+    console.log("graph " + graph_name + " not found: nothing drawn");
   }
 
 
+}
 
+const saveGraphAsPng = () => {
+
+  console.log("try to save the graph as a PNG");
+
+  //generate a useful name
+  let d = new Date();
+
+  let image_filename =  "power_graph_sim_" +  d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate() + "_" + d.getHours() + "-" + d.getMinutes();
+
+  // Get the d3js SVG element and save using saveSvgAsPng.js
+  saveSvgAsPng(document.getElementsByTagName("svg")[0], image_filename, {scale: 2, backgroundColor: "#FFFFFF"});
+
+}
+
+const clearCanvas = () => {
+  //clear the canvas
+  console.log("Clear the canvas");
+  d3.select('#graph').selectAll('*').remove();
 }

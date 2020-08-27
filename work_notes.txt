@@ -771,3 +771,207 @@ ace_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter
 	
 -- damm, crashing when i try to run 100 gens, seems to run some number of gens then go awol
 -- looks like an infiloop? fan starts up, stuck on gen 21/100, jumped to code but inside a seemingly innocuous FOR loop
+
+-- ok, retest this
+
+-- change sort of results so that the NEWEST appears at the top
+-- is this causing trouble?
+start order  [2, 0, 1, 3]
+instructions [[59,"effort=6.31"],[127,"drop=2"],[129,"effort=9.21"],[180,"drop=1"],[219,"drop=1"],[223,"effort=9.33"],[233,"effort=5.18"]]
+yup,  race_r.race_clock is a BIG number 33426317 so it looks like the race is NOT being finished at all
+
+-- YIKES. riders are ending up BEHIND the second last finisher... what the heck is that ARE WE FINSIHED code doing?
+
+added some lines and now 100 gens run BUT do I need to dig further into WHY a race was able to go infiloop?
+-- no infiloop if i try to run this race above.. odd. guess I shoudl still add the new code to the game JS. maybe add an extra few lines to at least LOG info IF it looks like a race could go infiloop?
+
+here's one 
+###### warning: min_distance_travelled 6004.9977584177295 ######
+race_function_no_vis.js:1460 Start order [2,1,0,3]
+race_function_no_vis.js:1461 Instructions [[14,"effort=6.25"],[15,"drop=2"],[43,"drop=2"],[91,"effort=6.66"],[111,"drop=2"],[117,"drop=2"],[152,"drop=1"],[154,"drop=2"],[181,"drop=2"],[213,"drop=2"],[224,"drop=2"],[228,"effort=9.84"],[235,"effort=5.11"],[244,"drop=1"]]
+
+-- ok, so this race does finish ok BUT there is defo a bug: drop instrucitons are being ignored.
+
+-- ok ok... looks like the instructions are ignored because the rider never hits that gap that I've defined as the drop-zone. I've said: switch if distance into lap is between points A and B, but at a certain speed it might never be between them. Need to fix this formula...
+
+if Distance_covered > A and Distance_covered < B
+OR Distance_covered > B and (Distance_covered - distance_covered_last_move) < A
+would this not catch where the distance moved skips over the A-B gap?
+
+the damn IF statement now loks hideous:
+  if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend1_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend1_switch_start_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend2_switch_start_distance) )
+  
+-- ok, seeeems to work. But the changes are taking too long. real race has them done on the bed. bend. but yes, bed needed.
+
+-- first copy to GA code then commit.
+
+wednesday JUly 1
+
+-- rerun basic tests and write something up, also need to go back over reinforcement learning
+
+-- physics limitation examples: switches take too long and cost too much effort- irl they are very smooth and can be timed very exactly on each lap. Teams tend to change a LOT. Power is miles off at the beginning as this is where a BIG effort to get up to speed is needed.
+
+
+tuesday August 18 
+
+long tangent into RL plus lots of nothingtime. nothign gets done. duel, deul
+
+-- wrote a bit more and added a diagram graph
+
+-- need to finsih writing a draft
+
+-- need to add more references
+
+-- how to draw the fatigue thingy as a formula for latex?
+
+-- Fr * (output-threshold/max-threshold)^fatigueExp
+-- Fr * ((Po-Pt)/(Pm-Pt)^Fe)
+
+-- why isn't the effort to power mapping not just always linear? I get it has to pass through the threshold at a given Et = Pt but is there not a better way whereby a line is drawn from 0 - Pm through Pt at x=Et? 
+
+-- no i don't think it's possible as there are three points, two of which vary: 0, Pt, and Pm. can have, as designed straights from 0 to Pt and from Pt to Pm. Might not be perfect but ok for now
+
+-- add an image of the race in action.
+
+-- add formulas for recovery and accumulated fatigue 
+
+- huh, I don't have an excel graph for recover. I should express it as a formula at least
+
+recovery   race_rider.endurance_fatigue_level -= race_rider.recovery_rate* Math.pow(( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
+
+-- Rr*((Pt-Pc)/Pt)^Re
+  
+  fatigue_failure_level = Ff*((Fm - Fa)/Fm);
+  
+-- problem. same race is getting different times- like, off by 1 issues. 258 and 259. why would it sometimes take an extra timestep? something not being reset? but such a small difference.
+
+-- tuesday 25th august 
+
+-- try to fix problem where we have different finsi8h times -offbyone- for game and ga races.
+
+example: all strong riders, start order: 2,0,3,1 Intructions: [[50,"effort=6.3"],[77,"drop=1"],[79,"drop=1"],[116,"drop=2"],[142,"effort=6.36"],[146,"drop=2"],[152,"drop=1"],[180,"drop=3"],[182,"effort=6.95"],[188,"drop=2"],[194,"drop=3"],[209,"drop=3"],[235,"drop=2"],[242,"effort=9.72"],[252,"drop=1"]]
+
+ga gives 259, sim 258. why? do i always return +1?
+
+-- ok, so there is a discrepancy whereby the race clock gets ++ before the result is returned even on the timespte in which the race finishes. So for the GA version I need to only ++ the race clock if the race is not finished. The sim version doesn't return a value so is ok.
+
+-- kewl.. buttt this doesn't really solve the initial issue where the ga returned 2 different results for the same start order and instructions. 
+
+-- run the same ga test again and see if it happens again
+
+-- chest rub from vinny, 2 * olive oil from evergreen moycullen. ouro de portugal brand
+
+-- found one example of disimprovement in 4 tests: result from 1st generation is 263 but when i actually run it I gets 271 (same in sim and ga). why would this happen? next gen result seems fine. smells like another bug.
+
+-- almost seems like it's possible that the wrong race time is used? or there's a mixup setting the best race from gen 0?
+
+-- if i could generate the power graph from the sim i could compare it to the one in the results- maybe the race is actually not finished but for some reason is being cut short?
+
+what data do i need to collect to draw this graph?
+best_race_rider_power
+
+-- christ that took too long. i give up. it draws now, and it is different- the power graphs do not sync up BUT they do seem to begin the same: could be something to do with fatigue?
+
+-- found another example where the ga race differs and gets 260 instead of 261. if i rerun it i get 261. the power diagram has defo a tiny difference so something has happened. how the fukk do i find out what's going wrong? thousands of races are running.
+
+-- can I run the same race 10000 times and try to detect it? does it happen for all instructions eventually? is something not being reset?
+
+-- idea: have another test like the Robustness one, but just run the same race over and over, and return a set of unique finish times and the number of times they occured: a counter thingy.
+
+-- robustness check is NOT working, doesn't seem to load the riders
+
+-- finally got robustness to work again, and consistency check now there as well, but it seems to get the same result every time. now running it 50k times to see.
+
+-- all 50k finish with 261. so how are races differing? something not reset when running the ga?
+
+let one_fifth = Math.floor(settings_r.robustness_check_population_size/5);
+  let one_fifth_count = 0;
+  
+    if (i % one_fifth == 0){
+      console.log(one_fifth_count*25 + "% done");
+      one_fifth_count++;
+    }
+	
+	-- generalize timer outputs to use in ga
+	
+	let segment_size = 10;
+	let one_segment = Math.floor(TOTAL/segment_size);
+	let one_segment_count = 0;
+  
+    if (i % one_segment == 0){
+      console.log(one_segment_count*(100/segment_size) + "% done");
+      one_segment_count++;
+    }
+-- what if the  issue is a really marginal one, like, the rounding of (x > race distance)?
+-- current example; looks like it just adds an extra timestep/cuts one off
+
+-- hmmmm... race step 260 finishes with 2nd last rider at 3999.83540739257. so, a TINY discrepancy would throw it off. I would need to log the completed race distance of the 2nd last rider at the 2nd last timestep to check this? does look sus.
+
+-- noticable diff between SIM and GA- chasing rider power oscillating more in GA.
+
+-- can't always be happening- what setting has a sporadic effect? effort/power conversion. fatigue. recovery. power oscillates, for chasing riders. no rider is dropped.
+
+-- now the conssitency check for
+start: 0,2,1,3
+insructions: [[39,"effort=6.7"],[58,"drop=2"],[68,"drop=2"],[106,"drop=3"],[138,"drop=2"],[176,"effort=9.49"],[177,"drop=2"],[192,"drop=1"],[201,"drop=1"],[214,"drop=3"],[229,"drop=3"],[236,"effort=9.56"],[240,"effort=8.530000000000001"],[244,"effort=9.74"],[254,"drop=1"]]
+
+goes 257,288,257,288 over and over again. does it do this for all races now?
+
+-- looks like it :-( not resetting somefink?
+
+-- yikes, problem seems in a lot of places. defo a big bug. need to fix. possible I'm not resetting fatigue/etc of riders? how would that make them quicker tho? the race before it affects it, somehow... how? i've made it way too complex- too much resetting/etc going on
+
+-- output level is being marginally changed... not 6 but 6.000000002368021. a rounding issue? i did add a bit for this lately. if I reset it will this help?
+
+-- add start_output_level in riders. set to 6. reset to this for each race.
+
+-- defo a difference between ga and sim. somethign in how power of chasers is worked out. must have forgotten to copy somthing?
+
+-- fukk. identical log files for a race from both GA and SIM. time to give up for today. mutherfukker.
+
+august 27th
+-- right, back at it. different finish time sometimes and the power of chasers differs but i don't know why. it happens in the ga but not when using the ga race code seperate from the ga itself.
+
+-- built a thing that generates an id of each race and checks for dupes 
+
+-- getting some of these issues where the race goes way over 4000m
+###### warning: min_distance_travelled 6006.749165424945 ######
+race_function_no_vis.js:1586 Start order [2,3,1,0]
+race_function_no_vis.js:1587 Instructions [[60,"effort=6.57"],[90,"drop=1"],[91,"effort=4.77"],[116,"drop=3"],[121,"effort=8.23"],[143,"drop=3"],[173,"effort=8.629999999999999"],[179,"effort=5.4"],[209,"effort=8.969999999999999"],[213,"drop=1"],[226,"drop=2"],[243,"drop=1"],[254,"drop=2"]]
+
+race_function_no_vis.js:1585 ###### warning: min_distance_travelled 6008.609434184566 ######
+race_function_no_vis.js:1586 Start order [1,3,0,2]
+race_function_no_vis.js:1587 Instructions [[3,"drop=3"],[14,"drop=3"],[100,"drop=2"],[161,"drop=1"],[186,"effort=8.809999999999999"],[217,"drop=2"],[251,"drop=1"],[257,"effort=4.93"]]
+
+-- much weird, can't seem to trigger the error now that I'm tracking the finish times of races. all i'm doing is searchign for cases where the same race runs with different outcomes
+
+multiple tests run now with no error, even with a population of 4000
+
+could i have fixed it with the few setting resets I added yesterday?
+
+-- after  more attempts and still no probs- maybe worth trying to reverse yesterday's changes in the reset area and see if they then ocur? right now i have no proof of any fix
+
+-- woah
+
+-- commented out load_rider.distance_from_rider_in_front=0; 
+-- suddennly there are tons of races getting different times. this must be it. Most of the changes are worse; in the test I ran no best race got worse so results looked normal, but in the background lots of races were getting different finish times. sons of beaches.
+
+-- uncomment and try comment out load_rider.output_level=load_rider.start_output_level; instead
+
+-- ok, good, the issue is not there. sooooo, it seems that for chasing riders the distance to the rider in front was not starting at 0, and this immediately affects them- i imagine in some cases they would have been way behind, depending on what happened in the previous race. i could actually test this int he sim by manually setting values?
+
+-- should this distance actually be initialised to 0 if they are supposed to start in a line?
+
+-- still getting some of these
+###### warning: min_distance_travelled 6012.629823245844 ######
+race_function_no_vis.js:1594 Start order [3,2,1,0]
+race_function_no_vis.js:1595 Instructions [[28,"effort=7.79"],[47,"drop=2"],[87,"drop=3"],[93,"drop=3"],[119,"effort=6.22"],[133,"drop=2"],[158,"drop=1"],[189,"drop=1"],[191,"drop=2"],[206,"effort=8.71"],[217,"drop=2"],[234,"drop=2"]]
+
+-- huh. still a difference in the graphs for rider power- chasers oscillate in ga but not sim. how can i compare them? just scroll them both side by side ya dummie
+
+-- can't see any diff from eyeballing
+
+-- guess i should also be able to graph the power from the GA one-off runs to see if the issue could be another specific to the ga over generations
+
+-- ah fuck. graph for gen 48 is way off- ga has best race at 255 but it's 264 when you run it separate- 
+-- turns out that this race seems to go way over 4000m. need to debug again. FFS!
