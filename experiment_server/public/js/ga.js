@@ -5,6 +5,7 @@ let chosen_rider_settings = {};
 let selected_settings_id = 0;
 let ga_results = {};
 
+let rider_power_data = [];
 
 function showColName(c_name){
   $("#race_result_col").html(c_name);
@@ -67,9 +68,14 @@ function run_single_race(){
     singleRaceWorker.onmessage = function(e) {
       let end_time = new Date().getTime();
       let result = e.data;
-      console.log('Single race result = ' + result + ' at ' + end_time);
+      console.log('Single race result = ' + JSON.stringify(result) + ' at ' + end_time);
+
+      //set the power so it can be graphed
+      rider_power_data = result.power_output;
+
       //get rid of the thread
-      $("#single_race_result").html("Race Time: <strong>" + result + "</strong>. Test Duration " + (end_time - start_time)/1000 + " seconds.");
+
+      $("#single_race_result").html("Race Time: <strong>" + result.time_taken + "</strong>. Test Duration " + (end_time - start_time)/1000 + " seconds.");
       singleRaceWorker.terminate();
     }
     singleRaceWorker.postMessage(["run_single_race",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
@@ -455,6 +461,240 @@ const  saveResults = () => {
 }
 
 
+function draw_power_graph(){
+  draw_line_graph("power_graph");
+
+}
+
+
+function draw_line_graph(graph_name_opt){
+
+    let graph_name = graph_name_opt;
+
+    switch(graph_name) {
+    case "power_graph":
+
+      let graph_title ="unknown";
+      let graph_data_1 = {};
+      let graph_data_2 = {};
+      let graph_data_3 = {};
+      let graph_data_4 = {};
+
+      //set the data based on the selection
+      if (graph_name=="power_graph"){
+
+        graph_title = "Rider Power Output";
+        graph_data_1 = {};
+
+        graph_data_1.title = "Rider 1";
+
+        graph_data_1.x_label = "Watts";
+        graph_data_1.y_label = "Timestep";
+
+        graph_data_1.x_scale_from = 0;
+
+        //need to get the max power used by any rider
+        let max_p = 0;
+        for(let i = 0; i< rider_power_data.length;i++){
+          let max_i = d3.max(rider_power_data[i]);
+          if (max_i > max_p){
+            max_p = max_i;
+          }
+        }
+
+        if (typeof(rider_power_data[0]) == "undefined") {
+          console.log("Error trying to draw power graph");
+          console.log("rider_power_data  = " + rider_power_data);
+        }
+
+        graph_data_1.x_scale_to = rider_power_data[0].length;
+
+        graph_data_1.y_scale_from = 0;
+        graph_data_1.y_scale_to = max_p;
+
+        graph_data_1.data = [];
+        for (let i=0;i<rider_power_data[0].length;i++){
+          graph_data_1.data.push({x:i, y:rider_power_data[0][i]});
+        }
+
+        graph_data_2 = {};
+        graph_data_2.title = "Rider 2";
+        graph_data_2.data = [];
+        for (let i=0;i<rider_power_data[1].length;i++){
+          graph_data_2.data.push({x:i, y:rider_power_data[1][i]});
+        }
+
+        graph_data_3 = {};
+        graph_data_3.title = "Rider 3";
+        graph_data_3.data = [];
+        for (let i=0;i<rider_power_data[2].length;i++){
+          graph_data_3.data.push({x:i, y:rider_power_data[2][i]});
+        }
+
+        graph_data_4 = {};
+        graph_data_4.title = "Rider 4";
+        graph_data_4.data = [];
+        for (let i=0;i<rider_power_data[3].length;i++){
+          graph_data_4.data.push({x:i, y:rider_power_data[3][i]});
+        }
+      }
+
+      //D3
+      // set the dimensions and margins of the graph
+        let totalWidth = 900;
+        let totalHeight = 440;
+        let legendLeftIndent = 280;
+        let bulletIndent = 20;
+
+          var margin = {top: 30, right: legendLeftIndent, bottom: 30, left: 60},
+              width = totalWidth - margin.left - margin.right,
+              height = totalHeight - margin.top - margin.bottom;
+
+          // append the svg object to the body of the page
+          var svg = d3.select("#graph")
+            .append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+              .attr("transform",
+                    "translate(" + margin.left + "," + margin.top + ")");
+            //  data = selected_ga_results;
+
+              // Add X axis --> it is a date format
+              var x = d3.scaleLinear()
+                .domain([graph_data_1.x_scale_from, graph_data_1.x_scale_to])
+                .range([ 0, width ]);
+              svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+              // Add Y axis
+              var y = d3.scaleLinear()
+                .domain([graph_data_1.y_scale_from, graph_data_1.y_scale_to])
+                .range([ height, 0 ]);
+              svg.append("g")
+                .call(d3.axisLeft(y));
+
+              // Add the line 1
+              svg.append("path")
+                .datum(graph_data_1.data)
+                .attr("fill", "none")
+                .attr("stroke", "#0000ff")
+                .attr("stroke-width", 1.5)
+                .attr("d", d3.line()
+                  .x(function(d) { return x(d.x) })
+                  .y(function(d) { return y(d.y) })
+                );
+
+                if (!jQuery.isEmptyObject(graph_data_2)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_2.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#ff0000")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
+
+                if (!jQuery.isEmptyObject(graph_data_3)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_3.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#00ff00")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
+                if (!jQuery.isEmptyObject(graph_data_4)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_4.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#000000")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
+
+                  // X and Y labels
+                  svg.append("text")
+                  .attr("class", "x label")
+                  .attr("text-anchor", "end")
+                  .attr("x", width)
+                  .attr("y", height - 6)
+                  .text(graph_data_1.x_label); // e.g. "GA Generation"
+
+                  svg.append("text")
+                  .attr("class", "y label")
+                  .attr("text-anchor", "end")
+                    .attr("x", -220)
+                  .attr("y", 6)
+                  .attr("dy", ".75em")
+                  .attr("transform", "rotate(-90)")
+                  .text(graph_data_1.y_label); // e.g. "Race Finish Time (s)"
+
+                  //Colour Legend
+                  svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",6).attr("r", 6).style("fill", "#0000ff");
+
+                  svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 6).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
+
+                  if (!jQuery.isEmptyObject(graph_data_2)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",40).attr("r", 6).style("fill", "#ff0000");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 40).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
+                  if (!jQuery.isEmptyObject(graph_data_3)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",60).attr("r", 6).style("fill", "#00ff00");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 60).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
+                  if (!jQuery.isEmptyObject(graph_data_4)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",80).attr("r", 6).style("fill", "#000000");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 80).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
+
+                  //add a title
+                  svg.append("text")
+                  .attr("x", (width / 2))
+                  .attr("y", 0 - (margin.top / 2))
+                  .attr("text-anchor", "middle")
+                  .style("font-size", "16px")
+                  .style("font-style", "italic")
+                  .text(graph_title);
+      break;
+
+    default:
+    console.log("graph " + graph_name + " not found: nothing drawn");
+  }
+
+
+}
+
+const saveGraphAsPng = () => {
+
+  console.log("try to save the graph as a PNG");
+
+  //generate a useful name
+  let d = new Date();
+
+  let image_filename =  "power_graph_sim_" +  d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate() + "_" + d.getHours() + "-" + d.getMinutes();
+
+  // Get the d3js SVG element and save using saveSvgAsPng.js
+  saveSvgAsPng(document.getElementsByTagName("svg")[0], image_filename, {scale: 2, backgroundColor: "#FFFFFF"});
+
+}
+
+const clearCanvas = () => {
+  //clear the canvas
+  console.log("Clear the canvas");
+  d3.select('#graph').selectAll('*').remove();
+}
 
 
 $(document).ready(function() {
@@ -468,6 +708,11 @@ $(document).ready(function() {
   $("#button_add_new_settings").on("click", addNewExperimentSettings);
 
   $("#button_save_results").on("click",saveResults);
+
+  //add power graph
+  $("#draw_power").on("click",draw_power_graph);
+  $("#saveGraphAsPng").on('click',saveGraphAsPng);
+  $("#clearCanvas").on('click',clearCanvas);
 
 
   //try to load settings from the experiment server

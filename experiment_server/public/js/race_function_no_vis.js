@@ -4,7 +4,14 @@
 //Model of team pursuit track cycle race
 
 //import global, race, and rider setting data
+let global_settings_tracker = "";
+let global_race_tracker = "";
+let global_riders_tracker = "";
+let global_log_message = "";
+let global_log_message_final = "";
+let global_log_message_now = true;
 
+let use_lookup_velocity = false;
 
 onmessage = function(e) {
   console.log('Message received from main script ');
@@ -217,7 +224,7 @@ function run_track_race(settings_r, race_r, riders_r){
   //include a run type to know how this race is being run
   settings_r.run_type = "single_race";
   let race_results = run_race(settings_r,race_r,riders_r);
-  return race_results.time_taken;
+  return race_results;
 
   //$("#race_result").text('Finish Time = ' + time_taken);
 }
@@ -384,13 +391,17 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   }
 
 
-  let segment_size = 10;
+  let segment_size = 10; //just to log % of gens done
   let one_segment = Math.floor(number_of_generations/segment_size);
   let one_segment_count = 0;
 
   let race_tracker = {}; //store ids of every race run to try find cases where the times differ
 
   for(let g=0;g<number_of_generations;g++){
+
+    if (g==(number_of_generations-1)){
+      global_log_message_now = true;
+    }
     //run each race and track the scores.
     //console.log("Generation " + g + " before racing ");
     //console.log(population);
@@ -412,7 +423,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let final_worst_race_properties = population[0];
     let worst_race_rider_power = [];
 
-    //print progress ever segment %
+    //print % progress every segment
     if (g % one_segment == 0){
       console.log(one_segment_count*(100/segment_size) + "% done");
       one_segment_count++;
@@ -487,6 +498,16 @@ function run_track_race_ga(settings_r, race_r, riders_r){
         best_race_rider_power = race_results.power_output;
         best_race_distance_2nd_last_timestep = race_results.distance_2nd_last_timestep;
         best_race_distance_last_timestep = race_results.distance_last_timestep;
+
+        // let's now log the settings for this best race for the LAST generation
+        if (global_log_message ){
+          //console.log("***BEST RACE LOG START***");
+          global_log_message_final = global_log_message;
+        //  console.log(global_settings_tracker);
+        //  console.log(global_race_tracker);
+        //  console.log(global_riders_tracker);
+        }
+
       }
 
       //DonalK2020 june 25: also track the WORST race to see what kind of instructions it is using
@@ -499,6 +520,12 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
       //console.log("race " + i + " time taken " + load_race_properties.time_taken + " instructions " + JSON.stringify(race_r.race_instructions_r));
     }
+
+    if (global_log_message && g == (number_of_generations-1) ){
+      console.log("***BEST RACE GENERATION " + g + " LOG START***");
+      console.log(global_log_message_final);
+    }
+
     stats_average_time = stats_total_time/population.length;
     stats_average_number_of_instructions = stats_total_number_of_instructions/population.length;
 
@@ -577,7 +604,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let number_of_drop_instructions_changed_total = 0;
       let number_of_start_order_shuffles_total = 0;
       let number_of_drop_instructions_total = 0;
-
       let total_number_of_instructions = 0;
       let variants = [];
       let stats = {};
@@ -588,7 +614,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       // population = new_population_best_squares(settings_r,population, stats,g);
       settings_r.mutant_counter = 0
       population = new_population_tournament_selection(settings_r,population, stats,g+1);
-
 
       for(let j = 0; j< population.length;j++){
         number_of_instructions_added_total += population[j].stats.number_of_instructions_added;
@@ -605,7 +630,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
           variants.push(""+population[j].variant_id);
         }
       }
-
 
       generation_results.population_size = population.length;
       generation_results.variants_size = variants.length;
@@ -625,7 +649,25 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     //  console.log(population);
 
       ga_results.generations.push(generation_results);
+    }
+    else if(g==(number_of_generations-1)){
+      // last gen doesn't produce new population
+      generation_results.population_size = 0;
+      generation_results.variants_size =0;
+      generation_results.number_of_instructions_added_total = 0;
+      generation_results.number_of_instructions_removed_total = 0;
+      generation_results.number_of_instructions_moved_total = 0;
+      generation_results.number_of_effort_instructions_changed_total = 0;
+      generation_results.number_of_drop_instructions_changed_total = 0;
+      generation_results.number_of_start_order_shuffles_total = 0;
+      generation_results.number_of_start_order_shuffles_total = 0;
+      generation_results.number_of_drop_instructions_total = 0;
+      generation_results.total_number_of_instructions = 0;
+      generation_results.number_of_crossovers_total = 0;
+      generation_results.number_of_direct_copies = 0;
+      generation_results.number_of_mutants_added_total = 0;
 
+      ga_results.generations.push(generation_results);
     }
   }
 
@@ -1044,6 +1086,14 @@ function switchLead(settings_r, race_r,riders_r, positions_to_drop_back){
   if (positions_to_drop_back >= (race_r.current_order.length-1)){
     positions_to_drop_back = (race_r.current_order.length-1);
   }
+  //if limit_drop_to_contiguous_group is 1/ON, check the current group size
+  if (settings_r.limit_drop_to_contiguous_group == 1){
+    if ((positions_to_drop_back) > (race_r.contiguous_group_size-1)){
+      //e.g. ig group size is 3 you can at most drop back 2 (lead rider is 1)
+    //  console.log("**** rider trying to drop back " + positions_to_drop_back + " but contiguous_group_size is " + race_r.contiguous_group_size);
+      positions_to_drop_back = (race_r.contiguous_group_size-1);
+    }
+  }
 
   let current_leader = race_r.current_order[0];
   race_r.riders_r[current_leader].current_aim = "drop"; //separate status whilst dropping back
@@ -1167,9 +1217,18 @@ function run_race(settings_r,race_r,riders_r){
     race_r.riders_r[i].aero_tres = race_r.riders_r[i].aero_twt * (settings_r.gradev + settings_r.rollingRes);
   }
 
-
   let continue_racing = true;
+  global_settings_tracker = JSON.stringify(settings_r);
+  global_race_tracker = JSON.stringify(race_r);
+  global_riders_tracker = JSON.stringify(riders_r);
+  if(settings_r.run_type == "single_race"){ //print them if running a single race (error checking)
+    console.log("**SETTINGS BEFORE RACE BEGINS**");
+    console.log(global_settings_tracker);
+    console.log(global_race_tracker);
+    console.log(global_riders_tracker);
+  }
 
+  global_log_message = "";
   //now the race begins
   while(continue_racing){
     //update the race clock, check for instructions, then move the riders based on the current order
@@ -1211,9 +1270,12 @@ function run_race(settings_r,race_r,riders_r){
         }
       }
     }
+      race_r.contiguous_group_size = 1; //count the riders in the coniguous group at the front: riders may be dropped
 
     for(let i=0;i<race_r.current_order.length;i++){
       let race_rider = race_r.riders_r[race_r.current_order[i]];
+
+
 
       //work out how far the race_rider can go in this time step
       //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
@@ -1278,33 +1340,41 @@ function run_race(settings_r,race_r,riders_r){
         powerv = Math.round((powerv)*100)/100;
 
         //check the lookup table
-        let lookup_velocity = -1;
-        if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
-          if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
-            lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)];
-          }
-        }
-        if ( lookup_velocity === undefined || lookup_velocity === -1){
-          //does not exist in the lookup so call the function and save it
-          race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
-          if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+        if (use_lookup_velocity)
+        {
+          let lookup_velocity = -1;
+          if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
             if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
-              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
+              lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)];
+            }
+          }
+          if ( lookup_velocity === undefined || lookup_velocity === -1){
+            //does not exist in the lookup so call the function and save it
+            race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
+
+            if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+              if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
+                newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
+              }
+              else{
+                newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
+                newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
+              }
             }
             else{
+              //add new array for total weight and A2 values
+              newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
               newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
               newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
             }
           }
           else{
-            //add new array for total weight and A2 values
-            newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
+            race_rider.velocity = lookup_velocity;
           }
         }
-        else{
-          race_rider.velocity = lookup_velocity;
+        else {
+          //use_lookup_velocity is turned off, so always call the newton function (slower)
+          race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
         }
         if(powerv < 0){
           console.log("crap! powerv 2 = " + powerv);
@@ -1341,8 +1411,8 @@ function run_race(settings_r,race_r,riders_r){
         }
 
       }
-      else{
-        //rider may be following or dropping back. Either way they will be basing velocity on that of another rider- normally just following the rider in front of you
+      else{ //CHASING rider
+        //rider may be following or dropping back or dropped. Either way they will be basing velocity on that of another rider- normally just following the rider in front of them
 
         let rider_to_follow = {};
         if (i==0){
@@ -1357,6 +1427,9 @@ function run_race(settings_r,race_r,riders_r){
         //let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings_r.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
         let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings_r.target_rider_gap) -  (race_rider.distance_covered-race_rider.start_offset);
         //this is your target velocity, but it might not be possible. assuming 1 s - 1 step
+
+
+
         let target_velocity = distance_to_cover;
         //work out the power needed for this velocity- remember we are drafting
 
@@ -1451,33 +1524,38 @@ function run_race(settings_r,race_r,riders_r){
         //round power output to 2 decimal places
         powerv = Math.round((powerv)*100)/100;
 
-        let lookup_velocity = -1;
-        if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
-          if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
-            lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)];
-          }
-        }
-        if ( lookup_velocity === undefined || lookup_velocity === -1){
-          //does not exist in the lookup so call the function and save it
-          race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
-          if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+        if(use_lookup_velocity){
+          let lookup_velocity = -1;
+          if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
             if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
-              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
+              lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)];
+            }
+          }
+          if ( lookup_velocity === undefined || lookup_velocity === -1){
+            //does not exist in the lookup so call the function and save it
+            race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
+            if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+              if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
+                newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
+              }
+              else{
+                newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
+                newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
+              }
             }
             else{
+              //add new array for total weight and A2 values
+              newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
               newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
               newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
             }
           }
           else{
-            //add new array for total weight and A2 values
-            newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
+            race_rider.velocity = lookup_velocity;
           }
         }
         else{
-          race_rider.velocity = lookup_velocity;
+          race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
         }
 
         //if you are dropping back and get back to the rider in front, go back to a follow state
@@ -1486,6 +1564,16 @@ function run_race(settings_r,race_r,riders_r){
             race_rider.current_aim = "follow";
           }
         }
+
+        //dksep20 if you are still a long ways behind the rider_to_follow you are dropped
+        //if you are within a set distance you are NOT dropped
+
+        //count the size of the current contiguous group: may affect drop/switchLead() instructions
+        if((race_r.contiguous_group_size == i) && ((rider_to_follow.distance_covered-rider_to_follow.start_offset) - (race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= settings_r.contiguous_group_drop_distance)){
+          race_r.contiguous_group_size++;
+        }
+
+
         race_rider.power_out = powerv;
 
         //can now save this power
@@ -1529,6 +1617,8 @@ function run_race(settings_r,race_r,riders_r){
     }
     // After all riders have moved
 
+    // console.log("race_r.contiguous_group_size " + race_r.contiguous_group_size);
+
     // Update each rider's distance value for the rider in front of them (lead is zero)
     let logMessage = "";
       for(let i=0;i<race_r.current_order.length;i++){
@@ -1556,11 +1646,18 @@ function run_race(settings_r,race_r,riders_r){
         display_rider.distance_from_rider_in_front = min_distance;
         display_rider.number_of_riders_in_front = number_of_riders_in_front;
 
-      if(settings_r.ga_log_each_step && settings_r.run_type == "single_race"){
+      if(global_log_message_now || (settings_r.ga_log_each_step && settings_r.run_type == "single_race")){
         logMessage += " " + race_r.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race_r.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
       }
     }
-      if(settings_r.ga_log_each_step && settings_r.run_type == "single_race"){console.log(logMessage);}
+      if(settings_r.ga_log_each_step && settings_r.run_type == "single_race"){
+        console.log(logMessage);
+      }
+      else if (global_log_message_now){
+        global_log_message += logMessage;
+      }
+
+
 
 
     //work out the distance covered of the second last rider
@@ -1571,8 +1668,8 @@ function run_race(settings_r,race_r,riders_r){
     //Just get the minimum distance covered from all riders
     let min_distance_travelled = race_r.riders_r[0].distance_covered;
     for (let xi = 1; xi<race_r.riders_r.length;xi++){
-      if(race_r.riders_r[xi] < min_distance_travelled){
-        min_distance_travelled = race_r.riders_r[xi];
+      if(race_r.riders_r[xi].distance_covered < min_distance_travelled){
+        min_distance_travelled = race_r.riders_r[xi].distance_covered;
       }
     }
 
@@ -1587,8 +1684,6 @@ function run_race(settings_r,race_r,riders_r){
 
       let all_riders_ahead = true;
 
-
-
       if (min_distance_travelled > (race_r.distance + over_travelled_maximum)){ //if some rider has yet to finish despite the second-to-last being done
           //weird, shouldn't happen, so log some info
           console.log("###### warning: min_distance_travelled " + min_distance_travelled + " ######");
@@ -1597,13 +1692,14 @@ function run_race(settings_r,race_r,riders_r){
 
       }
       else{
-      for (let x = 0;x<race_r.current_order.length-2;x++ ){ //check that the riders that dhould be in front of second-to-last ARE
-        if(race_r.riders_r[race_r.current_order[x]].distance_covered < second_last_rider.distance_covered){
+      for (let x = 0;x<race_r.current_order.length-2;x++ ){ //check that the riders that should be in front of second-to-last ARE
+        if(race_r.riders_r[race_r.current_order[x]].distance_covered < second_last_rider.distance_covered && race_r.riders_r[race_r.current_order[x]].distance_covered <= race_r.distance){
           all_riders_ahead = false;
         }
       }
     }
-      if(all_riders_ahead){
+
+    if(all_riders_ahead){
         continue_racing = false;
       }
     }

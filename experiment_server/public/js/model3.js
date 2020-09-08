@@ -24,6 +24,8 @@ let step_speed = 120;
 
 let rider_power_data = []; //record power outpur of each rider to generate graph
 
+let continue_racing = true; //false when race finishes
+
 
 console.log("Track bend radius = 22m");
 console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/2 );
@@ -147,7 +149,15 @@ function switchLead(positions_to_drop_back){
     positions_to_drop_back = (race.current_order.length-1);
   }
 
-    $("#race_info").html("<strong>Leader Drops Back</strong> by "+  positions_to_drop_back + " places");
+  if (settings.limit_drop_to_contiguous_group == 1){
+    if ((positions_to_drop_back) > (race.contiguous_group_size-1)){
+      //e.g. ig group size is 3 you can at most drop back 2 (lead rider is 1)
+      console.log("**** rider trying to drop back " + positions_to_drop_back + " but contiguous_group_size is " + race.contiguous_group_size);
+      positions_to_drop_back = (race.contiguous_group_size-1);
+    }
+  }
+
+  $("#race_info").html("<strong>Leader Drops Back</strong> by "+  positions_to_drop_back + " places");
 
   let current_leader = race.current_order[0];
   race.riders[current_leader].current_aim = "drop"; //separate status whilst dropping back
@@ -264,6 +274,8 @@ function moveRace(){
       }
     }
   }
+
+  race.contiguous_group_size = 1;
 
   for(let i=0;i<race.current_order.length;i++){
     let race_rider = race.riders[race.current_order[i]];
@@ -417,7 +429,7 @@ function moveRace(){
       let tv = target_velocity + settings.headwindv;
       //to work out the shelter, distance from the rider in front is needed
 
-      let level_of_shelter = 1;//maximum shelte
+      let level_of_shelter = 1;//maximum shelter
       let shelter_effect_strength = settings.drafting_effect_on_drag;
       if (race_rider.number_of_riders_in_front == 2){
         shelter_effect_strength += settings.two_riders_in_front_extra_shelter;
@@ -462,7 +474,6 @@ function moveRace(){
       if (target_power > current_max_power){
         target_power = current_max_power; //can't go over this (for now)
       }
-
 
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
       let powerv = race_rider.power_out, power_adjustment = 0;
@@ -526,6 +537,12 @@ function moveRace(){
           race_rider.current_aim = "follow";
         }
       }
+
+      //count the size of the current contiguous group: may affect drop/switchLead() instructions
+      if((race.contiguous_group_size == i) && ((rider_to_follow.distance_covered-rider_to_follow.start_offset) - (race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= settings.contiguous_group_drop_distance)){
+        race.contiguous_group_size++;
+      }
+
       race_rider.power_out = powerv;
 
       //can now save this power
@@ -731,7 +748,7 @@ function moveRace(){
   //get the 2nd last rider (whose time is the one that counts)
   let second_last_rider = race.riders[race.current_order[race.current_order.length-2]];
 
-  let continue_racing = true;
+  continue_racing = true;
 
     //console.log("FINISH RACE? second_last_rider.distance_covered " + second_last_rider.distance_covered);
 
@@ -740,14 +757,15 @@ function moveRace(){
     //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on... (ignore the last rider)
     let all_riders_ahead = true;
 
-    for (let x = 0;x<race.current_order.length-2;x++ ){
-      if(race.riders[race.current_order[x]].distance_covered < second_last_rider.distance_covered){
+    for (let x = 0; x < race.current_order.length-2; x++ ){
+      if(race.riders[race.current_order[x]].distance_covered < second_last_rider.distance_covered && race.riders[race.current_order[x]].distance_covered <= race.distance){
         all_riders_ahead = false;
       }
     }
 
     if(all_riders_ahead){ //race is finished right? you have done the distance and the others are still in front
       continue_racing = false;
+      $("#race_info").html("<strong>Race finished: </strong>"+  (race.race_clock-1) + " seconds, " + second_last_rider.distance_covered + "m");
     }
   }
   if (continue_racing && (race_state == "play" || race_state == "resume" )){
@@ -930,7 +948,8 @@ function stopRace(){
 }
 
 function forwardStep() {
-      if(race_state == "pause"){
+
+      if(continue_racing && race_state == "pause"){
         console.log("button forward invoked.");
         d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x fa-spin");
         setTimeout(function(){  d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x "); }, step_speed);
