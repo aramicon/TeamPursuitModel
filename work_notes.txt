@@ -975,3 +975,236 @@ race_function_no_vis.js:1595 Instructions [[28,"effort=7.79"],[47,"drop=2"],[87,
 
 -- ah fuck. graph for gen 48 is way off- ga has best race at 255 but it's 264 when you run it separate- 
 -- turns out that this race seems to go way over 4000m. need to debug again. FFS!
+
+-- friday 28th. 
+
+-- first, bug in sim, can keep steppign on with the >> button after race has finished: it doesn't look at the continue_racing bool?
+
+-- done. add a message saying RACE FINISHED when it does finish in the status bar
+
+-- ok, so bug looks to be this. 2nd last rider gets DROP-3 just before it crosses line. race does not finish until it is in 3rd place even if by then all 3 key riders are well over the 4k. so need to only keep racing if a rider that should be ahead is behind and has not reached the distance: we are waiting for it; it is chasing.
+
+-- ok, so now much improved but still offByOne: 256 in SIM, 255 in GA.
+
+-- need to understand why GA ends at 255? seems to be 256 when run alone?
+
+-- can't figure out why it would end at 255 when the standalone doesn't
+
+-- added same bit as in SIM
+&& race_r.riders_r[race_r.current_order[x]].distance_covered <= race_r.distance
+
+-- huh, uncovered something here
+
+  let min_distance_travelled = race_r.riders_r[0].distance_covered;
+    for (let xi = 1; xi<race_r.riders_r.length;xi++){
+      if(race_r.riders_r[xi] < min_distance_travelled){
+        min_distance_travelled = race_r.riders_r[xi];
+      }
+    }
+	
+	how am I comparing an object race_r.riders_r[xi] with a scalar min_distance_travelled?
+	what happens if i set min_distance_travelled = race_r.riders_r[xi] and then run
+	  if (min_distance_travelled > (race_r.distance + over_travelled_maximum)){  ????
+	  or is min distance travelled always just set to the first rider?
+	  
+	  changed it to 
+	  
+	  let min_distance_travelled = race_r.riders_r[0].distance_covered;
+    for (let xi = 1; xi<race_r.riders_r.length;xi++){
+      if(race_r.riders_r[xi].distance_covered < min_distance_travelled){
+        min_distance_travelled = race_r.riders_r[xi].distance_covered;
+      }
+    }
+	
+	-- but I'm not sure this will fix anything.
+	
+	-- in any case let's try run another 50 gens and see what we gets
+	
+	-- so bit better but still offByONe
+	
+	-- need to understand why the SIM and GA graphs differ- this might help
+	
+	-- the ga gives us 255(3987.5515070262,4003.54455893307) for finish time (2nd last timestep distance, last timestep distance)
+	
+	-- first, get the GA standalone to draw the power graph as well
+	
+	-- ok, done. aaaaand, same graph as SIM. 
+	
+	-- sssss0000000ooooo, the GA when running as ga (many gens) has differing results, soooo something small differs, and again we are back looking at chasing riders and why the power oscillates. could it be the shelter calculation?
+	
+	-- let's rteturn to the idea yday to look for any differences from race to race in the three settings objects: global/race/riders. Surely something is off?
+	
+	-- ok, have new machanism trying to compare settings before once off with GA. fukking bug where GA doesn't output results for last gen now causing trouble. FFS! 
+	
+	-- last gen data not saved cos for last gen you do NOT create a new generation at all... 
+	
+	-- attempt to get a blow by blow log of the best race in the final gen failed... too memory-hungry
+	
+	-- nope, can't run that- must not be resetting the message
+	
+	-- need to use a regex replace in notepad++ to add line breaks
+	-- regex: (\|\|\|\|\s\s\d\s\|\sSTRONG\s\d\sLEAD)
+	-- replace with: \n\1
+	-- note the \1 puts in the match inside the (). It finds e.g. ||||  1 | STRONG 3 LEAD
+	
+	-- saved event sfile but run-single race no longer works
+	
+-- monday 31st, try to investigate log files
+
+-- gen 99 chasing riders have different gap/speed tho lead is the same
+-- gen 1 all identical
+-- gen 25 nOT identical, last rider is going a little faster in the SIM: power is 474.33, 474.32 in ga
+-- step 22 is the first diff I can find- last rider ends up with a gap of 2.13 NOT the target 2. warum?
+-- is everything identical in step 21? YUP
+-- in 21, the last rider in both cases has power 474.3. But speed in GA is 60.06 kph while in SIM is 60.54 kph
+-- soooooo we are workign out the same power BUT when converting this to speed there's an issue
+-- newton lookup stuff? can i turn this off?
+-- put in a bool to switch off the lookups. not much else happening when you have power and need velocity. why only wrong for the last rider tho?
+
+-- woah
+
+-- that
+
+-- worked
+
+-- fukk should have tried that before. 
+
+-- for chasers i work out the velocity first by looking at the rider in front, and trying to get to -2m of it
+-- then i work out the power needed for this velocity with 
+  let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings_r.transv;
+ -- but this power might nor be possible, so adjustments may be made
+ -- after adjustments, the newton() is called: if the target power was possible in the first place this should return the same value again.
+ 
+ -- why does it not affect the other riders? always seemed to be the chasers oscillating after going 'off'
+ -- could build a testing mech that would add to the table and report back if it found anything odd
+ -- remember this doesn't happen with the SIM, so some other race is putting an entry into the table that is being used and is different
+ 
+ -- tuesday sep 1
+ 
+ -- run more sims- make one really weak rider and see if it gets dropped. surely?
+ 
+ -- make 2 riders weak and then 3 and then all. everything else equal. save graphs of fastest race gen 50.
+ 
+ 
+ -- hmmm, maybe i need a separate type of drop instruction that tells a rider to just drop away totally- rather than continuing to try and chase. issue is that if a ridr is dropped and the leader gets a 'drop to back' command it tots screws up the race. but i guess it should evolve to a drop to back-1. But this is brittle- it would be daft to hear a drop back instruciton and go all the way back behind a dropped rider. 
+
+-- tuesday sep 8th
+
+-- 8 days since i updated the paper. ook. 
+
+-- find out how weak the weak rider needs to be to have it dropped. ask yourself why dropping a rider is not happening more often. if i rejigged the drop instructions it might help: 
+
+0 = drop to back
+1 = drop to 2nd last
+etc 
+
+and then, IGNORE any rider that has been dropped by more than some fixed distance.
+
+-- hmmm, maybe I could just add somethign simpler to ignore a dropped rider? the issue is not that riders can't be dropped but that if a rider does get dropped, any drop-3 instructions later in the race will screw it up. it would take too many mutations to find all drop=3 and change them to drop=2. But if it is simpler like GO TO BACK OF GROUP and the group can be any size and a rider may be dropped from the group.
+
+-- yup, needs something like this.
+
+-- how about. Drop back X spaces OR until the back of the group. This means I can just take the drop=3 and check what the actual group size is, and if it is less than 3, change the drop instruction?
+
+-- I could even make this optional, add a switch setting, and test both: can put in a paragraph. 
+
+-- "limit_drop_to_contiguous_group":1 
+
+-- let's default it to 0. where in the code does the actual order get changed?
+-- switchLead() function. but need to track the contiguous_group_size. This would be a property of the race? This would need to be checked for every chaser? here's how: each timestep, you reset race.contiguous_group_size to 1, and for each chaser you add 1 IF they are less than a set settings_r.contiguous_group_drop_distance OR if contiguous_group_size is less than their place in the order: this would indicate that a rider further ahead of them has been dropped.
+
+This means that the lead rider might break away, drop the rest, and drop instructions will do nothing? I guess so, but in this case an effort instruction might work.
+
+-- "contiguous_group_drop_distance":10
+--race_r.contiguous_group_size
+
+-- counting group not working
+--  TypeError: Cannot read property 'requestContent' of undefined
+
+-- it seems to 'work' in that stuff gets logged and the races run... but how do I know it really works?
+
+-- Wednesday.
+
+-- le's rerun the four tests one more time.
+-- hmmm, have an issue where sim differs from ga... did i forget to put some part of the new code in the sim?
+
+-- ah fuck, another difference- race where the GA gets 256 but sim and singleshot ga get 305
+1,0,2,3
+[[18,"effort=6.49"],[44,"drop=2"],[54,"drop=2"],[61,"drop=1"],[70,"drop=3"],[89,"drop=3"],[113,"drop=2"],[133,"drop=1"],[172,"effort=9.28"],[174,"drop=2"],[191,"drop=2"],[207,"drop=2"],[227,"drop=2"],[236,"drop=2"]]
+
+-- thursday, 10th
+-- COlm emailed. need to figure out the latest errory stuff.
+-- issue is with the TWO-WEAK one. run it again a few times and see does it happen again
+-- why does the power drop so- is it fatigue?
+-- hmmmm, i wonder is it possibel that the GA ran with 3 actual strong riders, not 2, i.e. that rider 3 had 550/1200 and not 400/1000 as I expected? could test this by manually updating the mongodb
+-- hmmm, tried this but still fails... but, looks like in the ga rider 4 gets dropped early, so maybe the settigns actually used were from the one-very-weak, which is actually the one I would have tested previous. 
+-- very weak is 250/800 
+
+-- Awesome, found it- the GA was supposedly using TWO_WEAK but was actually running with the previously loaded settings, which was with one-very-weak. If I run the problematic result with one-ver-weak I get identical 256 finish time and graph. the weak rider gets dropped early and is ignored from then on.
+
+-- note, issue is with 5f58c9b8690f2a05f418dfe8 results- do not use this.
+
+--actually, need to be able to delete resultsets and clean out the old ones, plus edit the notes of existing ones.
+
+-- could potentially add more sophistication for dropped riders, i.e. that they realise they have been dropped, and ride at a steady pace home rather than trying to chase and then fatiguing. 
+
+-- l ooks to me like the rider at the back is saving too much (too much shelter)
+
+-- i could also work out the time as a float, i.e. make it more accurate: what time EXACTLY did the 2nd last rider cross the line?
+
+-- tuesday 15th sep 202020202020
+-- an i get it to give me the finish time to say, a tenth or a hundredth of a second?
+-- get timestep where 2nd-to-last rider crosses finish distance
+-- get velocity of s2l rider
+-- this v = distance in 1 second. get td, the total distance, which will be race distance rd + X. get X. 
+-- if we did v in 1 second, how long did X take? (X < v). X/v? woudl this not give me the correct part of the second?
+-- try it in a google doc.
+
+-- jeepers, this is what happens when you try to round() in JavaSCript: https://stackoverflow.com/questions/11832914/round-to-at-most-2-decimal-places-only-if-necessary/55521592#55521592
+--waoh, 1.005 = .005 = 0.9999999999 (try it in the console). i so dumb.
+-- more rabbit home stuff https://softwareengineering.stackexchange.com/questions/101163/what-causes-floating-point-rounding-errors
+-- hmmm, maybe just use the DecimalPrecision function from that SO page linked above?
+
+-- if this works ok should I not replace ALL round() refs to this?
+
+-- oh, it's an Object, not a function. DecimalPrecision.round(x,3)
+-- fukker won't run, 
+
+-- took different version from the same SO page, DecimalPrecision4 by AMr Ali. seems to work.
+
+-- right, so will this work in the GA?
+
+-- wednesday sep 16
+-- running more GAs again. new timing seems to work. need to test tho. 
+-- do i need to replace all the graphs again? fook
+-- 
+
+-- friday 18th. sep tenny twenny.
+
+-- finish running updates time tests, maybe update images in overleaf?
+
+-- start running robustness testing.
+
+-- work out perdentage improvements for different scenarios.
+
+-- try to add a paragraph of new text
+
+-- google scholar ga's again
+
+-- ah fuck, a bug in the new timing. Race finished: 260.854 seconds, (4016.725228663958m after 262 seconds). how is this possible? it can't go back below 261 seconds, surely. 
+
+-- ah balls.. it's possible for the lead rider to be dropped before the race fnishes and have the 2nd last rider go past the finish but not actually finish cos... well cos it thinks it is ahead of the lead rider, which it is. but it it still 2nd last. but, this shoudl not happen if the 2nd last rider is set purely on the distance travelled, not on the team order?
+
+-- try changing so that after a race timestep i order the riders based on distance travelled?
+
+-- added code to sort the riders based on distance... created a separate new array of objects to do this. seems to work, need to copy into GA 
+
+- monday 21st 9 20
+
+-- copy changes made on Friday from game into ga
+
+-- then, commit the code to git
+
+-- ok, one bug but now distance-based 2nd-last-rider selection seems to work.
+
+

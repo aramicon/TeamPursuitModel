@@ -1075,6 +1075,65 @@ function power_from_velocity(aero, headwind, total_resistance, transv, target_ve
   return powerv;
 }
 
+var DecimalPrecision = (function() {
+    if (Math.sign === undefined) {
+        Math.sign = function(x) {
+            return ((x > 0) - (x < 0)) || +x;
+        };
+    }
+    if (Math.trunc === undefined) {
+        Math.trunc = function(v) {
+            return v < 0 ? Math.ceil(v) : Math.floor(v);
+        };
+    }
+    var toPrecision = function(num, significantDigits) {
+        // Return early for ±0, NaN and Infinity.
+        if (!num || !Number.isFinite(num))
+            return num;
+        // Compute the base 10 exponent (signed).
+        var e = Math.floor(Math.log10(Math.abs(num)));
+        var d = significantDigits - 1 - e;
+        var p = Math.pow(10, Math.abs(d));
+        // Round to sf-1 fractional digits of normalized mantissa x.dddd
+        return d > 0 ? Math.round(num * p) / p : Math.round(num / p) * p;
+    };
+    // Eliminate binary floating-point inaccuracies.
+    var stripError = function(num) {
+        if (Number.isInteger(num))
+            return num;
+        return toPrecision(num, 15);
+    };
+    var decimalAdjust = function(type, num, decimalPlaces) {
+        var n = type === 'round' ? Math.abs(num) : num;
+        var p = Math.pow(10, decimalPlaces || 0);
+        var m = stripError(n * p)
+        var r = Math[type](m) / p;
+        return type === 'round' ? Math.sign(num) * r : r;
+    };
+    return {
+        // Decimal round (half away from zero)
+        round: function(num, decimalPlaces) {
+            return decimalAdjust('round', num, decimalPlaces);
+        },
+        // Decimal ceil
+        ceil: function(num, decimalPlaces) {
+            return decimalAdjust('ceil', num, decimalPlaces);
+        },
+        // Decimal floor
+        floor: function(num, decimalPlaces) {
+            return decimalAdjust('floor', num, decimalPlaces);
+        },
+        // Decimal trunc
+        trunc: function(num, decimalPlaces) {
+            return decimalAdjust('trunc', num, decimalPlaces);
+        },
+        // Format using fixed-point notation
+        toFixed: function(num, decimalPlaces) {
+            return decimalAdjust('round', num, decimalPlaces).toFixed(decimalPlaces);
+        }
+    };
+})();
+
 
 function setEffort(settings_r, race_r,riders_r, effort){ //actually update the effort level
   let leadingRider = race_r.riders_r[race_r.current_order[0]];
@@ -1229,11 +1288,14 @@ function run_race(settings_r,race_r,riders_r){
   }
 
   global_log_message = "";
+  let finish_time = 0;
   //now the race begins
   while(continue_racing){
     //update the race clock, check for instructions, then move the riders based on the current order
 
     //add any new instructions if found
+
+
     let new_instructions = race_r.race_instructions_r.filter(a=>parseInt(a[0]) == race_r.race_clock);
     if(new_instructions.length > 0){
       for(let i=0;i<new_instructions.length;i++){
@@ -1657,12 +1719,20 @@ function run_race(settings_r,race_r,riders_r){
         global_log_message += logMessage;
       }
 
-
-
-
-    //work out the distance covered of the second last rider
+    //work out the distance covered by the second last rider
     //get the 2nd last rider (whose time is the one that counts)
-    let second_last_rider = race_r.riders_r[race_r.current_order[race_r.current_order.length-2]];
+    //dksep20: as with game version, need to change this to look at distance rather than team ordering let second_last_rider = race_r.riders_r[race_r.current_order[race_r.current_order.length-2]];
+
+    let riders_to_sort = [];
+    for(let i_r = 0;i_r < race_r.riders_r.length; i_r++){
+      riders_to_sort[i_r] = {rider: race_r.current_order[i_r],distance_covered: race_r.riders_r[race_r.current_order[i_r]].distance_covered};
+    }
+
+    //sort based on distance_covered
+    riders_to_sort.sort((a, b) => (a.distance_covered < b.distance_covered) ? 1 : -1);
+
+    //set the second_last_rider using this distance based ordering
+    let second_last_rider = race_r.riders_r[riders_to_sort[riders_to_sort.length-2].rider];
 
     //DK2020 adding an extra check to avoid edge cases where all riders have done > distance but some are still BEHIND the second-to-last rider in the formal ordering.
     //Just get the minimum distance covered from all riders
@@ -1683,6 +1753,10 @@ function run_race(settings_r,race_r,riders_r){
       //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on... assumming some riders have not finished yet
 
       let all_riders_ahead = true;
+
+      //dk2020sep15: update to return a more exact finish time adjusted to remove the excess distance travelled over the line in that second
+      let extra_distance_covered = second_last_rider.distance_covered - race_r.distance;
+      finish_time = DecimalPrecision.round(((race_r.race_clock) - (extra_distance_covered/second_last_rider.velocity)),3);
 
       if (min_distance_travelled > (race_r.distance + over_travelled_maximum)){ //if some rider has yet to finish despite the second-to-last being done
           //weird, shouldn't happen, so log some info
@@ -1712,5 +1786,5 @@ function run_race(settings_r,race_r,riders_r){
   }
   //return the final finish time (seconds)
 
-  return {time_taken: race_r.race_clock, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep};
+  return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep};
 }

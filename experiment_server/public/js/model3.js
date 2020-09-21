@@ -40,9 +40,65 @@ range.on('input', function(){
 
 
 
-function dddd(){
-  console.log("hi");
-}
+var DecimalPrecision = (function() {
+    if (Math.sign === undefined) {
+        Math.sign = function(x) {
+            return ((x > 0) - (x < 0)) || +x;
+        };
+    }
+    if (Math.trunc === undefined) {
+        Math.trunc = function(v) {
+            return v < 0 ? Math.ceil(v) : Math.floor(v);
+        };
+    }
+    var toPrecision = function(num, significantDigits) {
+        // Return early for ±0, NaN and Infinity.
+        if (!num || !Number.isFinite(num))
+            return num;
+        // Compute the base 10 exponent (signed).
+        var e = Math.floor(Math.log10(Math.abs(num)));
+        var d = significantDigits - 1 - e;
+        var p = Math.pow(10, Math.abs(d));
+        // Round to sf-1 fractional digits of normalized mantissa x.dddd
+        return d > 0 ? Math.round(num * p) / p : Math.round(num / p) * p;
+    };
+    // Eliminate binary floating-point inaccuracies.
+    var stripError = function(num) {
+        if (Number.isInteger(num))
+            return num;
+        return toPrecision(num, 15);
+    };
+    var decimalAdjust = function(type, num, decimalPlaces) {
+        var n = type === 'round' ? Math.abs(num) : num;
+        var p = Math.pow(10, decimalPlaces || 0);
+        var m = stripError(n * p)
+        var r = Math[type](m) / p;
+        return type === 'round' ? Math.sign(num) * r : r;
+    };
+    return {
+        // Decimal round (half away from zero)
+        round: function(num, decimalPlaces) {
+            return decimalAdjust('round', num, decimalPlaces);
+        },
+        // Decimal ceil
+        ceil: function(num, decimalPlaces) {
+            return decimalAdjust('ceil', num, decimalPlaces);
+        },
+        // Decimal floor
+        floor: function(num, decimalPlaces) {
+            return decimalAdjust('floor', num, decimalPlaces);
+        },
+        // Decimal trunc
+        trunc: function(num, decimalPlaces) {
+            return decimalAdjust('trunc', num, decimalPlaces);
+        },
+        // Format using fixed-point notation
+        toFixed: function(num, decimalPlaces) {
+            return decimalAdjust('round', num, decimalPlaces).toFixed(decimalPlaces);
+        }
+    };
+})();
+
 
 
 
@@ -746,7 +802,23 @@ function moveRace(){
     race.race_clock++;
   //work out the distance covered of the second last rider
   //get the 2nd last rider (whose time is the one that counts)
-  let second_last_rider = race.riders[race.current_order[race.current_order.length-2]];
+
+  //dk: change this from:  let second_last_rider = race.riders[race.current_order[race.current_order.length-2]];
+  // set the second_last_rider based on the actual distance covered.
+  //create a separate array to do the sorting, and fill it with simple objects
+  let riders_to_sort = [];
+  for(let i_r = 0;i_r < race.riders.length; i_r++){
+    riders_to_sort[i_r] = {rider: race.current_order[i_r],distance_covered: race.riders[race.current_order[i_r]].distance_covered};
+  }
+  //console.log("£££  riders_to_sort before sorting £££" + JSON.stringify(riders_to_sort));
+
+  //sort based on distance_covered
+  riders_to_sort.sort((a, b) => (a.distance_covered < b.distance_covered) ? 1 : -1);
+
+  //console.log("£££  riders_to_sort after sorting  £££" + JSON.stringify(riders_to_sort));
+
+  //set the second_last_rider using this distance based ordering
+  let second_last_rider = race.riders[riders_to_sort[riders_to_sort.length-2].rider];
 
   continue_racing = true;
 
@@ -757,15 +829,22 @@ function moveRace(){
     //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on... (ignore the last rider)
     let all_riders_ahead = true;
 
-    for (let x = 0; x < race.current_order.length-2; x++ ){
-      if(race.riders[race.current_order[x]].distance_covered < second_last_rider.distance_covered && race.riders[race.current_order[x]].distance_covered <= race.distance){
+    for (let x = 0; x < riders_to_sort.length-2; x++ ){
+      // also need to use distance-based ordering here
+      // if(race.riders[race.current_order[x]].distance_covered < second_last_rider.distance_covered && race.riders[race.current_order[x]].distance_covered <= race.distance){
+      if(race.riders[riders_to_sort[x].rider].distance_covered < second_last_rider.distance_covered && race.riders[riders_to_sort[x].rider].distance_covered <= race.distance){
         all_riders_ahead = false;
       }
     }
 
     if(all_riders_ahead){ //race is finished right? you have done the distance and the others are still in front
       continue_racing = false;
-      $("#race_info").html("<strong>Race finished: </strong>"+  (race.race_clock-1) + " seconds, " + second_last_rider.distance_covered + "m");
+
+      // dk20sep15: work out the finish time (to 3 digits) note i use the DecimalPrecision.round() function to do the rounding.
+      let extra_distance_covered = second_last_rider.distance_covered - race.distance;
+      let finish_time = DecimalPrecision.round(((race.race_clock-1) - (extra_distance_covered/second_last_rider.velocity)),3);
+
+      $("#race_info").html("<strong>Race finished: </strong>"+ finish_time + " seconds, (" + second_last_rider.distance_covered + "m after " + (race.race_clock-1) + " seconds");
     }
   }
   if (continue_racing && (race_state == "play" || race_state == "resume" )){
