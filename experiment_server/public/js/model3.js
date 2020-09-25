@@ -104,7 +104,7 @@ var DecimalPrecision = (function() {
 
 function addRiderDisplay(){
   $("#riders_info" ).empty();
-  $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column'>Rider <i class='fas fa-biking'></i></div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div><div class='info_column'>Fatigue</div></div>");
+  $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column'>Rider <i class='fas fa-biking'></i></div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div><div class='info_column'>Fatigue</div><div class='info_column'>Time On Front</div></div>");
   for(let i=0;i<race.riders.length;i++){
     $("#riders_info" ).append("<div id='rider_values_"+i+"' class='info_row'></div>" );
   }
@@ -789,7 +789,7 @@ function moveRace(){
       display_rider.distance_from_rider_in_front = min_distance;
       display_rider.number_of_riders_in_front = number_of_riders_in_front;
       //display the rider properties
-       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + "<span class = 'rider_aim'>" + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' <i class="fas fa-flag-checkered"></i>':'') + " </span></div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div");
+       $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + "<span class = 'rider_aim'>" + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' <i class="fas fa-flag-checkered"></i>':'') + " </span></div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div><div class='info_column'>" + display_rider.time_on_front + " ( " + DecimalPrecision.round((display_rider.time_on_front / race.race_clock)*100,2) + " %) </div>");
 
       if(settings.log_each_step){
         logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
@@ -817,6 +817,9 @@ function moveRace(){
 
   //console.log("£££  riders_to_sort after sorting  £££" + JSON.stringify(riders_to_sort));
 
+  //dksep24: increment time_on_front of leading rider
+  race.riders[riders_to_sort[0].rider].time_on_front++;
+
   //set the second_last_rider using this distance based ordering
   let second_last_rider = race.riders[riders_to_sort[riders_to_sort.length-2].rider];
 
@@ -842,6 +845,9 @@ function moveRace(){
 
       // dk20sep15: work out the finish time (to 3 digits) note i use the DecimalPrecision.round() function to do the rounding.
       let extra_distance_covered = second_last_rider.distance_covered - race.distance;
+
+      console.log("** race finish time adjustment *** race_clock " + race.race_clock + " second_last_rider.distance_covered " + second_last_rider.distance_covered + " race.distance " + race.distance + " second_last_rider.velocity " + second_last_rider.velocity);
+
       let finish_time = DecimalPrecision.round(((race.race_clock-1) - (extra_distance_covered/second_last_rider.velocity)),3);
 
       $("#race_info").html("<strong>Race finished: </strong>"+ finish_time + " seconds, (" + second_last_rider.distance_covered + "m after " + (race.race_clock-1) + " seconds");
@@ -959,6 +965,8 @@ function load_race(){
     if (instructions_t.length > 0){
       race.race_instructions_r = instructions_t;
     }
+
+    load_rider.time_on_front = 0; //dksep24: want to track how much time each rider spends at the front.
 
   }
 

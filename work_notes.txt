@@ -1206,5 +1206,60 @@ This means that the lead rider might break away, drop the rest, and drop instruc
 -- then, commit the code to git
 
 -- ok, one bug but now distance-based 2nd-last-rider selection seems to work.
+-- committed and pushed to github
 
+-- very slight difference in finish time between ga and sim... 263.796 in sim, 263.744 in ga. I get 263.744 when I run ga once-off so have I a bug in the sim this time?
 
+-- defo somethign going on here, ga goes to 4034.76m before finishing... then uses a slighlty different velocity to work out the actual time it crossed the line, which takes off over 2 seconds... yikes. but at least it can be debugged without running the whole GA.
+
+-- wait, i had to make another change about how to itrate through the riders ahead. fart. need to copy this across. 
+
+-- yup. now getting 263.796 for both. but this fecks up those resent runs, so run them again.
+
+-- tuesday 22nd sep
+
+-- run all-weak again and then create a new one-strong. need to look at slowly increasing the stength of one rider and watching what emerges. 
+
+-- 1: all weak
+-- 2: one stronger, 410/1020
+-- 3: one stronger, 420/1040
+-- 4: one stronger, 430/1060
+-- 5: one stronger, 440/1080
+-- 6: one stronger, 450/1100
+-- 7: one stronger, 460/1120
+-- 8: one stronger, 470/1140
+-- 9: one stronger, 480/1160
+-- 10: one stronger, 490/1180
+-- 11: one stronger, 500/1200
+
+-- 12: one stronger, 520/1240
+-- 13: one stronger, 540/1280
+-- 14: one stronger, 560/1320
+-- 15: one stronger, 580/1360
+-- 16: one stronger, 600/1400
+
+700/1700
+
+massively stronger
+-- 17: one stronger, 800/2000
+
+900/2300
+
+1000/3000
+
+-- taking a long time to run. I was supposed to automate this. didn't. maybe run less than 50 gens or with a smaller pop?
+
+-- thursday 24th. ah jeez. where does... nvrmnd
+-- run the rest of the test above. look through the results. 
+
+-- ok so have a bunch run and there are results. how do i represent them? maybe write a paragraph?
+
+-- "Unlike the traditional statistical and mathematical programming techniques such as discriminant analysis, linear and logistic regression, linear and quadratic programming, or decision trees; intelligent systems have proven their ability to overcome different challenges in financial research areas, specially in banking loan portfolio optimization" oh dear
+
+-- possible graph = % of time at front of stronger rider (best race after 50 gens) as power increases
+
+-- could output this in the game version then copy into notepad, mebbie use python to graph? would need threshold power as X and % of time at front as y. 
+
+-- add a time_on_front property to riders. need to incremenet this at each timestep. might be an issue on the last timestep? need to use the physical ordering and not the logical ordering
+
+-- ok. so have the graph, mapplt, need to add a couple more data points but it will help this paragraph.

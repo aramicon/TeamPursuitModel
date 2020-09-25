@@ -1748,14 +1748,18 @@ function run_race(settings_r,race_r,riders_r){
     distance_2nd_last_timestep = distance_last_timestep; //recording this to test exact distances being covered, have offByOne error in some cases
     distance_last_timestep = second_last_rider.distance_covered;
 
-
     if (second_last_rider.distance_covered > race_r.distance ){
       //all riders ahead of the second_last_rider in the current order must be ahead on the track- otherwise the race goes on... assumming some riders have not finished yet
 
       let all_riders_ahead = true;
 
+
+
       //dk2020sep15: update to return a more exact finish time adjusted to remove the excess distance travelled over the line in that second
       let extra_distance_covered = second_last_rider.distance_covered - race_r.distance;
+
+      //console.log("** race finish time adjustment *** race_clock " + race_r.race_clock + " second_last_rider.distance_covered " + second_last_rider.distance_covered + " race_r.distance " + race_r.distance + " second_last_rider.velocity " + second_last_rider.velocity);
+
       finish_time = DecimalPrecision.round(((race_r.race_clock) - (extra_distance_covered/second_last_rider.velocity)),3);
 
       if (min_distance_travelled > (race_r.distance + over_travelled_maximum)){ //if some rider has yet to finish despite the second-to-last being done
@@ -1766,8 +1770,8 @@ function run_race(settings_r,race_r,riders_r){
 
       }
       else{
-      for (let x = 0;x<race_r.current_order.length-2;x++ ){ //check that the riders that should be in front of second-to-last ARE
-        if(race_r.riders_r[race_r.current_order[x]].distance_covered < second_last_rider.distance_covered && race_r.riders_r[race_r.current_order[x]].distance_covered <= race_r.distance){
+      for (let x = 0;x<riders_to_sort.length-2;x++ ){ //check that the riders that should be in front of second-to-last ARE
+        if(race_r.riders_r[riders_to_sort[x].rider].distance_covered < second_last_rider.distance_covered && race_r.riders_r[riders_to_sort[x].rider].distance_covered <= race_r.distance){
           all_riders_ahead = false;
         }
       }
