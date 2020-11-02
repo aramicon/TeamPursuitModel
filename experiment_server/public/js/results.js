@@ -123,7 +123,7 @@ const draw_line_graph = (graph_name_opt) =>{
         graph_data_1.x_scale_from = 0;
 
         graph_data_1.x_scale_to = selected_ga_results.generations.length;
-        graph_data_1.y_scale_from = 100;
+        graph_data_1.y_scale_from = 0;
         graph_data_1.y_scale_to = d3.max(selected_ga_results.generations, function(d) { return +d.robustness_check_worst_mutant_time_taken; });
 
         graph_data_1.data = [];
@@ -150,6 +150,13 @@ const draw_line_graph = (graph_name_opt) =>{
         graph_data_4.data = [];
         for (i=0;i<selected_ga_results.generations.length;i++){
           graph_data_4.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].robustness_check_best_mutant_time_taken});
+        }
+
+        graph_data_5 = {};
+        graph_data_5.title = "Std. Deviation";
+        graph_data_5.data = [];
+        for (i=0;i<selected_ga_results.generations.length;i++){
+          graph_data_5.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].robustness_check_standard_dev});
         }
 
 
@@ -434,6 +441,18 @@ const draw_line_graph = (graph_name_opt) =>{
                       .y(function(d) { return y(d.y) })
                     );
                 }
+                if (!jQuery.isEmptyObject(graph_data_5)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_5.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#00ffff")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
 
                   // X and Y labels
                   svg.append("text")
@@ -469,7 +488,10 @@ const draw_line_graph = (graph_name_opt) =>{
                       svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",80).attr("r", 6).style("fill", "#000000");
                       svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 80).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
                   }
-
+                  if (!jQuery.isEmptyObject(graph_data_5)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",100).attr("r", 6).style("fill", "#00ffff");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 100).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
                   //add a title
                   svg.append("text")
                   .attr("x", (width / 2))
@@ -503,19 +525,19 @@ const  build_results_table = () =>{
   let ga_results = selected_ga_results;
 
   let results_html = "<div>Start time: "+ga_results.start_time + " End Time: " + ga_results.end_time +  "</div>";
-  results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>BEST RACE</th><th>BEST TIME</th><th>BEST START ORDER</th><th>BEST INSTRUCTIONS</th><th>VISUALISE</th> <th>POWER GRAPH</th><th> FINISH TIMES GRAPH </th><th>WORST RACE</th><th>WORST TIME</th><th>WORST START ORDER</th><th>WORST INSTRUCTIONS</th><th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
+  results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>BEST RACE</th><th>BEST TIME</th><th>BEST START ORDER</th><th>BEST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>VISUALISE</th> <th>POWER GRAPH</th><th> FINISH TIMES GRAPH </th><th>WORST RACE</th><th>WORST TIME</th><th>WORST START ORDER</th><th>WORST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>VISUALISE</th><th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
 
   console.log(ga_results);
   console.log(ga_results.generations);
 
   for(g=0;g<ga_results.generations.length;g++){
 
-    results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\">" + g + "</td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Run BEST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_instructions)) + "'> Run </a></td>";
+    results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\">" + g + "</td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Best Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations) + " </td> <td onmouseover=\"showColName('Run BEST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_instructions)) + "&noise_alterations=" + encodeURI(JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations)) + "'> Run </a></td>";
 
     results_html += "<td> <button onclick = 'draw_power_graph("+g+")'>DRAW</button>" + "</td>";
     results_html += "<td> <button onclick = 'draw_finish_times_graph("+g+")'>DRAW</button>" + "</td>";
 
-    results_html += "</td><td onmouseover=\"showColName('WORST Populaton index/ID')\">" + ga_results.generations[g].final_worst_race_properties_index + "/" + ga_results.generations[g].worst_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].worst_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_worst_race_start_order + "]</td><td onmouseover=\"showColName('WORST Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_worst_race_instructions) + "</td><td onmouseover=\"showColName('Run WORST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_worst_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_worst_race_instructions)) + "'> Run </a></td>";
+    results_html += "</td><td onmouseover=\"showColName('WORST Populaton index/ID')\">" + ga_results.generations[g].final_worst_race_properties_index + "/" + ga_results.generations[g].worst_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Worst Race Time')\">" + ga_results.generations[g].worst_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_worst_race_start_order + "]</td><td onmouseover=\"showColName('WORST Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_worst_race_instructions) + "</td><td onmouseover=\"showColName('WORST Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations) + " </td><td onmouseover=\"showColName('Run WORST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_worst_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_worst_race_instructions)) + "&noise_alterations=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations))  + "'> Run </a></td>";
 
     //stats columns
     pop = ga_results.generations[g].population_size;

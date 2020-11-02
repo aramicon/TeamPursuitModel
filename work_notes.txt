@@ -1263,3 +1263,187 @@ massively stronger
 -- add a time_on_front property to riders. need to incremenet this at each timestep. might be an issue on the last timestep? need to use the physical ordering and not the logical ordering
 
 -- ok. so have the graph, mapplt, need to add a couple more data points but it will help this paragraph.
+
+-- friyay Sep25th. fukk where doth time go?
+
+-- need to prep for possible meeting. read what I added yesterday. Look at adding back the robustness check. Does robustness improve from generation to generation? does it differ from scenario to scenario? It's like a form of noise no?
+
+-- The riskiness of a strategy in this context may be related to the brittleness of performance when instructions fail or are tweaked. Here, two different concepts of robustness to noise are considered. In the first case, a set of instructions is compared to a large number of copies of itself, all of which undergo the same mutation process used by the GA. Instructions may be added, altered in time or intensity, or be deleleted. The performance of these mutants can then be compared to that of the original.
+
+The second approach modifies the race model itself, introducing an element of noise into the application of instructions. This noise is designed as a simplified model of failure under pressure: when a rider is highly fatigued or performing at high intensity, there is a higher risk of mishearing an instruction or failing to carry it out. This is therefore not random noise but designed noise/failure. It is interesting to consider what strategies the GA will favour in this case, though it makes the process more complex as there is a degree of randomness introcued to the performance itself, thus making it difficult to re-enact. 
+
+-- so, let's bound the work with those three aspects:
+- noise v1: robsutness, noise v2: performance failure, and 3... comparing solutions and finding was to describe them? Like, working out how different one strategy is from another? or is the noise enough?
+
+-- mondee 28th. get somethign done today so you can chilla bit during the week and get back in next week as disc starts again
+
+-- robustness. run the test for every gen. what needs to be saved? avg. finish time. best. worst. std dev.
+-- get the robustnesss check to run again. add 
+generation_results.robustness_check_standard_dev,  similar to average_mutant_time_taken
+
+-- run this for an all-weak set of riders. build some kind of graph
+
+-- right, seeeeems to work- add the std. dev. to the graph i rleady had for robsutness
+
+-- oct 12.
+
+-- maybe 13th?
+
+-- oct 14 wednesday
+-- need to get back to work on this :-( 
+-- add a mechanism for applying failure under pressure, plus a means to record everything so that it can be re-enacted in the game.
+
+-- where exactly does the failure happen? when given an instruction?
+-- let's say
+-- whaen a rider gets an instruciton there is some probabilty of it either mishearing it, delaying its application, or being unable to carry it out.
+-- 1: rider may delay carrying out the instruciton by some amount of time.
+-- 2: rider may attempt to carry out a stronger or weaker version of the instruction (random)
+-- 3: rider may carry out a weaker version of a power instruction (due to fatigue/effort)
+
+-- could aim for 2 and 3 as time steps are a bit large for mucking with.
+-- when an instruction is issued there is some prob. that it will be changed (noise)
+-- when a rider gets the instruction there is a stress-affected probability that it will fail to carry out the effort required.
+
+-- thursday 15th
+-- add new properties to control new stochastic behaviour
+-- global switch? "enable_instruction_noise_1_random": 1
+-- "enable_instruction_noise_2_failure": 1
+-- "noise_1_probability_instruction_misheard":0.01 runs for every instruction, so 1 in 100 here will be out
+-- if this passes the instruction must be tweaked but by how much?
+-- try it with pure random changes within a range- e.g. change a drop instruction to be a drop-X where X >= 1 and X < Team Size
+-- for effort, try a totally random value from a range. Rider can fail by a little but mishear by a lot, i.e. mishearing is actually random, while failure is not.
+-- pick random value between 2 and 9 for effort. though it seems more logical that instruciton noise would be more likely to be close to the target as that
+
+
+-- 27th OCT. fugg.
+-- should each rider have its own propensity to failing under pressure?
+-- easy to put a setting in the rider info so sure
+-- "noise_2_propensity_to_fail_under_pressure":0.01 -- put this in the rider properties
+
+-- wednesdat 28th
+-- added 2 global properties
+"enable_instruction_noise_1_random":1,
+"noise_1_probability_instruction_misheard":0.01
+
+-- need another property to control whether an instruciton is delayed 
+
+"noise_1_probability_instruction_delayed": 0.2 (0 to 1). if it is being alered, an instruciton is either delayed or has its value changed
+
+-- also need to know by how many timesteps the delay might be.
+"noise_1_probability_instruction_delay_range":3
+
+-- put in lots of code, it's more complex than it looks
+-- need glovbals as well for the range to move effort and possibly drop_positions
+-- "noise_1_probability_instruction_effort_range":2
+-- "noise_1_probability_instruction_drop_range":2
+-- can i simplify Math.random() * (( effort_value + noise_1_probability_instruction_effort_range) - ( effort_value - noise_1_probability_instruction_effort_range)) + ( effort_value - noise_1_probability_instruction_effort_range)
+
+R*(( x + y) - ( x - y)) + ( x - y)
+R*(( 5 + 3) - ( 5 - 3)) + ( 5 - 3)
+
+-- naw, don't try to simp it, should work as is
+
+-- ah shit, changed already to 
+let effort_adjustment = Math.random() * (noise_1_probability_instruction_effort_range*2) + (0- noise_1_probability_instruction_effort_range); 
+
+-- now need to know what the max effort value can be. 9? I remember it not being 10.
+-- should really replace that 9 with a constant
+
+-- hmmm, can't just add a random int to the drop instruciton as drop=3 will become drop = 3 as it is the max, and also the most common. we want it to randomly select a different valuye. so really should use the teamsixe, which can be found... where?
+
+-- ok, added ton of code, awful complex really. feck. assume it will break but enough done for now.
+
+-- thursday oct 29
+-- code from yesterday actually runs. bugs will be there but at least it rolls. need to work on the mechanism to store the adjustments so that they can be re-enacted by the game
+
+-- each race will need to store its own instruction_noise_alterations. this will need to be returned and stored (for the winning races in any gen)
+
+-- note: thigns might go awry if there are two instructions for one timestep, but this er, shouldn't happen?
+
+  race_r.instruction_noise_alterations[race_r.race_clock] = noise_alteration;
+  
+ -- need two additions to generation_results
+ generation_results.best_race_instruction_noise_alterations
+ and
+ generation_results.worst_race_instruction_noise_alterations
+ 
+ -- try to display the noise alterations in the GA table of results
+ 
+ -- likely that there will be NO noise in the best race
+ -- but there may be dis-improvement- the best race may underperform so the fitness may get worse, unlike the no-noise scenario where it is fully deterministic
+ 
+ -- will surely need to add some more metrics on the noise?
+ 
+ 
+ -- first get the GA to store, and the Results to display, any noise in the worst and best races. We need an example with noise to apply in the game view.
+ 
+ -- note, the game view will now have to either apply noise or replay existing noise. it would be dump to do both.
+ 
+ -- why is worst time undefined/undefined in Results? fix this first
+ --ga_results.generations[g].worst_race_time and ga_results.generations[g].final_worst_race_start_order are UNDEFINED
+ 
+ -- ok, so the worst race properties are worked out, but are they saved in the db?
+ 
+ -- huh, in the db we appear to have the time and the alterations but missing the original instructions and start order
+ "worst_race_time":525.888,"worst_race_instruction_noise_alterations":{"331":{"original_instruction":[331,"drop=2"],"altered_instruction":[331,"drop=1"]}}
+ 
+ -- cool, so somethign worked. need to add the type to the drop and effort noises
+ 
+ -- oh, the worst race data IS in the db. just not being displayed?
+ 
+ ga_results.generations[g].final_worst_race_properties_index / ga_results.generations[g].worst_race_id
+ 
+ -- ok, that id now seems to be saving
+ 
+ -- now display the altered instructions for both best and worst
+ 
+ worst_race_instruction_noise_alterations and best_race_instruction_noise_alterations
+ 
+ -- ok, so it now displays. 
+ 
+ -- run a much longer ga and see if that saves ok	
+ 
+ -- friday 30th
+ 
+ -- need to work on getting the game to re-run the noise alterations.
+ -- first off, they need to be sent from the results page (for both best and worst races)
+ 
+ -- adding a new param noise_alterations to add to the uri that calls the game race from results
+ 
+ -- also add to worst race and check that both work
+ 
+ - example url http://127.0.0.1:3003/tpgame.html?source=results&results_id=5f9aee5be4367c0b38a39d3f&startorder=2,1,3,0&instructions=%5B%5B44,%22effort=6.2%22%5D,%5B45,%22drop=2%22%5D,%5B112,%22drop=2%22%5D,%5B150,%22effort=9.54%22%5D,%5B163,%22drop=1%22%5D,%5B225,%22effort=9.38%22%5D,%5B245,%22drop=3%22%5D,%5B272,%22drop=1%22%5D,%5B350,%22drop=3%22%5D,%5B356,%22drop=3%22%5D%5D&noise_alterations=%7B%7D
+ 
+ -- what's %7B%7D ? ah, it's {} 
+ 
+ -- here's an example worst race URI that contains alterations:
+ http://127.0.0.1:3003/tpgame.html?source=results&results_id=5f9aee5be4367c0b38a39d3f&startorder=2,1,3,0&instructions=%5B%5B47,%22effort=2.37%22%5D,%5B59,%22effort=1.21%22%5D,%5B110,%22drop=2%22%5D,%5B183,%22drop=3%22%5D,%5B246,%22drop=3%22%5D,%5B260,%22effort=6.25%22%5D,%5B292,%22drop=2%22%5D%5D&noise_alterations=%7B%2259%22:%7B%22original_instruction%22:%5B59,%22effort=1.21%22%5D,%22altered_instruction%22:%5B59,%22effort=0%22%5D,%22type%22:%22random_effort%22%7D%7D
+  
+ -- now need to decode them
+ 
+ -- create a new variable: instruction_noise_alterations
+ 
+ -- to check if an object x is an empty objec, i.e. x = {}, use
+ 
+ Object.keys(x).length === 0 && x.constructor === Object
+ 
+ -- finally have it showing but alterations look muck in the textarea... from the stringify? I see
+ 
+ "{\"59\":{\"original_instruction\":[59,\"effort=1.21\"],\"altered_instruction\":[59,\"effort=0\"],\"type\":\"random_effort\"}}"
+ 
+ -- took out the stringify, now have
+ 
+ {"59":{"original_instruction":[59,"effort=1.21"],"altered_instruction":[59,"effort=0"],"type":"random_effort"}}
+ 
+ -- now need to look at update_race_settings() to READ this from the new textarea and then move on to applying it
+ -- huh, update_race_settings() does basically nothing, the work must be all in load_race()?
+ 
+ -- added property instruction_noise_alterations_r to race and tried to set it from the textarea.
+ 
+ -- Monday Nov 2nd. Still haven't finished much. fukk.
+ 
+ -- first, commit to git. ahven't done this in a while.
+ 
+ 
+
+

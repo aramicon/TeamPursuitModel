@@ -901,6 +901,8 @@ function load_race(){
   race.race_instructions = [];
   race.race_instructions_r = [];
 
+  race.instruction_noise_alterations_r = {};
+
   // Set up the switch range points: this is where riders can start to drop back
   // I added settings.switch_prebend_start_addition to allow the swithc to start before the bend proper (speed up switches)
   race.bend1_switch_start_distance = settings.track_straight_length/2 - settings.switch_prebend_start_addition;
@@ -964,6 +966,17 @@ function load_race(){
     }
     if (instructions_t.length > 0){
       race.race_instructions_r = instructions_t;
+    }
+
+    let instruction_noise_alterations = {};
+    let instruction_noise_alterations_string = $('#instruction_noise_alterations').val();
+    if(instruction_noise_alterations_string.length > 5){
+      //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+      instruction_noise_alterations = JSON.parse(new_instructions);
+    }
+    if (!(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
+      race.instruction_noise_alterations_r = instruction_noise_alterations;
+      console.log("loaded noise alterations from textarea: " + JSON.stringify(race.instruction_noise_alterations_r) );
     }
 
     load_rider.time_on_front = 0; //dksep24: want to track how much time each rider spends at the front.
@@ -1078,6 +1091,7 @@ function load_details_from_url(){
           //set the start order and instructions
           let start_order = url.searchParams.get("startorder");
           let instructions = url.searchParams.get("instructions");
+          let instruction_noise_alterations = url.searchParams.get('noise_alterations');
           if(start_order.length > 0){
             console.log("loaded start_order from URL: " + start_order);
             $("#teamorder").val(start_order);
@@ -1085,6 +1099,11 @@ function load_details_from_url(){
           if(instructions.length > 0){
             console.log("loaded instructions from URL: " + instructions);
             $("#instructions").val(instructions);
+          }
+
+          if(!(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
+            console.log("loaded instruction_noise_alterations from URL: " + JSON.stringify(instruction_noise_alterations));
+            $("#instruction_noise_alterations").val(instruction_noise_alterations);
           }
 
           //need to make sure the race is loaded AFTER we get the settings
@@ -1128,6 +1147,8 @@ function load_details_from_url(){
           //set the start order and instructions
           let start_order = url.searchParams.get("startorder");
           let instructions = url.searchParams.get("instructions");
+          let instruction_noise_alterations = url.searchParams.get('noise_alterations');
+
           if(start_order.length > 0){
             console.log("loaded start_order from URL: " + start_order);
             $("#teamorder").val(start_order);
@@ -1135,6 +1156,10 @@ function load_details_from_url(){
           if(instructions.length > 0){
             console.log("loaded instructions from URL: " + instructions);
             $("#instructions").val(instructions);
+          }
+          if(!(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
+            console.log("loaded instruction_noise_alterations from URL: " + JSON.stringify(instruction_noise_alterations));
+            $("#instruction_noise_alterations").val(instruction_noise_alterations);
           }
 
           //need to make sure the race is loaded AFTER we get the settings

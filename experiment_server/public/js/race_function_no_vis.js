@@ -279,17 +279,36 @@ function run_robustness_check(settings_r, race_r, riders_r){
 
   //return the stats
   //work out the average
-  let total = 0;
+  let sumOfMutantRaceTimes = 0;
   for(i=0;i<population_stats.length;i++){
-    total+=population_stats[i];
+    sumOfMutantRaceTimes+=population_stats[i]; //summing the finish times
   }
 
+  let mutantMean =  (sumOfMutantRaceTimes/population_stats.length);
+
   robustness_result={};
-  robustness_result.message = "Robustness Check:  Original race time taken " + original_time_taken + ". Average time of " + population.length + " mutants = " + total/population_stats.length;
+
   robustness_result.original_time_taken = original_time_taken;
-  robustness_result.average_mutant_time_taken = total/population_stats.length;
+  robustness_result.average_mutant_time_taken = mutantMean;
   robustness_result.unfittest_mutant_time_taken = unfittest_mutant_time_taken;
   robustness_result.fittest_mutant_time_taken = fittest_mutant_time_taken;
+
+
+  //loop through again knowing the mean to work out the standard deviation
+  let mutantStdDev = 0;
+  let mutantVariance = 0;
+  let totalDeviation = 0;
+  for(i=0;i<population_stats.length;i++){
+    totalDeviation+=Math.pow((population_stats[i] - mutantMean),2); //summing the finish times
+  }
+
+  mutantVariance = totalDeviation/population_stats.length;
+  mutantStdDev = Math.sqrt(mutantVariance);
+
+  robustness_result.robustness_check_standard_dev = mutantStdDev;
+  //add a message
+  robustness_result.message = "Robustness Check:  Original race time taken " + original_time_taken + ". Average time of " + population.length + " mutants = " + mutantMean + " std. Dev. " + mutantStdDev;
+
   return robustness_result;
 }
 
@@ -423,6 +442,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let final_worst_race_properties = population[0];
     let worst_race_rider_power = [];
 
+    let best_race_instruction_noise_alterations = {};
+    let worst_race_instruction_noise_alterations = {};
+
     //print % progress every segment
     if (g % one_segment == 0){
       console.log(one_segment_count*(100/segment_size) + "% done");
@@ -499,6 +521,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
         best_race_distance_2nd_last_timestep = race_results.distance_2nd_last_timestep;
         best_race_distance_last_timestep = race_results.distance_last_timestep;
 
+        best_race_instruction_noise_alterations = race_results.instruction_noise_alterations;
+
         // let's now log the settings for this best race for the LAST generation
         if (global_log_message ){
           //console.log("***BEST RACE LOG START***");
@@ -515,6 +539,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
         final_worst_race_properties_index = i;
         final_worst_race_properties = population[i];
         worst_race_rider_power = race_results.power_output;
+
+        worst_race_instruction_noise_alterations = race_results.instruction_noise_alterations;
       }
 
 
@@ -534,6 +560,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     //first, display the best time from this generation
 
     let best_race_id = final_best_race_properties.variant_id+"_"+final_best_race_properties.id_generation+"_"+final_best_race_properties.id_type+"_"+final_best_race_properties.id_mutant_counter;
+    let worst_race_id = final_worst_race_properties.variant_id+"_"+final_worst_race_properties.id_generation+"_"+final_worst_race_properties.id_type+"_"+final_worst_race_properties.id_mutant_counter;
 
     //console.log("FASTEST RACE generation  " + g + " was race " + final_best_race_properties_index + " id "+final_best_race_properties.variant_id+"_"+final_best_race_properties.id_generation
     //+"_"+final_best_race_properties.id_type+"_"+final_best_race_properties.id_mutant_counter
@@ -552,9 +579,17 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     generation_results.final_best_race_instructions = final_best_race_properties.instructions;
     generation_results.best_race_time = final_best_race_properties.time_taken;
 
+    generation_results.worst_race_id = worst_race_id;
+    generation_results.final_worst_race_properties_index = final_worst_race_properties_index;
     generation_results.final_worst_race_start_order = final_worst_race_properties.start_order;
     generation_results.final_worst_race_instructions = final_worst_race_properties.instructions;
     generation_results.worst_race_time = final_worst_race_properties.time_taken;
+
+    console.log("final_worst_race_start_order" + JSON.stringify(final_worst_race_properties.start_order));
+    console.log("final_worst_race_instructions" + JSON.stringify(final_worst_race_properties.instructions));
+    console.log("worst_race_time" + JSON.stringify(final_worst_race_properties.time_taken));
+
+    generation_results.worst_race_instruction_noise_alterations = worst_race_instruction_noise_alterations;
 
     generation_results.stats_average_time = stats_average_time;
     generation_results.stats_average_number_of_instructions = stats_average_number_of_instructions;
@@ -562,6 +597,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     generation_results.robustness_check_average_mutant_time_taken = 0;
     generation_results.robustness_check_best_mutant_time_taken = 0;
     generation_results.robustness_check_worst_mutant_time_taken = 0;
+    generation_results.robustness_check_standard_dev = 0;
     generation_results.race_fitness_all = race_fitness_all;
 
 
@@ -572,10 +608,12 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     //console.log(g + " generation_results.best_race_distance_2nd_last_timestep " + generation_results.best_race_distance_2nd_last_timestep)
     generation_results.best_race_distance_last_timestep = best_race_distance_last_timestep;
 
+    generation_results.best_race_instruction_noise_alterations = best_race_instruction_noise_alterations;
+
     //before looking at next generation can work out the robustness check of the current BEST strategy, IF required
     if(settings_r.ga_run_robustness_check==1){
 
-      console.log("Run robustness check");
+
 
       race_r.drop_instruction = 0;
       race_r.live_instructions = [];
@@ -589,8 +627,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let robustness_check_results = run_robustness_check(settings_r, race_r, riders_r);
       generation_results.robustness_check_number_of_mutants = settings_r.robustness_check_population_size;
       generation_results.robustness_check_average_mutant_time_taken = robustness_check_results.average_mutant_time_taken;
+      generation_results.robustness_check_standard_dev = robustness_check_results.robustness_check_standard_dev;
       generation_results.robustness_check_best_mutant_time_taken = robustness_check_results.fittest_mutant_time_taken;
       generation_results.robustness_check_worst_mutant_time_taken = robustness_check_results.unfittest_mutant_time_taken;
+
+      console.log("Run robustness check generation " + g + robustness_check_results.message);
     }
 
     // create a new population based on the fitness
@@ -1209,6 +1250,9 @@ function run_race(settings_r,race_r,riders_r){
   race_r.instructions = [];
   race_r.instructions_t = [];
 
+  //dk2020 oct. adding new array to store noise/failure alterations. will make this an object/dict for easy retrieval.
+  race_r.instruction_noise_alterations = {};
+
   //prepare to record the power output for each rider at each timestep
   rider_power = [];  //added 2020May26 to start trackign rider power output
   for(let i = 0;i<race_r.start_order.length;i++){
@@ -1294,22 +1338,139 @@ function run_race(settings_r,race_r,riders_r){
     //update the race clock, check for instructions, then move the riders based on the current order
 
     //add any new instructions if found
+    //dkOct2020: add 'noise' if this is switched on. this represents a small chance that an instruciton is misheard by randomly changing its value
 
+    let enable_instruction_noise_1_random = 0;
+    let noise_1_probability_instruction_misheard = 0;
+    let noise_1_probability_instruction_delayed = 0;
+    let noise_1_probability_instruction_delay_range = 0;
+    let noise_1_probability_instruction_effort_range = 0;
+    let noise_1_probability_instruction_drop_range = 0;
 
+    let instruction_alteration = {};
+
+    //use the global settings but default them to 0 (i.e. do not use) if they do not exist there
+    if (typeof(settings_r.enable_instruction_noise_1_random) != 'undefined'){
+      enable_instruction_noise_1_random = settings_r.enable_instruction_noise_1_random;
+    }
+    if (typeof(settings_r.noise_1_probability_instruction_misheard) != 'undefined'){
+      noise_1_probability_instruction_misheard = settings_r.noise_1_probability_instruction_misheard;
+    }
+    if (typeof(settings_r.noise_1_probability_instruction_delayed) != 'undefined'){
+      noise_1_probability_instruction_delayed = settings_r.noise_1_probability_instruction_delayed;
+    }
+    if (typeof(settings_r.noise_1_probability_instruction_delay_range) != 'undefined'){
+      noise_1_probability_instruction_delay_range = settings_r.noise_1_probability_instruction_delay_range;
+    }
+    if (typeof(settings_r.noise_1_probability_instruction_effort_range) != 'undefined'){
+      noise_1_probability_instruction_effort_range = settings_r.noise_1_probability_instruction_effort_range;
+    }
+    if (typeof(settings_r.noise_1_probability_instruction_drop_range) != 'undefined'){
+      noise_1_probability_instruction_drop_range = settings_r.noise_1_probability_instruction_drop_range;
+    }
+
+    let alteration_selection_sample = -1;
+    let noise_alteration = {};
+    if(enable_instruction_noise_1_random == 1){
+      let alteration_application_sample = Math.random();
+      if ( alteration_application_sample < noise_1_probability_instruction_misheard){
+          alteration_selection_sample = Math.random(); //this will be used to choose what kind of alteration is applied
+
+      }
+
+    }
     let new_instructions = race_r.race_instructions_r.filter(a=>parseInt(a[0]) == race_r.race_clock);
+    //delay the instruction if this 'noise' is chosen
+
     if(new_instructions.length > 0){
-      for(let i=0;i<new_instructions.length;i++){
-        let inst = new_instructions[i][1].split("=");
-        if (inst.length=2){
-          if(inst[0]=="effort"){
-            race_r.live_instructions.push(["effort",parseFloat(inst[1])]);
+        for(let i=0;i<new_instructions.length;i++){
+
+          if (alteration_selection_sample >= 0 && alteration_selection_sample < noise_1_probability_instruction_delayed){
+            let timestep_delay =  Math.floor(Math.random() * (noise_1_probability_instruction_delay_range) + 1) ; //should provide a value in range (1 - noise_1_probability_instruction_delay_range)
+            //adjust the instruction BUT only if there is NO existing instruciton in that timestep
+            let check_timestep = race_r.race_instructions_r.filter(a=>parseInt(a[0]) == (race_r.race_clock +timestep_delay ));
+            if(check_timestep.length == 0){
+              let index_of_instruction = race_r.race_instructions_r.indexOf(new_instructions[i]);
+              //console.log("NOISE 1: DELAY instruction " + JSON.stringify(new_instructions[i][0]));
+
+              noise_alteration["original_instruction"] = new_instructions[i];
+              new_instructions[i][0] += timestep_delay; //actually add the delay
+
+              noise_alteration["altered_instruction"] = new_instructions[i];
+              noise_alteration["type"] = "random_delay";
+
+              race_r.race_instructions_r[index_of_instruction] = new_instructions[i];
+            //  console.log("NOISE 1: DELAY instruction NOW " + JSON.stringify(race_r.race_instructions_r[index_of_instruction]));
+
+              //record the alteration instruction so that it can be played back later if needed
+              race_r.instruction_noise_alterations[race_r.race_clock] = noise_alteration;
+            }
           }
-          else if(inst[0]=="drop"){
-            race_r.drop_instruction = parseInt(inst[1]);
-          }
+          else{ // only add an instruciton that is not delayed
+            let inst = new_instructions[i][1].split("=");
+            if (inst.length=2){
+              if(inst[0]=="effort"){
+                let effort_value = parseFloat(inst[1]);
+                if (alteration_selection_sample >= 0 && alteration_selection_sample >= noise_1_probability_instruction_delayed){
+                    //create a random adjustment
+                    let effort_adjustment = Math.random() * (noise_1_probability_instruction_effort_range*2) + (0- noise_1_probability_instruction_effort_range);
+                    //make sure the adjustment is in the allowed range! 0 - 9
+                    //console.log("NOISE 1: make effort adjustment of " + effort_adjustment + " on to old value of " + effort_value);
+
+                    noise_alteration["original_instruction"] = [race_r.race_clock, "effort=" + effort_value];
+
+                    effort_value  += effort_adjustment;
+                    if (effort_value < 0){
+                      effort_value = 0;
+                      //console.log("NOISE 1: settign effort to 0");
+                    }
+                    else if(effort_value > 9){
+                      effort_value = 9;
+                        //console.log("NOISE 1: settign effort to 9");
+                    }
+                      noise_alteration["altered_instruction"] = [race_r.race_clock, "effort=" + effort_value];
+                      noise_alteration["type"] = "random_effort";
+
+                    race_r.instruction_noise_alterations[race_r.race_clock] = noise_alteration;
+                }
+                race_r.live_instructions.push(["effort",effort_value]);
+              }
+              else if(inst[0]=="drop"){
+                let drop_value  = parseInt(inst[1]);
+                  if (alteration_selection_sample >= 0 && alteration_selection_sample >= noise_1_probability_instruction_delayed){
+                    let  random_other_drop_value =  Math.floor(Math.random() * ((settings_r.ga_team_size-1) - 1) + 1);
+                    if (random_other_drop_value >= drop_value){
+                        random_other_drop_value++; // we don't want to ever get the current value, we want a different one
+                    }
+
+                    //console.log("NOISE 1: make DROP adjustment, new value " + random_other_drop_value + ", old value wuz " + drop_value);
+
+                    noise_alteration["original_instruction"] = [race_r.race_clock, "drop=" + drop_value];
+
+                    drop_value = random_other_drop_value;
+
+                      //make sure it has not gone overboard
+                      if(drop_value < 1){
+                        drop_value = 1;
+                          //console.log("NOISE 1: settign drop value to 1");
+                      }
+                      else if (drop_value > (settings_r.ga_team_size-1)){
+                        drop_value = (settings_r.ga_team_size-1);
+                        //console.log("NOISE 1: settign drop value to " + (settings_r.ga_team_size-1));
+                      }
+                      noise_alteration["altered_instruction"] = [race_r.race_clock, "drop=" + drop_value];
+                      noise_alteration["type"] = "random_drop";
+                      race_r.instruction_noise_alterations[race_r.race_clock] = noise_alteration;
+
+                  }
+                race_r.drop_instruction = drop_value;
+              }
+            }
+
+
         }
       }
-    }
+  }
 
     //carry out any live_instructions (they are queued)
     while (race_r.live_instructions.length > 0){
@@ -1790,5 +1951,5 @@ function run_race(settings_r,race_r,riders_r){
   }
   //return the final finish time (seconds)
 
-  return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep};
+  return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep, instruction_noise_alterations: race_r.instruction_noise_alterations};
 }
