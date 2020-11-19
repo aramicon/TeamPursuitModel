@@ -90,6 +90,37 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
   return effort_level;
 }
 
+// performance failure functoions
+function calculate_rider_performance_failure_probability(effort, effort_max, current_fatigue,current_fatigue_max, accumulated_fatigue,accumulated_fatigue_max, rider_performance_failure_rate,rider_performance_failure_rate_max, performance_failure_probability_exponent,performance_failure_effort_importance_multiplier){
+
+  //work out a percentage that this rider is going to fail right now
+  let rider_performance_failure_probability = ((((Math.pow(effort,performance_failure_probability_exponent)/Math.pow(effort_max,performance_failure_probability_exponent))*performance_failure_effort_importance_multiplier + (Math.pow(current_fatigue,performance_failure_probability_exponent)/Math.pow(current_fatigue_max,performance_failure_probability_exponent)) + (Math.pow(accumulated_fatigue,performance_failure_probability_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_probability_exponent)))/(3+(performance_failure_effort_importance_multiplier-1)))*(rider_performance_failure_rate/rider_performance_failure_rate_max));
+  // console.log("will this rider fail? probability calced to be " + rider_performance_failure_probability);
+  return rider_performance_failure_probability;
+}
+
+// calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage);
+
+function calculate_rider_performance_failure_percentage_amount(effort, effort_max, current_fatigue, current_fatigue_max, accumulated_fatigue, accumulated_fatigue_max, rider_performance_failure_multiplier,rider_performance_failure_multiplier_max,  performance_failure_base_max_percentage,performance_failure_amount_exponent,performance_failure_effort_importance_multiplier ){
+
+    //how much will the rider fail by?
+
+    let rider_performance_failure__percentage_amount = (
+        (
+            (
+              (Math.pow(effort,performance_failure_amount_exponent)/Math.pow(effort_max,performance_failure_amount_exponent))*performance_failure_effort_importance_multiplier +
+              (Math.pow(current_fatigue,performance_failure_amount_exponent)/Math.pow(current_fatigue_max,performance_failure_amount_exponent)) +
+              (Math.pow(accumulated_fatigue,performance_failure_amount_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_amount_exponent))
+            )/(3+(performance_failure_effort_importance_multiplier-1))
+
+        )
+        *(rider_performance_failure_multiplier/rider_performance_failure_multiplier_max)
+      );
+    rider_performance_failure__percentage_amount  = rider_performance_failure__percentage_amount*performance_failure_base_max_percentage;
+    //console.log("rider_performance_failure__percentage_amount: " + rider_performance_failure__percentage_amount);
+    return DecimalPrecision.round(rider_performance_failure__percentage_amount,2);
+}
+
 //test mapPowerToEffort() and mapEffortToPower()
 // console.log("************TEST mapEffortToPower and back via mapPowerToEffort************")
 // for(let i = 0;i <= 18;i++){
@@ -445,6 +476,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let best_race_instruction_noise_alterations = {};
     let worst_race_instruction_noise_alterations = {};
 
+    let best_race_performance_failures = {};
+    let worst_race_performance_failures = {};
+
     //print % progress every segment
     if (g % one_segment == 0){
       console.log(one_segment_count*(100/segment_size) + "% done");
@@ -522,6 +556,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
         best_race_distance_last_timestep = race_results.distance_last_timestep;
 
         best_race_instruction_noise_alterations = race_results.instruction_noise_alterations;
+        best_race_performance_failures = race_results.performance_failures;
 
         // let's now log the settings for this best race for the LAST generation
         if (global_log_message ){
@@ -541,6 +576,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
         worst_race_rider_power = race_results.power_output;
 
         worst_race_instruction_noise_alterations = race_results.instruction_noise_alterations;
+        worst_race_performance_failures = race_results.performance_failures;
       }
 
 
@@ -609,6 +645,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     generation_results.best_race_distance_last_timestep = best_race_distance_last_timestep;
 
     generation_results.best_race_instruction_noise_alterations = best_race_instruction_noise_alterations;
+
+    generation_results.best_race_performance_failures = best_race_performance_failures;
+    generation_results.worst_race_performance_failures = worst_race_performance_failures;
 
     //before looking at next generation can work out the robustness check of the current BEST strategy, IF required
     if(settings_r.ga_run_robustness_check==1){
@@ -1252,6 +1291,7 @@ function run_race(settings_r,race_r,riders_r){
 
   //dk2020 oct. adding new array to store noise/failure alterations. will make this an object/dict for easy retrieval.
   race_r.instruction_noise_alterations = {};
+  race_r.performance_failures = {};
 
   //prepare to record the power output for each rider at each timestep
   rider_power = [];  //added 2020May26 to start trackign rider power output
@@ -1420,9 +1460,9 @@ function run_race(settings_r,race_r,riders_r){
                     noise_alteration["original_instruction"] = [race_r.race_clock, "effort=" + effort_value];
 
                     effort_value  += effort_adjustment;
-                    if (effort_value < 0){
-                      effort_value = 0;
-                      //console.log("NOISE 1: settign effort to 0");
+                    if (effort_value <  settings_r.minimum_power_output){
+                      effort_value =  settings_r.minimum_power_output;
+                      //console.log("NOISE 1: settign effort to  settings_r.minimum_power_output " +  settings_r.minimum_power_output);
                     }
                     else if(effort_value > 9){
                       effort_value = 9;
@@ -1534,6 +1574,26 @@ function run_race(settings_r,race_r,riders_r){
         }
 
         let powerv = race_rider.power_out, power_adjustment = 0;
+
+        //donalK2020: performance failure
+        if (settings_r.performance_failure_enabled == 1){
+            //will the rider fail this time?
+            let performance_failure_probability = calculate_rider_performance_failure_probability(race_rider.output_level, settings_r.maximum_effort_value, race_rider.endurance_fatigue_level, settings_r.fatigue_failure_level, race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_rate, settings_r.rider_performance_failure_rate_max, settings_r.performance_failure_probability_exponent, settings_r.performance_failure_effort_importance_multiplier);
+            if (Math.random() < performance_failure_probability){
+              //rider fails to perform target power, but by how much?
+              let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, settings_r.performance_failure_effort_importance_multiplier);
+              //add an entry to performance_failures
+              let timestep_rider = race_r.race_clock + "_" + race_r.current_order[i];
+              race_r.performance_failures[timestep_rider] = performance_failure_percentage;
+
+              console.log("RIDER FAILURE " + performance_failure_percentage*100 + "% target_power updated from " + target_power + " to " + (target_power - (target_power*performance_failure_percentage)));
+
+              target_power = target_power - (target_power*performance_failure_percentage);
+
+            }
+        }
+
+
         //compare power required to previous power and look at how it can increase or decrease
         if (powerv > target_power){ //slowing down
           if((powerv - target_power) > Math.abs(settings_r.power_adjustment_step_size_down)){
@@ -1951,5 +2011,5 @@ function run_race(settings_r,race_r,riders_r){
   }
   //return the final finish time (seconds)
 
-  return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep, instruction_noise_alterations: race_r.instruction_noise_alterations};
+  return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep, instruction_noise_alterations: race_r.instruction_noise_alterations, performance_failures:race_r.performance_failures};
 }

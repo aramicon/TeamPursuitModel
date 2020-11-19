@@ -1444,6 +1444,167 @@ let effort_adjustment = Math.random() * (noise_1_probability_instruction_effort_
  
  -- first, commit to git. ahven't done this in a while.
  
+ -- now load noise altertions again and go from there.
+ -- seems to load alterations once for each rider- must be in a loop?
+ -- yup- move both instructions and alteration settings outside the rider-loading loop
+ -- works, now need to actually apply the alterations
+ -- i guess handle race.instruction_noise_alterations_r like race.race_instructions_r
  
+ -- Monyay Nov 9th. added few lines trying to tell if the alteration is a delay and if so to set the original instruction.
+ 
+ -- need to sketch out how to handle the potential for there being multiple instructions on the one timestep. It shouldn't happen but I have 0 code controlling this and can't 100% assume that there will be just the one instruciton?
+ 
+ -- montag nov 16th
+ -- have to get the game to run those instrucitons and move on to the performance failure ones
+ -- so, I've set delay_instruction = true but how do I apply this given that there MAY be multiple instructions for the one timestep. Or maybe I should just throw an error if there are > 1 for the same timestep? It shouldn't happen, right?
+ 
+ -- need to use array.splice(index,0=add,1=replace,value) to remove an instructoin from new_instructions IF it has been delayed, but will this break the loop   for(i_i=0;i_i<new_instructions.length;i_i++){ ??
+ -- test
+ let a = [1,2,1,3,1,1,1,1,1,1,4,5,6,1,7,8];
+ for(i = 0;i<a.length;i++){
+	if(a[i]==1){
+		a.splice(i,1);
+		i--; //will otherwise skip the next element as it has been moved back a space
+	}
+ }
+ 
+ -- ok, have added this, and removed the delay_instruction variable.
+ 
+ -- ok, now it will try to make adjustments for delay/effort/drop types of noise, but needs to be tested and is probably buggy as fook
+ 
+ -- works BUT in my test the effort is set to zero. This explains why it was the slowest race :-) 
+ -- need to prevent effort being set to zero, and also need to handle it : I think the lowest allowed value shoudl be 1?
+ 
+ -- added code to prevent 0 from being set in game. need to also adjust where it actually sets the noise.
+ 
+ -- but first need to verify the lowest allowed effort level : it appears that the formula requires > 0 but that could be 0.1
+ 00 I guess look at where the effort instructions are created?
+ -- seems like I use a setting called settings_r.minimum_power_output
+ -- this is set to 1, so use this. why haven't i an equivalent setting for the max, and why is it such a shit name? should be settings_r.minimum_effort_level 
+ 
+-- ok, updated
+-- test some other alterations 
+{"59":{"original_instruction":[59,"effort=1.21"],"altered_instruction":[59,"effort=6"],"type":"random_effort"}}
+
+{"59":{"original_instruction":[59,"effort=1.21"],"altered_instruction":[61,"effort=1.21"],"type":"random_delay"}}
+
+-- shocking- the delay worked seemingly first time
+
+{"59":{"original_instruction":[59,"effort=1.21"],"altered_instruction":[61,"effort=1.21"],"type":"random_delay"},"110":{"original_instruction":[110,"drop=2"],"altered_instruction":[110,"drop=3"],"type":"random_drop"},"246":{"original_instruction":[246,"drop=3"],"altered_instruction":[246,"drop=1"],"type":"random_drop"}}
+
+-- weird, seesm that instruction_noise_alterations gets set to the wrong element
+-- how can this line break?
+let instruction_noise_alterations = race.instruction_noise_alterations_r[race.race_clock];
+-- oh wait, my actual instruction is poo
+
+-- test with a fast race (add a new fake alteration) 
+
+{"153":{"original_instruction":[153,"drop=3"],"altered_instruction":[153,"drop=1"],"type":"random_drop"}}
+
+-- 290.07 with change, same without :-( though it does seem to work, how could it make zero to the finish time?
+-- try a more dramatic change to the effort
+
+{"186":{"original_instruction":[186,"effort=8.02"],"altered_instruction":[186,"effort=5"],"type":"random_effort"}}
+
+-- ok so this made a big difference, finish time now 316.596 seconds
+
+-- time to commit changes
+
+-- next up need to look at performance failure
+
+-- sketched out the idea for how the performance failure would work. idea is to have two functions
+-- first takes in effort/fatigue/rider_failure property, and returns a 0-1 prob of failure.
+--if this is passed via random number selection
+-- second function takes more or less the same properties but returns a % to fail by. 
+-- this % will be used to adjust the power output
+-- details of each failure will need to be stored in the results so that they can be replayed as with the random noise
+-- can each rider fail on every timestep? what happens if a chasing rider fails?
+
+-- Tuesday 17th
+
+-- finish basic forumlas on Excel and try to incorporate into code
+
+-- sketched out how to store the performance failures for replay
+-- e.g. performance_failures={
+								"101_0":0.12,
+								"241_3":0.241
+							}
+-- should be relatively easy to apply but what's crucial to know is exactly WHERE this happens in the power calcualtion process
+-- currently think AFTER fatigue and step-size limits are applied.
+-- seems like the power failres will be wobbles as opposed to longer problems, i.e., a rider fails by % in step 4, but unlikely to fail again in step 5. Could potentially make a failure less of a poitn and more of a trough? Or increase likelyhood of failure if you have just failed? Seems like wayyy too much guewtimating of physical processes here. Again.
+
+-- in cany case build it. The two functions are crucial
+
+-- wednesday 18th novembre
+-- create dumb versions of the functions and add the required props
+-- each rider gets
+-- "performance_failure_rate": 4
+-- "performance_failure_multiplier": 6
+ 
+-- global settings gets 
+-- "main switch performance_failure_enabled":0
+-- "performance_failure_probability_exponent":1 -- used in formula to skew effect of formula arguments. e.g. 1 = linear, 2 is a square so lower values have less effect
+-- "performance_failure_amount_exponent":1
+-- "performance_failure_base_max_percentage":0.1 -- max percentage that the rider can fail by (will be limited in any case by the step-down size unless I update how that is applied)
+-- "rider_performance_failure_rate_max": 10,
+-- "performance_failure_multiplier_max": 10
+
+-- now create two funciton stubs
+-- 1: calculate_rider_performance_failure_probability(effort, current_fatigue, accumulated_fatigue, rider_performance_failure_rate, performance_failure_exponent)
+
+-- 2: calculate_rider_performance_failure_percentage_amount(effort, current_fatigue, accumulated_fatigue, rider_performance_failure_multiplier, performance_failure_base_max_percentage)
 
 
+-- adding "maximum_effort_value":9 to global settings, as it should really be already there, rather than embedding 9 in the code
+
+
+-- Thursday 19th
+-- check the calculate_rider_performance_failure_percentage_amount function, seems to be failing, debugger it
+-- blast, was missing a = , e.g. let x (1 + 2)
+-- now seems to run but is spitting out some pile of messages.
+-- just output the rider failure % as it seems to be bigger than it should?
+
+-- ok, it does seem to work, just trying some different settign values to watch waht happens
+
+-- see an example of high fial % with a low power - this should be really unlikely even with a lot of fatigue? 
+-- high fatige + high acumulated fatigue + low effort can still result in a big failure- is that ok or should I tweak the formula. For example I could make the effort have twice the effect as the other properties? would just need to multiply it by 2 and add 1 to the divisor?
+
+(effort*A + y + z)/3+(A-1)
+
+-- e.g. (1*2 + 1 + 1)/3 + (2-1) = 1, (1*2 + 0 + 0)/3 + (2-1) = 0.5
+
+
+will this still give me a 0-1 range for any A?
+
+-- could have A as a global property "performance_failure_effort_importance_multiplier":1
+-- i guess add it to both formulas (same prop). though same % on bigger power is already going to be a bigger drop: but still, we want to shrink the % drop for small effort, or even just make failure at small effort less likely. 
+
+-- still getting a high failure amount for low effort in some cases, e.g.
+RIDER FAILURE 48.40815144032922% target_power updated from 266.6666666666667 to 137.57826282578876
+
+-- guess I could log more info and see what the actual props values are in a case like that?
+
+-- will also need to do the logging and replaying aspects before doing any biger tests
+
+-- ideally I need to be able to run this in the race sim itself, as well as the random noise, so that I can play races a few times and get different results. It woudl help test things. I'd need a switch to enable/disable it, like a replay mode and a regular mode. I guess it will always replay whatever it find in the inputs? so would just need one switch/setting, or maybe one each for enable_random_noise_in_game_sim and enable_performance_failure_in_game_sim ? bit of coding there, too. can you for example have noise ON a noise instruction? seems to me that it wouldn't make any sense 
+
+-- game_sim is currently crashing cos nothing in the noise alteration textarea- does this ever run now from the GA page?
+
+-- first need to start storing the failures in a new data structure performance_failures
+-- ok, it seems to add to the dict but this is not visible in mongo when I save the results. why is it not there?
+
+--ok, tis there now, was missing a line. mebbie should round the failure % to two decimals places, is currently v. long
+
+-- done, used the DecimalPrecision.round(X,2) function that I've used elsewhere
+
+-- now get them to display on the game page
+
+-- back up. step 1: show them on the results page
+
+-- huh, somethign seems wrong here, final_worst_race_instruction_noise_alterations only gets used once in the code, how can it be returned?
+
+-- changed that, now need to add tabs in the game page to organise the text areas and be able to fit 3- over to bootstrap/css
+
+-- now load in the performance failures from the url data
+
+-- right, do I now have race.performance_failures_r available to use in the race?

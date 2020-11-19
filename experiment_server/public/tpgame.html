@@ -84,20 +84,35 @@
       </div>
       <div class="col">
         <div class="form-group">
-          <label for="instructions">Instructions:</label>
-          <textarea class="form-control" rows="5" id="instructions"></textarea>
+
+          <ul class="nav nav-tabs" id="myTab" role="tablist">
+            <li class="nav-item">
+              <a class="nav-link active" id="instructions-tab" data-toggle="tab" href="#instructions" role="tab" aria-controls="instructions" aria-selected="true">Instructions</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" id="noise_alterations-tab" data-toggle="tab" href="#noise_alterations" role="tab" aria-controls="noise_alterations" aria-selected="false">Noise</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" id="performance_failures-tab" data-toggle="tab" href="#performance_failures" role="tab" aria-controls="performance_failures" aria-selected="false">Failures</a>
+            </li>
+          </ul>
+          <div class="tab-content" id="myTabContent">
+            <div class="tab-pane fade show active" id="instructions" role="tabpanel" aria-labelledby="home-tab">
+              <label for="instructions_textarea">Instructions:</label>
+              <textarea class="form-control" rows="5" id="instructions_textarea"></textarea>
+            </div>
+            <div class="tab-pane fade" id="noise_alterations" role="tabpanel" aria-labelledby="noise_alterations-tab">
+            <label for="instruction_noise_alterations">Instruction Noise Alterations:</label>
+              <textarea class="form-control" rows="5" id="instruction_noise_alterations_textarea"></textarea>
+            </div>
+            <div class="tab-pane fade" id="performance_failures" role="tabpanel" aria-labelledby="performance_failures-tab">
+            <label for="performance_failures">Performance Failures:</label>
+            <textarea class="form-control" rows="5" id="performance_failures_textarea"></textarea>
+          </div>
+          </div>
+
         </div>
       </div>
-
-      <div class="col">
-        <div class="form-group">
-          <label for="instruction_noise_alterations">Instruction Noise Alterations:</label>
-          <textarea class="form-control" rows="5" id="instruction_noise_alterations"></textarea>
-        </div>
-      </div>
-
-
-
       </div>
       <div class="row">
         <div class="col">

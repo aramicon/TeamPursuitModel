@@ -286,18 +286,64 @@ function moveRace(){
 
   //add any stored instructions if found
   let new_instructions = race.race_instructions_r.filter(a=>parseInt(a[0]) == race.race_clock);
+
   if(new_instructions.length > 0){
+    //also check for any alterations due to noise
+    let instruction_noise_alterations = race.instruction_noise_alterations_r[race.race_clock];
+    if (instruction_noise_alterations !== undefined && !(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
+      console.log("Instruction alterations found: " + JSON.stringify(instruction_noise_alterations));
+      //Is this a delay?
+      if(instruction_noise_alterations["type"]=="random_delay"){
+        console.log("random delay alteration");
+        //change the timestep of the original; we need to NOT run it now.
+        //need to make sure we update the correct instruction
+        //loop through race.race_instructions_r until you find the one to change
+        for(let i_s=0;i_s<race.race_instructions_r.length;i_s++){
+          if(race.race_instructions_r[i_s][0] == instruction_noise_alterations["original_instruction"][0] && race.race_instructions_r[i_s][1] == instruction_noise_alterations["original_instruction"][1]){
+            console.log("found instruction to delay instruction " + i_s + " from " + race.race_instructions_r[i_s][0] + " to " + instruction_noise_alterations["altered_instruction"][0]);
+              if ( instruction_noise_alterations["altered_instruction"][0] >  race.race_instructions_r[i_s][0]){ //only change things id the delay is actually for a future timestep
+                race.race_instructions_r[i_s][0] = instruction_noise_alterations["altered_instruction"][0]; //this SHOULD update it
+
+                //search the new_instructions for this same instruction and remove it (if delay is > 0)
+                for(let i_i=0;i_i<new_instructions.length;i_i++){
+                    //need the loop in case there are > 1 instructions (for the same timestep)
+                    if(new_instructions[i_i][0] == instruction_noise_alterations["original_instruction"][0] && new_instructions[i_i][1] == instruction_noise_alterations["original_instruction"][1]){
+                      //remove that element in the array
+                      new_instructions.splice(i_i,1);
+                      i_i--; //need to hold the index counter as array elements wil be shifted left
+                      console.log("delay instruction: current timestep instruciton removed from array!");
+                    }
+                }
+              }
+            break;
+          }
+        }
+      }
+      else if(instruction_noise_alterations["type"]=="random_drop" || instruction_noise_alterations["type"]=="random_effort"){
+        //search new_instructions for the instruction_noise_alterations entry and update it if found
+        for(let i_i=0;i_i<new_instructions.length;i_i++){
+            //need the loop in case there are > 1 instructions (for the same timestep)
+            if(new_instructions[i_i][0] == instruction_noise_alterations["original_instruction"][0] && new_instructions[i_i][1] == instruction_noise_alterations["original_instruction"][1]){              //remove that element in the array
+              new_instructions[i_i][1] = instruction_noise_alterations["altered_instruction"][1]; //sets the new value
+              console.log(instruction_noise_alterations["type"] + " instruction alteration : current timestep instruction updated!");
+            }
+        }
+      }
+      else{
+        console.log("Unknown alteration type " + instruction_noise_alterations["type"] + "\n\n\n" + JSON.stringify(instruction_noise_alterations));
+      }
+    }
 
     for(let i=0;i<new_instructions.length;i++){
       let inst = new_instructions[i][1].split("=");
       if (inst.length=2){
         if(inst[0]=="effort"){
           race.live_instructions.push(["effort",parseFloat(inst[1])]);
-          //console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
+          console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
         }
         else if(inst[0]=="drop"){
           race.drop_instruction = parseInt(inst[1]);
-          //console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
+          console.log(race.race_clock + " **FOUND INSTRUCTION** DROP: " + parseInt(inst[1]));
         }
       }
     }
@@ -308,6 +354,15 @@ function moveRace(){
   while (race.live_instructions.length > 0){
     let instruction = race.live_instructions.pop();
     if(instruction[0]=="effort"){
+      //dk: check for invalid values
+      if(instruction[1] < settings.minimum_power_output){
+        console.log("WARNING! effort instruction < 1, updating to minimum 1");
+        instruction[1] = 1;
+      }
+      else if(instruction[1] > 9){
+          console.log("WARNING!effort instruction > 9, updating to maximum 9");
+        instruction[1] = 9;
+      }
       setEffort(instruction[1]);
       $("#instruction_info_text").text(race.race_clock + " - Effort updated to " + instruction[1]);
       //console.log(race.race_clock + " Effort instruction " + instruction[1] + " applied ")
@@ -958,29 +1013,41 @@ function load_race(){
 
     console.log("loading rider " + load_rider.name + " at position " + race.start_order[i] + " with start offset of " + load_rider.start_offset);
 
-    let instructions_t = [];
-    let new_instructions = $('#instructions').val();
-    if(new_instructions.length > 5){
-      //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
-      instructions_t = JSON.parse(new_instructions);
-    }
-    if (instructions_t.length > 0){
-      race.race_instructions_r = instructions_t;
-    }
-
-    let instruction_noise_alterations = {};
-    let instruction_noise_alterations_string = $('#instruction_noise_alterations').val();
-    if(instruction_noise_alterations_string.length > 5){
-      //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
-      instruction_noise_alterations = JSON.parse(new_instructions);
-    }
-    if (!(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
-      race.instruction_noise_alterations_r = instruction_noise_alterations;
-      console.log("loaded noise alterations from textarea: " + JSON.stringify(race.instruction_noise_alterations_r) );
-    }
-
     load_rider.time_on_front = 0; //dksep24: want to track how much time each rider spends at the front.
 
+  }
+
+  let instructions_t = [];
+  let new_instructions = $('#instructions_textarea').val();
+  if(new_instructions.length > 5){
+    //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+    instructions_t = JSON.parse(new_instructions);
+    console.log("load instructions");
+  }
+  if (instructions_t.length > 0){
+    race.race_instructions_r = instructions_t;
+}
+
+  let instruction_noise_alterations = {};
+  let instruction_noise_alterations_string = $('#instruction_noise_alterations_textarea').val();
+  if(instruction_noise_alterations_string.length > 5){
+    //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+    instruction_noise_alterations = JSON.parse(instruction_noise_alterations_string);
+  }
+  if (!(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){ //i.e. if it is a non-empty object
+    race.instruction_noise_alterations_r = instruction_noise_alterations;
+    console.log("loaded noise alterations from textarea: " + JSON.stringify(race.instruction_noise_alterations_r) );
+  }
+
+  let performance_failures = {};
+  let performance_failures_string = $('#performance_failures_textarea').val();
+  if(performance_failures_string.length > 5){
+    //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+    performance_failures = JSON.parse(performance_failures_string);
+  }
+  if (!(Object.keys(performance_failures).length === 0 && performance_failures.constructor === Object)){ //i.e. if it is a non-empty object
+    race.performance_failures_r = performance_failures;
+    console.log("loaded performance failures from textarea: " + JSON.stringify(race.performance_failures_r) );
   }
 
   race.riders = riders;
@@ -1092,18 +1159,25 @@ function load_details_from_url(){
           let start_order = url.searchParams.get("startorder");
           let instructions = url.searchParams.get("instructions");
           let instruction_noise_alterations = url.searchParams.get('noise_alterations');
+          let performance_failures = url.searchParams.get('performance_failures');
+
           if(start_order.length > 0){
             console.log("loaded start_order from URL: " + start_order);
             $("#teamorder").val(start_order);
           }
           if(instructions.length > 0){
             console.log("loaded instructions from URL: " + instructions);
-            $("#instructions").val(instructions);
+            $("#instructions_textarea").val(instructions);
           }
 
           if(!(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
             console.log("loaded instruction_noise_alterations from URL: " + JSON.stringify(instruction_noise_alterations));
             $("#instruction_noise_alterations").val(instruction_noise_alterations);
+          }
+
+          if(!(Object.keys(performance_failures).length === 0 && performance_failures.constructor === Object)){
+            console.log("loaded performance_failures from URL: " + JSON.stringify(performance_failures));
+            $("#performance_failures_textarea").val(performance_failures);
           }
 
           //need to make sure the race is loaded AFTER we get the settings
@@ -1148,6 +1222,7 @@ function load_details_from_url(){
           let start_order = url.searchParams.get("startorder");
           let instructions = url.searchParams.get("instructions");
           let instruction_noise_alterations = url.searchParams.get('noise_alterations');
+          let performance_failures = url.searchParams.get('performance_failures');
 
           if(start_order.length > 0){
             console.log("loaded start_order from URL: " + start_order);
@@ -1155,11 +1230,15 @@ function load_details_from_url(){
           }
           if(instructions.length > 0){
             console.log("loaded instructions from URL: " + instructions);
-            $("#instructions").val(instructions);
+            $("#instructions_textarea").val(instructions);
           }
           if(!(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
             console.log("loaded instruction_noise_alterations from URL: " + JSON.stringify(instruction_noise_alterations));
-            $("#instruction_noise_alterations").val(instruction_noise_alterations);
+            $("#instruction_noise_alterations_textarea").val(instruction_noise_alterations);
+          }
+          if(!(Object.keys(performance_failures).length === 0 && performance_failures.constructor === Object)){
+            console.log("loaded performance_failures from URL: " + JSON.stringify(performance_failures));
+            $("#performance_failures_textarea").val(performance_failures);
           }
 
           //need to make sure the race is loaded AFTER we get the settings
