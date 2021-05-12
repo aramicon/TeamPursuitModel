@@ -1608,3 +1608,801 @@ RIDER FAILURE 48.40815144032922% target_power updated from 266.6666666666667 to 
 -- now load in the performance failures from the url data
 
 -- right, do I now have race.performance_failures_r available to use in the race?
+-- nope, bug 
+performance_failures_string = "[object HTMLDivElement]"
+somethign being set wrong
+
+-- friday 20th november 2020
+-- need to get the replay goigng and work towards proper testing
+-- what's going on with the rounding?
+RIDER FAILURE 7.000000000000001% target_power updated from 400 to 372,
+
+ah, so if we round 0.03432112 to 2 places we get 0.03, i.e. 3%. If we want 3.43% here we need to round to 4 places. try that.
+
+oh, looks like the failures are only being applied to the lead rider. oops
+
+-- hmmm, not reading array cos a  DOM element is also called 'performance_failures'
+
+-- hmmmmm, not sure if the failures are working- see, they apply to target power, but actual power output is already limited to the steposize and the target power will be reset in any case for the next timestep. I guess it should have an effect sometimes, but only when the target power is close to the current power.
+
+-- ah balls, so far the performance failues seem to have zero effect- if I take them out and rerun the race there is NO change in the finish time. will have to rethink- it must be to do with the note above, how the failure is affectign the target power but not the actual power and NO failure really happens.
+
+{"26_2":0.741,"26_0":0.741,"26_1":0.741,"26_3":0.741,"71_0":0.741,"90_2":0.741,"107_3":0.0741,"119_2":0.0815,"166_0":0.082,"186_2":0.0779,"195_3":0.0772,"253_2":0.0779,"274_3":0.0772}
+
+-- what if I add really huge failures? ooh, it changed the finish time by a few tenths of a second.
+
+-- Montag Nov 23rd
+
+-- need to use debug tools to step through what happens when there IS a performance failure. WHy does the change have no effect?
+
+-- ok. so target_power is 267.5874202315783 and performance_failure_percentage is 0.0741. target_power gets updated to 247.75919239241833. powerv is also 267.58 (note rounding diff). power_adjustmentgets set to -19.820807607581656. So there IS an effect here, surely?
+
+-- maybe the issue going on is that the GA generation winner is simply the varient that fails the least? Like maybe other races have failures that have a big effect, therefore they don't win?
+
+-- performance_failure_percentage seems to be 0.0741 a lot. strange.
+
+-- try setting riders to have a ton of failures ( "performance_failure_rate": 10,
+               "performance_failure_multiplier": 10 for all riders)
+here's what the best race performance_failures from gen 1 looks like
+{"0_1":0.0741,"5_2":0.0741,"5_0":0.0741,"7_0":0.0741,"7_3":0.0741,"10_0":0.0741,"10_1":0.0741,"13_3":0.0741,"14_3":0.0741,"17_2":0.0741,"20_1":0.0741,"21_1":0.0741,"22_3":0.0741,"26_2":0.0741,"27_3":0.0741,"30_0":0.0741,"32_0":0.0741,"33_3":0.0741,"35_2":0.0741,"37_0":0.0741,"37_3":0.0741,"41_1":0.0741,"41_3":0.0741,"44_2":0.0741,"46_3":0.0741,"49_3":0.0741,"51_3":0.0741,"52_3":0.0741,"53_2":0.0741,"54_3":0.0741,"62_2":0.0741,"63_2":0.0741,"65_2":0.0741,"66_2":0.0741,"67_0":0.0741,"68_0":0.0741,"68_3":0.0741,"70_2":0.0741,"70_1":0.0741,"70_3":0.0741,"71_0":0.0741,"72_3":0.0741,"74_1":0.0741,"76_1":0.0741,"78_2":0.0741,"81_0":0.0741,"81_3":0.0741,"84_3":0.0741,"88_2":0.0741,"89_3":0.0741,"90_2":0.0741,"90_1":0.0741,"92_2":0.0741,"96_1":0.0741,"98_0":0.0741,"99_1":0.0741,"100_3":0.0741,"103_1":0.0741,"104_2":0.0741,"104_0":0.0741,"105_2":0.0741,"106_0":0.0741,"107_0":0.0741,"110_3":0.0741,"113_0":0.0741,"113_3":0.0741,"117_2":0.0741,"120_1":0.0741,"122_2":0.0741,"123_0":0.0741,"124_1":0.0741,"124_3":0.0741,"126_3":0.0741,"129_1":0.0741,"130_2":0.0741,"131_0":0.0741,"132_3":0.0741,"133_2":0.0741,"136_3":0.0745,"137_1":0.0741,"137_3":0.0745,"138_1":0.0741,"140_2":0.0741,"141_1":0.0741,"142_2":0.0741,"142_3":0.0741,"144_1":0.0741,"144_3":0.0741,"147_1":0.0741,"147_2":0.0741,"148_1":0.0741,"149_2":0.0741,"153_2":0.0741,"153_3":0.0741,"154_0":0.0741,"154_1":0.0741,"154_3":0.0741,"155_3":0.0741,"156_2":0.0741,"157_0":0.0741,"160_0":0.0741,"160_3":0.0741,"166_2":0.0741,"169_3":0.0741,"171_3":0.0741,"173_2":0.0741,"175_2":0.0741,"176_3":0.0741,"177_1":0.0741,"178_2":0.0741,"186_1":0.0741,"189_0":0.0414,"189_3":0.0741,"190_2":0.0741,"191_0":0.0414,"193_1":0.0741,"197_1":0.0741,"197_2":0.0741,"198_1":0.0741,"198_2":0.0741,"199_1":0.0741,"201_0":0.0414,"201_3":0.0741,"203_1":0.0741,"204_3":0.0741,"206_1":0.0741,"210_2":0.0741,"213_2":0.0741,"217_2":0.0741,"218_3":0.0741,"220_1":0.0411,"221_3":0.0741,"223_1":0.0411,"231_2":0.0411,"232_3":0.0741,"235_2":0.0411,"235_3":0.0741,"239_0":0.0414,"242_3":0.0741,"244_2":0.0411,"246_1":0.0411,"247_3":0.0741,"249_3":0.0741,"250_3":0.0741,"254_3":0.0741,"254_0":0.0414,"255_0":0.0414,"256_2":0.0411,"263_3":0.0741,"264_0":0.0414,"267_2":0.046,"268_3":0.0741,"269_2":0.046,"271_1":0.0411,"272_1":0.0411,"275_2":0.046,"279_0":0.0414,"288_0":0.0414,"292_2":0.046,"295_3":0.0741,"296_1":0.0411,"300_1":0.0411,"302_3":0.0741,"305_0":0.0414,"309_3":0.0741}
+
+ 311.396 seconds
+ 
+ -- if i take out all those failures, how fast are they?
+ 
+ -- huh- performance failures still happen when I hit the STOP button a few times?
+ -- ok, needed to add a few more lines to reset the data structs
+ -- no failures now but the time is 310.58. that's a tiny difference for maximum failure settings.
+ 
+ -- try amp up the failure % and see what happens.
+ 
+ -- huh, "performance_failure_base_max_percentage":0.5 but I get 0.74? surely it would be max of 0.5? need to keep pokign about here to make sure things work ok
+ 
+ -- huh, the results DO seem to be < 0.5 so why are the logged values more? am i logging thw rong thing?  i.e. probbaility instread of amount? it seems I am logging the right value but I can still see tons of .0741 in the results. cen fáth?
+ 
+ -- ah, sure it's 0.5 NOT 0.05 and I'm getting 0.07 not 0.7, so this may just be dumb.
+ 
+ -- so set to 1 ( max right?) do I get more dramatic failures?
+ 307.394 with failures, 298.837 without. that's better, right?
+
+-- here's a test. all else being equal, will a team where one rider fails less make that rider do more work?
+-- will need to have a decent amount of failure, a good few gens, reasnable size of pop. turn off the logging?
+-- ran 20 gens of 1000 with all 400/1000 but one rider fialing far less than others
+-- hmm, less faily rider starts at front but does not spend any wxtra time there- of course riders can fail in any position.
+-- best race finish t 288.553 seconds. take out failures and it is 294.498 seconds. whaaaa? ARe the instructions being inflated to balance out the failures? 
+
+-- from looking at that example and playing both fail/nofail versions it seems that yes, the combination of instruction and failures is key: in this example there is one phase where a rider goes close to failure but because of performance failures jsut about gets to swtich and recover. So, a performance failure is actually part of the strategy. That's with a high level of failure, such that if riders have long turns they will reliably record some level of failure during it.
+
+-- run the same ga with NO performance failure and compare the best results with the last. more instructions? different kind of result?
+
+-- hard to read much intot he single race from so many gens. defo quicker without the failure but how is it affecting the search- would need to seed the process with an identical starting population? 
+
+-- for kicks, try run a process with tons of noise and see what that does.
+
+what would a conservative strategy look like? and how would it not disappear being replaced by ones with finer margins? does the blunt fatigue-failure mechanism have too much of an impact on behaviour? 
+
+-- need a few paragraphs and a couple of images or a graph to explain the effect of the npise and failure.how does each affect the GA? are the effects different or similar? why does a rider that does not fail not get prioritsed?
+
+-- do ai need to try to shift the application of the failure? 
+
+-- so with more noise, here's an e.g. 288.832 seconds with a lot of noise, all weak.
+instruction_noise_alterations:
+{"102":{"original_instruction":[102,"effort=6.5"],"altered_instruction":[102,"effort=6.214388160783767"],"type":"random_effort"},"135":{"original_instruction":[136,"drop=2"],"altered_instruction":[136,"drop=2"],"type":"random_delay"},"234":{"original_instruction":[234,"drop=2"],"altered_instruction":[234,"drop=1"],"type":"random_drop"},"272":{"original_instruction":[272,"effort=8.74"],"altered_instruction":[272,"effort=7.676728792877347"],"type":"random_effort"},"277":{"original_instruction":[277,"drop=1"],"altered_instruction":[277,"drop=2"],"type":"random_drop"},"283":{"original_instruction":[283,"effort=8.83"],"altered_instruction":[283,"effort=9"],"type":"random_effort"}}
+
+-- if I remove the noise it is 302.915 seconds, so again SLOWER. mad. or is it? the GA is just searching for improvements and this must be a strategy that is amenable to a crucial piece of noise. with no noise one rider fails and causes a big slowdown about halfway through- the noise works in its favour.
+
+-- error in the graphing code: ReferenceError: graph_data_5 is not defined
+`
+-- lotsa noise AND lotsa failure 292.6 seconds, 293.763 seconds instructions only.
+
+-- Mondee 14/12. so much undone. Run the noise again and open overleaf. at least add the paragraphs desribing it.
+
+-- so what happens with tons of performance failure and I remove it?
+-- with p. failure, best race after 20 gens> 295.735
+-- with p. failure removed (same instructs and noise)> 326.262 
+-- with p.failure and nise removed:339.127 
+-- with p.failure included and noise removed: 355.179 
+
+-- but I must be getting worse best-race-scores than when I have NO p.failure?
+-- run the same thing with noise and NO p.failure. 
+--hmm, swithcing performance_failure_enabled:0 does not seem to actually disable ti :-(
+
+-- ok so it does seem to work after all, reran the test
+-- after final gen: 290.078. so quicker, but not by a whole ton at all
+-- does the power curve look much different?
+
+-- acshully, the version with noise AND failure gets down to 291.345s in the final gen
+
+-- ok, so it is quicker when there is no noise/failure, but maxxing them out is not nearlyu as damaging as I would have thought. Perhaps I need to make them fail by more?
+
+-- try noise first, make it so that there is tons of noise and its effects are HUGE, like wild changes
+
+-- 2021
+
+-- monday jan 18
+-- huge gaping gap but can't get that time back. only go on
+
+-- reade last few notes to try pick things up again
+-- so, noise and failure does not have the effect 'desired'? 
+
+-- rerun that test: no failure then + max noise/no failure, then no noise/max failure, then max noise/max failure, and see what you dend up with.
+
+-- note: with noise there is no thin-air-noise, i.e. no randomly created new ones, just abberrations to exiting ones
+-- the noise coudl actually make the strategy do BETTER, not just worse. But the noise does not get pushed into the next generation. Noise is just changes, not specifically disimprovements. so the fitness is based on instructs+noise, but in the next generation there will be different noise. does the avg. fitness of the population improve more slowly?
+
+-- on the failure end, it seems that if tyhe failures are 'regular' then they become mechanistic and essentially part of the strategy: instructions + failure. Ones that perform best are those that, when they fail, approximate better solutions. This means you end up with solutions that will actually get WORSE if you run them without the failure!
+
+-- might be able to fidn a better way to implement failure to reduce/remove this?
+
+-- but first need to understand it properly and write somethign about it
+
+-- run 1 done: no noise/failure. 
+-- run 2 done: lots of noise/no fialure
+-- run 3 : no noise/lots of failure
+-- run 4: lots of noise: no failure
+
+-- put these results in a spreadsheet to show the differences between
+first-last gen best/average 
+% improvement
+
+-- ok, added data but have of course hit a disrapancy that throws it all out
+-- if I play the best race from gen. 20 in test case 2 (lots of noise/no failure), I get a different result to the GA. But how can I compare the GA/game versions where noise is applied? One generates it and the other replays it. Will have to do long slow testing of the noise feature in BOTH versions to try dig out where it has gone wrong.
+
+result in GA: 290.906, result in game: 291.284
+
+have a quick look at the power graphs
+
+-- huh, in the noise there is an entry to delay instruciton from 275 to 278, then one already at 278.
+-- which one actually gets run at 278? this is where the power graphs start to differ.
+-- NOPE, misread, the delay is actually for ZERO seconds: what does a zero second delay do? perhaps it is run in one and not the other?
+
+{"123":{"original_instruction":[123,"drop=2"],"altered_instruction":[123,"drop=3"],"type":"random_drop"},"153":{"original_instruction":[153,"effort=5.71"],"altered_instruction":[153,"effort=6.26850943436085"],"type":"random_effort"},"157":{"original_instruction":[157,"drop=3"],"altered_instruction":[157,"drop=2"],"type":"random_drop"},"181":{"original_instruction":[181,"drop=2"],"altered_instruction":[181,"drop=3"],"type":"random_drop"},"229":{"original_instruction":[229,"drop=2"],"altered_instruction":[229,"drop=3"],"type":"random_drop"},"257":{"original_instruction":[257,"drop=1"],"altered_instruction":[257,"drop=2"],"type":"random_drop"},"270":{"original_instruction":[275,"effort=2.99"],"altered_instruction":[275,"effort=2.99"],"type":"random_delay"},"278":{"original_instruction":[278,"effort=9.95"],"altered_instruction":[278,"effort=9"],"type":"random_effort"}}
+
+-- seems possible that the game is running an insturciton that has a delay of ZERO, while the ga is not?
+
+-- first bug to fix: pressing stop button in game after editing noise does not apply the change.
+
+-- progress. what seems to happen is that in the GA the instruction is NOT run as noise is added, but that noise is a delay with offset 0, which will NEVER run. In the Game, the instruction runs and the 0-offset noise delay does nothing at all.
+
+-- fix: need to edit the ga code to never assign a delay of 0. This means I have to rerun the same tests though.
+
+-- it seems that the delay offset cannot be zero as it uses this:
+let timestep_delay =  Math.floor(Math.random() * (noise_1_probability_instruction_delay_range) + 1) ; 
+-- but below this we have:
+noise_alteration["original_instruction"] = new_instructions[i];
+              new_instructions[i][0] += timestep_delay; //actually add the delay
+
+              noise_alteration["altered_instruction"] = new_instructions[i];
+              noise_alteration["type"] = "random_delay";
+-- note that we use = with arrays BUT it is the references that will be used. SO this means that the original instruction will also include the cursed offset and will be wrong. 
+
+-- evidence for this would be that all delays have the same original and altered timestep, and that there is no corrosponding instruction for the original.
+
+-- can fix this posisbly with a slice() to force a COPY to be used, but need to verify that my hypothesis is correct
+
+-- huh, comparing noise to instrucitons and looks verrrrry dodge.
+
+-- e.g., it seems that delayed instructions have noise applied
+-- there are noise entries for timesteps that do NOT exist.
+-- delays seem messed up in multiple ways. are the original instrucitons being moved, and then these are what is logged as the actual instructions?
+
+-- also, we have this as a set of instructions:
+[[110,"drop=1"],[202,"drop=3"],[233,"effort=8.74"],[258,"drop=1"],[292,"effort=8.559999999999999"],[280,"effort=9.68"],[283,"drop=2"],[288,"effort=9"],[298,"drop=2"]]
+
+note how 292 precedes 280. wtf!
+
+-- are instructions out of order if there is NO noise?
+
+-- i don't see this with no noise or with p. failure only.
+
+-- have to change the delay algorithm then see if that adresses the other issues. it should NOT change the race instructions as noise is supposed to be separate. instead, at each timestep check some kind of delays array for any waiting instructions. it just needs to know [delayed_timestep, original_timestep] or even {"delayed_timestep": original_timestep}. have to be very sure that it doesn't break anythign.
+
+-- ooh, the timesteps are NOT out of sync if I turn off the delays. so fixing that should sort them.
+
+- tuesday 19th.
+-- rebuild the delay mechanism (both ga and game need changes)
+
+-- tried writing out a new mechanism for finding a free target timestep to delay until, which handles the case when timesteps are already 'occupied'. this is way more complex to me than it first seems
+-- need to add instruction_noise_delays to race_r
+
+-- so now need to NOT run an instruction if it is marked for a delay.
+
+-- Wednesday Jan 20
+-- only did a tiny tiny bit, fixed one bug with an else statement
+
+-- Thursday Jan 21
+-- fixed some bugs to get it to actually run, but so far it has loggeed nothing about delays at all.
+
+-- yikes, we get log message slike
+NOISE 1: DELAY instruction [120,"drop=2"] to {"original_instruction":[120,"drop=2"],"altered_instruction":[4,"drop=2"],"type":"random_delay"} actual_timestep 4
+
+-- so, the actual_timestep makes no sense; it shuld always be bigger than the original timestep
+
+-- ok, so the issues was in the original non-collision setting of actual_timestep
+-- now, it looks like the delayed instrucitons array is blank
+***DELAY***58: delayed_instructions []
+
+-- ok, so the GA ran and results can be saved. currently only delay noise, very high. instructions are NOT out of order. 
+
+GA time: 291.921 Game time: 296.265
+
+balls, very far apart. 
+
+-- ah crap, one array is just a reference to an old one, ned to use slice()
+
+
+
+-- ok, there was another bug. now tho it does seem to run . will be easier to check in the Game when checking to see if the results make sense
+
+even with slice it still IS the original. odd.
+
+need to deeeeep copy: https://stackoverflow.com/questions/122102/what-is-the-most-efficient-way-to-deep-clone-an-object-in-javascript
+
+-- Friday 22 01 2021
+-- ok let's at least try this method
+JSON.parse(JSON.stringify(obj))
+
+-- may need to review more sections in the code as this is the first time I've actually tried to deep copy as opposed to a shallow copy or an = operation
+
+-- ok, so nowww it seems to remove the delay instruction BUT BUT BUT
+-- it gets even SLOWER
+GA time: 291.921 Game time: 298.704
+
+#monday jan 25
+--ok, need to figure out what went wrong. why is it slower.
+-- here's a test- I can manually construct the instructions that should run, i.e. that should be identical to the original instructions + the delays.
+
+-- with delays added in we get
+[[16,"effort=8.629999999999999"],[44,"drop=2"],[37,"drop=2"],[93,"drop=1"],[139,"drop=2"],[196,"drop=1"],[208,"effort=3.79"],[219,"drop=2"],[225,"effort=6.18"],[256,"drop=1"],[291,"effort=6.4"],[276,"effort=9.22"],[273,"effort=8.2"]]
+
+note how the order is broken, i.e. 291, 276, 273
+Time: 298.705. Huh, almost exaclty 298.704 but must be some teeny difference 
+
+Do I get the same time IF I put these instructions in the correct/sorted order?
+[[16,"effort=8.629999999999999"],[37,"drop=2"],[44,"drop=2"],[93,"drop=1"],[139,"drop=2"],[196,"drop=1"],[208,"effort=3.79"],[219,"drop=2"],[225,"effort=6.18"],[256,"drop=1"],[273,"effort=8.2"],[276,"effort=9.22"],[291,"effort=6.4"]]
+
+Time: 298.705. SO the order is not he issue. Good. In fact, it seems the problem is in the GA, not here.
+
+Back to the GA. Review how the delays work. 
+
+I wonder what time we get (game) if we ignore every delayed instruction? Maybe this is what the GA does? 
+[[16,"effort=8.629999999999999"],[37,"drop=2"],[139,"drop=2"],[196,"drop=1"],[219,"drop=2"],[256,"drop=1"],[273,"effort=8.2"]]
+
+Time: 291.921 Gotcha! GA is threfore probs NOT running the delayed instructions at all!
+
+-- frig, there was a bug in the code adding the delayed instruction
+
+ok, made changes, found and fixed a bug, ran 20 gens of 1000 again 
+-- compare last best race. same time in GA and game?
+ga time: 287.26 game time: 287.26 
+-- phew. this seems like progress?
+-- try it again
+
+-- test 2, GA gen 20 best time: 285.889. Game time: 285.889
+
+-- good.
+
+-- now rerun the earlier set
+
+-- no noise
+-- small delays only 
+		"noise_1_probability_instruction_delay_range":4,
+-- lots of noise/no failure
+-- no noise/lots of failure
+-- lots of noise/lots of failure
+
+-- Tuesday, Feb. 2nd, 2021
+
+-- redo those experiments above- use the same Google sheet as before to record some results and create a few graphs
+
+-- want to be able to produce pure noise results, i.e. a GA that does not improve at all
+
+-- call these 
+-- Feb 2 Tests: pop 1000, 20 gens NO NOISE/NO FAILURE
+-- Feb 2 Tests: pop 1000, 20 gens DELAYS ONLY/ NO FAILURE
+	"enable_instruction_noise_1_random":1,
+	"noise_1_probability_instruction_misheard":0.5,
+	"noise_1_probability_instruction_delayed": 1,
+	"noise_1_probability_instruction_delay_range":5,
+
+-- Feb 2 Tests: pop 1000, 20 gens LOTS OF NOISE/NO FAILURE
+"enable_instruction_noise_1_random":1,
+"noise_1_probability_instruction_misheard":1,
+"noise_1_probability_instruction_delayed": 0.3,
+"noise_1_probability_instruction_delay_range":5,
+"noise_1_probability_instruction_effort_range":5,
+"noise_1_probability_instruction_drop_range":3,
+
+-- note here we have noise on every timestep: surely this will have a big impact on the GA and on how much it can improve?
+
+-- Feb 2 Tests: pop 1000, 20 gens NO NOISE/LOTS OF FAILURE
+-- what exactly tunes the level of failure again?
+This seems key: (rider_performance_failure_rate/rider_performance_failure_rate_max)
+"performance_failure_enabled":1,
+"performance_failure_probability_exponent":2,
+"performance_failure_effort_importance_multiplier":1,
+"performance_failure_amount_exponent":2,
+"performance_failure_base_max_percentage":1,
+"rider_performance_failure_rate_max": 10,
+"performance_failure_multiplier_max": 10,
+"maximum_effort_value":9
+
+-- ah fukk.
+GA time gen 19 best race: 289.368. Game time: 289.334
+GA time gen 18 best race: 288.463. Game time: 289.799 
+GA time gen 17 best race: 289.545. Game time: 289.545 
+GA time gen 16 best race: 290.278. Game time: 290.278 
+
+huh.
+
+-- very hard to spot anywhere where the game would differ from the ga, but somethign is defo amiss :-( 
+-- 1 possible theory: failures at timestep 0 are being ignored?
+-- nope, there is no timestep 0 in the example 
+
+
+-- so, setting these to both be 10 will cause maximum failure? Try it?
+-- Feb 2 Tests: pop 1000, 20 gens LOTS OF NOISE/LOTS OF FAILURE
+-- power graphs very similar tho the GA goes to higher power right at the end, wheras the game seems to fail a bit. is this fatigue?
+
+- key instruction [260,"effort=9.83"]. i wonder what happens if you have an instruiton to fail on this same go?
+model3.js:442 Performance failure 260_2 of 0.3989 reducing power from 1000 to 601.1
+-- i wonder what happens if I run it without this one failure?
+
+rider seems to hit the fatigue wall at 170 while trying to get to 1000 watts. the failures here don't seem to change much? 
+
+-- wednesday feb 3rd
+-- plan to fix latest bug
+-- add function to display the raw power data that is behind the graph, and use this to pinpoint where things start to differ between ga and game: check for anything odd at this timestep
+
+-- theory: in ga, failure on same timestep as instruction is handled differently than in game (e.g. runs or does not run)
+
+-- add nea textarea at bottom of results page to put the data into (easy to copy from)
+-- add a new column with a button that calls a function to find and put the power data in the textarea
+-- will need a new function : show_power_data()
+
+-- works though the data is hard to read, might add code to show it twice- 2nd time formatted vertically to make it easier to compare (1 line per timestep)
+
+-- can use "40".padEnd(6) to pad out the length of short values
+
+-- done, now need to do the SAME thing for the game; start by adding a textarea
+
+-- done, now can compare the data in notepad
+
+-- fugg, the entries have different orderings. why? need to look at where I add to the power data arrays in each setup
+game:
+rider_power_data[race.current_order[i]].push(powerv); line 501
+ga:
+  rider_power[race_r.current_order[i]].push(powerv); line 1733
+  
+  huh, no obvious issues here.
+  
+  -- so, start order should be 0, 3,2,1. which looks correct in the GA. yet the game data seems to be ordered 0,1,2,3?
+  
+  -- ah shit, I may have been running the wrong one :-( 
+  
+  -- ok can now compare: ga/game identical until ts 186, then there's a 0.1 diff in 3rd rider
+  -- but they later line up again and it doesn't totally diverge until ts 274
+  
+  there is no failure or instruction at ts 186
+  
+  -- ts 265 lso significant, here is where the leader first goes out of sync in a big way. try taking out this failure in the same and see if the data gets closer?
+  
+  -- huh, now I get 288.463: exactly the same time as the ga.
+  -- 1: why is this failure so BIG, and 2: why does it NOT have the same effect in the ga?
+  
+  -- looks like the GA ignores the failure. lead rider, increasing power
+  
+  Game: 265	259.1 	448.69	582.1 	265.08
+  GA:	265	259.09	448.69	651.28	265.08
+  
+  failure = "265_2":0.4179
+  
+  formula =   target_power = target_power - (target_power*performance_failure_percentage);
+which will be 1000 - (1000*0.4179) = 582.1
+
+Ga creates failure BUT ignores it. warum?
+-- maybe the power effort is actually > 9 and this has a knock on effect? would it be enough to cancel out the reduction in target power?
+power_from_effort = 400 + (1000 - 400) *((9.83-6)/(9-6));
+== 1166
+ == 1166-(1166*0.4179) = 678.7286
+ -- this COULD explain it?
+ -- found error checking in Game that is NOTTTT in GA!!!
+ -- comment it out and see if you then get the same answer
+ -- new game time: 288.463
+ 
+ -- this seems like the cause then? muthafunka
+ 
+ -- ok so ran GA again and first check finds the minor discrepancies but not the majors. will have to figure out both tbh.
+
+-- thursday 4th feb 2021. 
+
+-- do i get the same discrepancies when there is NO noise or failures? RUn a new batch to check since I did change code.
+
+-- ok so they are there- it is not related to failures or noise
+-- seems to happen to the chasing tiders... off by .01, both higher and lower. doesn't seem to be enough to put the finish time off but still annoying. rounding?
+
+GA
+race_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter_effect_strength*level_of_shelter))*10000)/10000;
+let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
+let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings_r.transv;
+GAME
+race_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter_effect_strength*level_of_shelter))*10000)/10000;
+let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
+let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings.transv;
+
+-- only diff I've found (so far) is that the newton lookup feature was disable in the GA but NOT in the game. 
+
+-- disable it and see if you get the same results
+
+-- same issue, no change
+
+- Friday 5th.
+-- ok, need to sort this fugging power discrepancy.
+-- so the power goes off
+
+GA
+11 | WEAK 2 LEAD | 130.19m | 48.61 kph | 400 / 400 / 1000 watts | -1 m | 0/0 ||||  11 | WEAK 1 FOLLOW | 128.19m | 48.61 kph | 294.01 / 400 / 1000 watts | 2 m | 0/0 ||||  11 | WEAK 4 FOLLOW |F| | 126.19m | 48.61 kph | 267.58 / 400 / 1000 watts | 2 m | 0/0 ||||  11 | WEAK 3 FOLLOW | 124.19m | 48.61 kph | 262.14 / 400 / 1000 watts | 2 m | 0/0 |||| 
+GAME
+ 11 | WEAK 2 LEAD | 130.19m | 48.61 kph | 400 / 400 / 1000 watts | -1 m | 0/0 ||||  11 | WEAK 1 FOLLOW | 128.19m | 48.61 kph | 294.01 / 400 / 1000 watts | 2 m | 0/0 ||||  11 | WEAK 4 FOLLOW |F| | 126.19m | 48.61 kph | 267.58 / 400 / 1000 watts | 2 m | 0/0 ||||  11 | WEAK 3 FOLLOW | 124.19m | 48.61 kph | 262.15 / 400 / 1000 watts | 2 m | 0/0 |||| 
+ 
+ -- only difference is 262.15 to 262.14 
+ -- there are distance discrepos by the end of the race, tho they are v. small, 0.01m 
+ 
+ Game log message uses
+ Math.round(display_rider.power_out * 100)/100
+ GA uses the same
+ Math.round(display_rider.power_out * 100)/100
+ 
+ -- huh, I turned off the lookups for the LEAD but not the following rider. add this
+ 
+   if (use_lookup_velocity)
+      {
+	  ...
+	  ...
+	  }
+      else {      
+        race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
+    }
+	
+-- hmmm, too may differences- am i running it right?
+
+all weak 400/1000 with no noise or failure
+
+[[58,"effort=6.6"],[75,"drop=2"],[82,"drop=1"],[101,"drop=2"],[103,"drop=2"],[113,"drop=2"],[134,"drop=3"],[142,"drop=2"],[153,"drop=2"],[158,"drop=2"],[190,"effort=7.27"],[193,"drop=3"],[197,"drop=2"],[226,"effort=7.29"],[239,"drop=2"]]
+
+starting order 1,0,3,2
+
+-- ran the ga again and still have the large numbers of differences
+-- soooo, where is it going wrong?
+-- maybe add another attribute to the rider to store info like powerv for each step and add this to the log?
+
+-- add step_info to rider
+-- waht do we want to log?
+target_power
+powerv
+aero_A2
+accumulated_fatigue
+endurance_fatigue_level
+output_level
+
+in that order
+-- logging but getting undefined for some parts
+
+-- now have to also add this to the ga
+
+-- huh, added all this info and nowwww they seem to be identical? was it the newton thing?
+
+-- run the whole thign again- GA then compare last gen best via logged power values from graph.
+
+-- good- they are identical. that means the damn thing WAS the newton lookup mechanism, which I had disabled properly in the ga but NOT in the game. bah!
+
+-- run these again (againagainagain)
+-- Feb 5/8 Tests: pop 1000, 30 gens NO NOISE/NO FAILURE
+-- Feb 5/8 Tests: pop 1000, 30 gens DELAYS ONLY/ NO FAILURE
+-- Feb 5/8 Tests: pop 1000, 30 gens LOTS OF NOISE/NO FAILURE
+-- Feb 5/8 Tests: pop 1000, 30 gens NO NOISE/LOTS OF FAILURE
+-- Feb 5/8 Tests: pop 1000, 30 gens LOTS OF NOISE/LOTS OF FAILURE
+
+-- Monday Feb 8th. Do those tests again.
+-- huh, took 566.665 to run the 230 gens. did I leave something dumb in the code?
+
+-- Feb 5/8 Tests: pop 1000, 30 gens LOTS OF NOISE/NO FAILURE
+	"enable_instruction_noise_1_random":1,
+"noise_1_probability_instruction_misheard":1,
+"noise_1_probability_instruction_delayed": 0.3,
+"noise_1_probability_instruction_delay_range":5,
+"noise_1_probability_instruction_effort_range":5,
+"noise_1_probability_instruction_drop_range":3,
+"performance_failure_enabled":0,
+-- so that's a lot of noise- should have a big effect? 	
+
+-- Feb 5/8 Tests: pop 1000, 30 gens DELAYS ONLY/ NO FAILURE
+"enable_instruction_noise_1_random":1,
+"noise_1_probability_instruction_misheard":1,
+"noise_1_probability_instruction_delayed": 1,
+"noise_1_probability_instruction_delay_range":5,
+"noise_1_probability_instruction_effort_range":5,
+"noise_1_probability_instruction_drop_range":3,
+"performance_failure_enabled":0,
+
+-- Feb 5/8 Tests: pop 1000, 30 gens NO NOISE/LOTS OF FAILURE
+
+-- performance failure is too dterministic: needs to have a stochastic aspect. but continue ahead and run the current batch in any case before rewriting anything
+
+"performance_failure_enabled":1,
+"performance_failure_probability_exponent":2,
+"performance_failure_effort_importance_multiplier":1,
+"performance_failure_amount_exponent":2,
+"performance_failure_base_max_percentage":1,
+"rider_performance_failure_rate_max": 10,
+"performance_failure_multiplier_max": 10,
+
+
+-- Feb 5/8 Tests: pop 1000, 30 gens LOTS OF NOISE/LOTS OF FAILURE
+
+
+"noise_1_probability_instruction_misheard":1,
+"noise_1_probability_instruction_delayed": 0.3,
+"noise_1_probability_instruction_delay_range":5,
+"noise_1_probability_instruction_effort_range":5,
+"noise_1_probability_instruction_drop_range":3,
+"performance_failure_enabled":1,
+"performance_failure_probability_exponent":2,
+"performance_failure_effort_importance_multiplier":1,
+"performance_failure_amount_exponent":2,
+"performance_failure_base_max_percentage":1,
+"rider_performance_failure_rate_max": 10,
+"performance_failure_multiplier_max": 10,
+
+-- would these tests not be better if each started with the same (random) population? I.e. I could save/reuse that population rather than recreate a new one every time? 
+
+-- ok, entered results in the spreadsheet and all the times i tested match up, but how do I interpret them now?
+
+-- tueday 9th
+-- check what happens in each test to the best-after-30 race when I remove the noise/failure.
+
+-- ok, go to overleaf and add a word
+
+-- need to formalise the noise and failure expressions
+=((POW(H5,H9)/POW($E5,H9)*H10 + POW(H6,H9)/POW($E6,H9) + POW(H7,H9)/POW($E7,H9))/(3+(H10-1))*(H8/$E8)
+
+=((((POW(J5,J9)/POW($E5,J9))*J10 + POW(J6,J9)/POW($E6,J9) + + POW(J7,J9)/POW($E7,J9))/3))*(J8/$E8)
+
+=(((POW(H5,H9)/POW($E5,H9)*H10 + POW(H6,H9)/POW($E6,H9) + POW(H7,H9)/POW($E7,H9))/(3+(H10-1)))*(H8/$E8))
+
+
+E= current effort level , E_Max = max effort level
+FE= Failure Exponent
+Em = effort multiplier
+Fc = current fatigue, Fc_Max = max fatigue level
+Fa = accumulated fatgiue, Fa_Max = maxiumum accumulated fatigue
+PFr = rider Performance Failure rate, PFr_MAx = maximum rider performance failure rate
+
+Probability of Failure PFail =(((E^FE/Max_E^FE)*Em + (Fc^FE/Fc_Max^FE) + (Fa^FE/Fa_Max^FE))/(3+(Em-1))) * (PFr/PFr_Max)	
+
+-- Monday Feb 15
+
+-- also need the formula for the amount applied, which is currently the same (no randomness)
+huh, it's basically the same (not in the excel so taking it from the code)
+  let rider_performance_failure__percentage_amount = (
+        (
+            (
+              (Math.pow(effort,performance_failure_amount_exponent)/Math.pow(effort_max,performance_failure_amount_exponent))*performance_failure_effort_importance_multiplier +
+              (Math.pow(current_fatigue,performance_failure_amount_exponent)/Math.pow(current_fatigue_max,performance_failure_amount_exponent)) +
+              (Math.pow(accumulated_fatigue,performance_failure_amount_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_amount_exponent))
+            )/(3+(performance_failure_effort_importance_multiplier-1))
+
+        )
+        * (rider_performance_failure_multiplier/rider_performance_failure_multiplier_max)
+      );
+
+FAE = Failure Amount Exponent
+PFrA = Performance Failure rider amount, PFrA_MAX = maximum rider performance failure rate
+
+Amount of Failure AFail =(((E^FAE/Max_E^FAE)*Em + (Fc^FAE/Fc_Max^FAE) + (Fa^FAE/Fa_Max^FAE))/(3+(Em-1))) * (PFrA/PFrA_MAX)
+
+-- see can I build this into the overleaf doc
+-- use fatigue level example for format
+ \[ Fatigue\_level \mathrel{+}= F_r * ((P_c-P_t)/(P_m-P_t))^{F_e} \]
+ 
+ failure prop: \[\frac{((E^{FE}/E\_max^{FE})*Em + (Fc^{FE}/Fc\_max^{FE}) + (Fa^{FE}/Fa\_max^{FE}))}{(3+(Em-1))} * (PFr/PFr\_max)\]
+ 
+ failure amount: \[\frac{((E^{FE}/E\_max^{FAE})*Em + (Fc^{FAE}/Fc\_max^{FAE}) + (Fa^{FAE}/Fa\_max^{FAE}))}{(3+(Em-1))} * (PFrA/PFrA\_max)\]
+
+-- ok, so have added these in, very awkward. now what? need to discuss what actually happens when the noise and failure are applied.
+
+-- right, so one thign I need is a graph that has best-race-finish-time for each gen for a bunch of different noise settings (the ones I ran): might need a new page for this, or some way to select multiple results and get it to draw lines for all selected on the one display?
+
+-- probs better to try extend the existing results page rather than a manual one, as it might be useful later on... 
+
+-- also add a means to update the description of an experiment. at some stage also need delete powers
+
+-- add a checkbox to the results list
+-- add a second dropdown for multi-result graphs
+-- add a function that spits out the selected ids (or error if none)
+
+-- ok, after a goose chase, now have the ids loaded into an array - next will be to go get data for each and plot them all on the once graph. easy peasy :-)
+
+-- Tuesday 16th Feb.
+
+-- split into loading data and drawing graphs: assemble the data in an array piece by piece
+
+-- will have to do some work to figure out the Y axis (max of all data points?)
+
+-- could add a new endpoint in the node side that maps to the graph name and returns exactly what it needs (in one mongo call)?
+
+-- ok, now it is calling an endpoint http://127.0.0.1:3003/best_fitness_per_generation/ for but gets back a 404 and displays the error: SyntaxError: Unexpected token < in JSON at position 0
+
+-- now how do I get results for multiple IDs out of MongoDb?
+-- from https://stackoverflow.com/questions/32264225/how-to-get-multiple-document-using-array-of-mongodb-id
+-- db.getCollection('feed').find({"_id" : {"$in" : [ObjectId("55880c251df42d0466919268"), ObjectId("55bf528e69b70ae79be35006")]}});
+
+-- but I only want part of the data, so need to do more wrapping here. let's first just hardcode in an id that works and try get back just the best fitness data for it
+
+-- need to get ga_results . "generations":[{"best_race_time":1234.12,"stats_average_time":344.43}]
+
+-- following https://docs.mongodb.com/manual/reference/method/db.collection.find/
+
+-- testing using sample id in Robo3T
+-- currently have db.getCollection('experiment_results').find({_id : ObjectId("60214201f3c3a51ad80674ba")},{_id:1,'ga_results':1})
+
+-- huh, accessing nested objects in JS: https://www.tutorialspoint.com/safely-accessing-deeply-nested-values-in-javascript
+
+-- Wednesday 17th Feb. Need to finish this graph muckery
+
+-- only want to return best_race_time for each generation (for each id given)
+
+-- ObjectId() not working, seems to be a Mongoose thing, which I am not using?
+
+-- can access the ga_results but can't seem to get at the generations. console.log(Object.keys(documents[i])); works but console.log(Object.keys(documents[i].ga_results)); seems to contain half a million values starting with 0,1,2,...!
+
+-- waiiittt a second- the muthafukka is a godamn string! ga_results, a big huge string, i.e. an array or chars, which is where all the keys ceomfrom. I have to convert the damn thing to an object using JSON.parse().
+-- get rid of all the error checking (see how Object.keys() works
+      if(documents[i].ga_results){
+          console.log(i + " has ga_results property");
+          if(i==0){
+            console.log(Object.keys(documents[i]));
+            console.log("race_settings keys");
+            let rs = documents[i].race_settings;
+            console.log(rs);
+            //try6 to get start order
+            let so = JSON.parse(rs);
+            console.log(Object.keys(so));
+
+            let ga_results = documents[i].ga_results;
+            if (ga_results.generations){
+              console.log(i + " has ga_results['generations'] property");
+            }
+          }
+
+        }
+
+-- ok, finally have data back on front end, tho it is not graphed and it is for a fixed set of two ids 
+-- get these to graph before goign back to the node/mongo mess
+
+-- now it draws two lines. but the object ids are actually hardcoded, and it is limited to 5 lines
+
+-- yaya, it now uses the IDs that were sent. getting there
+
+-- hard to see anything so change the min setting to be the min of the data mebbie minus 5 or 10?
+
+-- big improvement with that, much more readable- should do the same for the old ones :-o 
+
+-- to finish this graph I need headers, i.e. short bits of text to name each line. These should really be in the DB and shoud be editable from the page. Would need a simple enough endpoint that would just set the value
+-- short_title:"No Noise/Lots of Failure"
+
+-- Thursday 18th Feb
+
+-- create new short title for graph, and make the notes editable
+
+-- create a form in the results page that shows up when you click a results id
+-- done, now need to populate the notes and short_title (new) line 894
+-- create a new function updateResults() - first just get it to spit out the entries in the two new inputs
+
+-- nice, this is now saving. need to display these in the main results table. note, after the update there is no refresh
+
+-- ok, so they are in the table and I've set some, now need to return these short titles when graphing
+-- added short_titles as new array at beginning of data returned, but need to remove this before tryign to draw the graph
+-- use Array.from() to copy then x.splice(1) to take out the first element in x
+-- woah, seemed to work first time
+
+-- right, have a version of the graph now, put it into OverLeaf and finish that paragraph/section
+
+-- added some lines, sent email, need to go back and add a basic conclusion and mebeeie a closer look at one of the best races with a form of noise, e.g. compare the final ones from failure only and noise only. could also redo the other graphs to flatten them a bit (start the y not at 100 but at min-10)
+
+-- Mondee Feb 22nd
+
+-- need to figure out that final section on overleaf where I describe the noise findings
+
+-- are my notes on explaining the strategies in the noise/failure environments way out? look at the non-noise version. what if they differ little from it?
+
+-- huh, the no noise race has an interesting piece - rider 1 accelerates early until it fails, then gets dropped, and at some point another rider takes the lead. note, this rider leads at a lower effort level as it takes the lead rider's power at point-of-switch as its target, and this is lower than the effort instruction dictates since that rider is failing now and slowing down to recover
+
+-- run the no noise again for 30 gens and see is there any difference
+
+-- a visual clue int eh game to show that a rider is failing/recovering would be useful. 
+
+-- Tuesday 23rd.
+
+-- ran multiple no noise GAs and they all drop in similar ways
+
+-- run the Lots of Failure/No Noise GA again.
+
+-- huh, the best race after 30 gens has a rider doing no time on the front at all.
+
+-- try run 100 generations with lots of failure/no noise to see if it converges gradually on more equal leadership
+
+-- wednesday 24th
+-- 100 gens didn't converge much. try write up a conclusion then can do a lap of the whole paper aga9in	
+
+-- ok, basic one written. leave it for a few minutes before re-reading
+
+-- need to add the word 'elitist' into the description of the GA (elitism + tournament selection)? Elitism here means I am keeping the best chromosomes with no mutations.
+
+-- what is Blotzmann selection? What is simulated annealing? : Approximate an optimum, when discovering it completely is too difficult.
+
+-- moved the caveat about the power calculation and race start to the future directions section
+
+-- Thursday 25th.
+
+-- add elitism. 
+
+- done. do the crossover new races also have mutation applied?
+
+-- I have a setting there, crossover_apply_mutation_probability:0.5, so it's mutating 50% of the crossover children
+
+-- Monday March 1. broken wrist 
+
+-- need to try add more references about GAs
+
+dota 2 
+overwatch
+
+C:\ProgramData\Anaconda3\Scripts\jupyter notebook
+
+-- friday 9th
+
+-- was supposed to work on this this week but did mostly data mining and the time just fecked off as usual
+
+-- need to rejig the 'paper
+
+-- added line numbers
+
+-- added a bibtex file, 
+
+-- copy those initial 2 refs into bibtex, leave in the samples
+
+Craig, Neil \& Norton, Kevin. (2001). Characteristics of Track Cycling. Sports medicine (Auckland, N.Z.). 31. 457-68. 10.2165/00007256-200131070-00001. 
+`
+Craig NP, Norton KI. Characteristics of track cycling. . 2001;31(7):457-68. doi: 10.2165/00007256-200131070-00001. PMID: 11428683.
+
+Whitley, D. A genetic algorithm tutorial. Stat Comput 4, 65–85 (1994). https://doi.org/10.1007/BF00175354
+
+
+@article{craig,
+    author = "Craig, N. P. \& Norton, K.I.",
+    title = "Characteristics of track cycling",
+    journal = "Sports medicine (Auckland, N.Z.)",
+    volume = "31",
+    number = "7",
+    pages = "457-468",
+    year = "2001",
+    DOI = "10.2165/00007256-200131070-00001",
+    keywords = "track cycling"
+}
+
+
+@article{whitley,
+    author = "Whitley, D.",
+    title = "A genetic algorithm tutorial",
+    journal = "Statistics and Computing",
+    volume = "4",
+    number = "2",
+    pages = "65-85",
+    year = "1994",
+    DOI = "10.1007/BF00175354",
+    keywords = "genetic algorithm"
+}
+
+
+

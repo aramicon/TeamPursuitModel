@@ -94,12 +94,10 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
 function calculate_rider_performance_failure_probability(effort, effort_max, current_fatigue,current_fatigue_max, accumulated_fatigue,accumulated_fatigue_max, rider_performance_failure_rate,rider_performance_failure_rate_max, performance_failure_probability_exponent,performance_failure_effort_importance_multiplier){
 
   //work out a percentage that this rider is going to fail right now
-  let rider_performance_failure_probability = ((((Math.pow(effort,performance_failure_probability_exponent)/Math.pow(effort_max,performance_failure_probability_exponent))*performance_failure_effort_importance_multiplier + (Math.pow(current_fatigue,performance_failure_probability_exponent)/Math.pow(current_fatigue_max,performance_failure_probability_exponent)) + (Math.pow(accumulated_fatigue,performance_failure_probability_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_probability_exponent)))/(3+(performance_failure_effort_importance_multiplier-1)))*(rider_performance_failure_rate/rider_performance_failure_rate_max));
+    let rider_performance_failure_probability = ((((Math.pow(effort,performance_failure_probability_exponent)/Math.pow(effort_max,performance_failure_probability_exponent))*performance_failure_effort_importance_multiplier + (Math.pow(current_fatigue,performance_failure_probability_exponent)/Math.pow(current_fatigue_max,performance_failure_probability_exponent)) + (Math.pow(accumulated_fatigue,performance_failure_probability_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_probability_exponent)))/(3+(performance_failure_effort_importance_multiplier-1)))*(rider_performance_failure_rate/rider_performance_failure_rate_max));
   // console.log("will this rider fail? probability calced to be " + rider_performance_failure_probability);
-  return rider_performance_failure_probability;
+  return DecimalPrecision.round(rider_performance_failure_probability,4);
 }
-
-// calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage);
 
 function calculate_rider_performance_failure_percentage_amount(effort, effort_max, current_fatigue, current_fatigue_max, accumulated_fatigue, accumulated_fatigue_max, rider_performance_failure_multiplier,rider_performance_failure_multiplier_max,  performance_failure_base_max_percentage,performance_failure_amount_exponent,performance_failure_effort_importance_multiplier ){
 
@@ -114,11 +112,12 @@ function calculate_rider_performance_failure_percentage_amount(effort, effort_ma
             )/(3+(performance_failure_effort_importance_multiplier-1))
 
         )
-        *(rider_performance_failure_multiplier/rider_performance_failure_multiplier_max)
+        * (rider_performance_failure_multiplier/rider_performance_failure_multiplier_max)
       );
+    //console.log("rider_performance_failure__percentage_amount =  " + rider_performance_failure__percentage_amount + " * " + performance_failure_base_max_percentage + " = " + (rider_performance_failure__percentage_amount*performance_failure_base_max_percentage));
     rider_performance_failure__percentage_amount  = rider_performance_failure__percentage_amount*performance_failure_base_max_percentage;
-    //console.log("rider_performance_failure__percentage_amount: " + rider_performance_failure__percentage_amount);
-    return DecimalPrecision.round(rider_performance_failure__percentage_amount,2);
+
+    return DecimalPrecision.round(rider_performance_failure__percentage_amount,4);
 }
 
 //test mapPowerToEffort() and mapEffortToPower()
@@ -1292,6 +1291,7 @@ function run_race(settings_r,race_r,riders_r){
   //dk2020 oct. adding new array to store noise/failure alterations. will make this an object/dict for easy retrieval.
   race_r.instruction_noise_alterations = {};
   race_r.performance_failures = {};
+  race_r.instruction_noise_delays = {};
 
   //prepare to record the power output for each rider at each timestep
   rider_power = [];  //added 2020May26 to start trackign rider power output
@@ -1339,6 +1339,9 @@ function run_race(settings_r,race_r,riders_r){
     load_rider.number_of_riders_in_front=0;
 
     load_rider.output_level=load_rider.start_output_level; //new addition to try address bug
+
+    //dk2021 new rider property to add info to the log message
+    load_rider.step_info = "";
 
     if (i==0){
       load_rider.current_aim = "lead";
@@ -1423,30 +1426,67 @@ function run_race(settings_r,race_r,riders_r){
     //delay the instruction if this 'noise' is chosen
 
     if(new_instructions.length > 0){
-        for(let i=0;i<new_instructions.length;i++){
+        for(let i=0;i<new_instructions.length;i++){ //technically there should only be ONE instruction per timestep but it remains packaged in a just-in-case loop
 
           if (alteration_selection_sample >= 0 && alteration_selection_sample < noise_1_probability_instruction_delayed){
-            let timestep_delay =  Math.floor(Math.random() * (noise_1_probability_instruction_delay_range) + 1) ; //should provide a value in range (1 - noise_1_probability_instruction_delay_range)
+            let target_delay =  Math.floor(Math.random() * (noise_1_probability_instruction_delay_range) + 1) ; //should provide a value in range (1 - noise_1_probability_instruction_delay_range)
             //adjust the instruction BUT only if there is NO existing instruciton in that timestep
-            let check_timestep = race_r.race_instructions_r.filter(a=>parseInt(a[0]) == (race_r.race_clock +timestep_delay ));
+            //donalK2021: new mechanism to find free timestep (or zero if none is found!)
+            let target_timestep = (race_r.race_clock + target_delay);
+          	let actual_timestep = 0;
+            let check_timestep = race_r.race_instructions_r.filter(a=>parseInt(a[0]) == (target_timestep));
             if(check_timestep.length == 0){
-              let index_of_instruction = race_r.race_instructions_r.indexOf(new_instructions[i]);
-              //console.log("NOISE 1: DELAY instruction " + JSON.stringify(new_instructions[i][0]));
-
-              noise_alteration["original_instruction"] = new_instructions[i];
-              new_instructions[i][0] += timestep_delay; //actually add the delay
-
-              noise_alteration["altered_instruction"] = new_instructions[i];
-              noise_alteration["type"] = "random_delay";
-
-              race_r.race_instructions_r[index_of_instruction] = new_instructions[i];
-            //  console.log("NOISE 1: DELAY instruction NOW " + JSON.stringify(race_r.race_instructions_r[index_of_instruction]));
-
-              //record the alteration instruction so that it can be played back later if needed
-              race_r.instruction_noise_alterations[race_r.race_clock] = noise_alteration;
+              actual_timestep = target_timestep;
             }
-          }
-          else{ // only add an instruciton that is not delayed
+          	else{
+              //console.log("Oops, there is already an instruction at " + target_timestep + " so we cannot delay " + race_r.race_clock + " to then")
+          		let min_step = race_r.race_clock + 1;
+          		let max_step = (race_r.race_clock + noise_1_probability_instruction_delay_range);
+          		let min_counter = target_timestep;
+          		let max_counter = target_timestep
+          		while(actual_timestep == 0 && (min_counter > min_step || max_counter < max_step)){
+          			//console.log("BEFORE: actual_timestep " + actual_timestep + " min_counter " + min_counter + " min_step " + min_step + " max_counter " + max_counter + " max_step " + max_step);
+          			//go 'up' one step first
+          			if (max_counter < max_step){
+          				max_counter++;
+                  check_timestep = race_r.race_instructions_r.filter(a=>parseInt(a[0]) == (max_counter));
+                  if(check_timestep.length == 0){
+                    actual_timestep = max_counter;
+                  }
+          			}
+          			if (actual_timestep == 0){ //if still not found go 'down' one step
+          				if (min_counter > min_step){
+          					min_counter--;
+                    check_timestep = race_r.race_instructions_r.filter(a=>parseInt(a[0]) == (min_counter));
+                    if(check_timestep.length == 0){
+                      actual_timestep = min_counter;
+                    }
+          				}
+          			}
+          				//console.log("AFTER: actual_timestep " + actual_timestep + " min_counter " + min_counter + " min_step " + min_step + " max_counter " + max_counter + " max_step " + max_step);
+          		}
+          	}
+
+              //can only delay if actual_timestep was found
+              if (actual_timestep > 0){
+                noise_alteration["original_instruction"] = new_instructions[i].slice();
+
+                noise_alteration["altered_instruction"] = new_instructions[i].slice();
+                noise_alteration["altered_instruction"][0] = actual_timestep;  //actually set the delay
+                noise_alteration["type"] = "random_delay";
+
+                //race_r.race_instructions_r[index_of_instruction] = new_instructions[i];
+                race_r.instruction_noise_delays[actual_timestep] = race_r.race_clock;
+              //  console.log("NOISE 1: DELAY instruction NOW " + JSON.stringify(race_r.race_instructions_r[index_of_instruction]));
+                //record the alteration instruction so that it can be played back later if needed
+                race_r.instruction_noise_alterations[race_r.race_clock] = noise_alteration;
+
+                  //console.log("NOISE 1: DELAY instruction " + JSON.stringify(new_instructions[i]) + " to " + JSON.stringify(noise_alteration) + " actual_timestep " + actual_timestep);
+              }
+            }
+
+          else
+          { // only add an instruciton that is not delayed
             let inst = new_instructions[i][1].split("=");
             if (inst.length=2){
               if(inst[0]=="effort"){
@@ -1482,9 +1522,7 @@ function run_race(settings_r,race_r,riders_r){
                     if (random_other_drop_value >= drop_value){
                         random_other_drop_value++; // we don't want to ever get the current value, we want a different one
                     }
-
                     //console.log("NOISE 1: make DROP adjustment, new value " + random_other_drop_value + ", old value wuz " + drop_value);
-
                     noise_alteration["original_instruction"] = [race_r.race_clock, "drop=" + drop_value];
 
                     drop_value = random_other_drop_value;
@@ -1501,21 +1539,57 @@ function run_race(settings_r,race_r,riders_r){
                       noise_alteration["altered_instruction"] = [race_r.race_clock, "drop=" + drop_value];
                       noise_alteration["type"] = "random_drop";
                       race_r.instruction_noise_alterations[race_r.race_clock] = noise_alteration;
-
                   }
                 race_r.drop_instruction = drop_value;
               }
             }
-
-
         }
-      }
-  }
+        }
+
+
+      } // loop for found instrucitons
+
+        //****DK20201JAN: also need to check the delay queue and add the instruction there (if there is one)
+      if(race_r.instruction_noise_delays[race_r.race_clock]){
+        //get the original instruction; it should be run now with NO attempt to add further noise
+        let original_instruction_timestep = race_r.instruction_noise_delays[race_r.race_clock];
+        //console.log("***DELAY***" + race_r.race_clock + ": delay found, original_instruction_timestep " + original_instruction_timestep);
+        //assume that there is just ONE instruction at that timestep
+        let delayed_instructions = race_r.race_instructions_r.filter(a=>parseInt(a[0]) == original_instruction_timestep);
+      //  console.log("***DELAY***" + race_r.race_clock + ": delayed_instructions " + JSON.stringify(delayed_instructions));
+        if(delayed_instructions.length > 0){
+          let instruction_to_load = delayed_instructions[0];
+            //console.log("adding delayed instruction " + JSON.stringify(delayed_instructions) + "instruction_to_load " + JSON.stringify(instruction_to_load));
+
+          if (instruction_to_load.length==2){
+              let inst = instruction_to_load[1].split("=");
+              if (inst.length == 2){
+                if(inst[0]=="effort"){
+                    let effort_value = parseFloat(inst[1]);
+                    race_r.live_instructions.push(["effort",effort_value]);
+                    //console.log("Added delayed EFFORT instruction " + effort_value);
+                }
+                else if(inst[0]=="drop"){
+                  let drop_value  = parseInt(inst[1]);
+                  race_r.drop_instruction = drop_value;
+                  //console.log("Set delayed drop_instruction " + drop_value);
+                }
+            }
+          }
+        }
+      }   //****DK20201JAN:
 
     //carry out any live_instructions (they are queued)
     while (race_r.live_instructions.length > 0){
       let instruction = race_r.live_instructions.pop();
       if(instruction[0]=="effort"){
+        //dk2021: adding these IFs to limit the range of instructions in case they go over 9 or under 1 (arbitrary max/min)
+        if(instruction[1] < settings_r.minimum_power_output){
+          instruction[1] = 1;
+        }
+        else if(instruction[1] > 9){
+          instruction[1] = 9;
+        }
         setEffort(settings_r, race_r,riders_r, instruction[1]);
       }
     }
@@ -1545,6 +1619,8 @@ function run_race(settings_r,race_r,riders_r){
 
       let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
       race_rider.aero_A2 = Math.round((0.5 * settings_r.frontalArea * race_rider.aero_density)*10000)/10000;   // full air resistance parameter
+
+        race_rider.step_info = ""; //dk2021 used to add logging info
 
       if (race_rider.current_aim =="lead"){
         //push the pace at the front
@@ -1586,7 +1662,7 @@ function run_race(settings_r,race_r,riders_r){
               let timestep_rider = race_r.race_clock + "_" + race_r.current_order[i];
               race_r.performance_failures[timestep_rider] = performance_failure_percentage;
 
-              console.log("RIDER FAILURE " + performance_failure_percentage*100 + "% target_power updated from " + target_power + " to " + (target_power - (target_power*performance_failure_percentage)));
+              //console.log("RIDER FAILURE (prob " + performance_failure_probability + ")" + performance_failure_percentage + " of target_power: updated from " + target_power + " to " + (target_power - (target_power*performance_failure_percentage)));
 
               target_power = target_power - (target_power*performance_failure_percentage);
 
@@ -1668,6 +1744,9 @@ function run_race(settings_r,race_r,riders_r){
         //can now save this power
         rider_power[race_r.current_order[i]].push(powerv);
 
+        //dk2021 set the log info
+        race_rider.step_info = "(" + target_power + "|" + powerv + "|" + race_rider.aero_A2 + "|" + race_rider.accumulated_fatigue + "|" + race_rider.endurance_fatigue_level + "|" + race_rider.output_level + ")";
+
         //add fatigue if going harder than the threshold or recover if going under it
         //recover if going under the threshold
 
@@ -1708,11 +1787,8 @@ function run_race(settings_r,race_r,riders_r){
         // assume we are drafting and try to cover the same distance as the race_rider in front, which will take a certain amount of power
         //need to factor in the original offset
         //let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings_r.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
-        let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings_r.target_rider_gap) -  (race_rider.distance_covered-race_rider.start_offset);
+        let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset - settings_r.target_rider_gap) -  (race_rider.distance_covered - race_rider.start_offset);
         //this is your target velocity, but it might not be possible. assuming 1 s - 1 step
-
-
-
         let target_velocity = distance_to_cover;
         //work out the power needed for this velocity- remember we are drafting
 
@@ -1779,6 +1855,24 @@ function run_race(settings_r,race_r,riders_r){
 
         //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
         let powerv = race_rider.power_out, power_adjustment = 0;
+
+        //donalK2020: performance failure
+        if (settings_r.performance_failure_enabled == 1){
+            //will the rider fail this time?
+            let performance_failure_probability = calculate_rider_performance_failure_probability(race_rider.output_level, settings_r.maximum_effort_value, race_rider.endurance_fatigue_level, settings_r.fatigue_failure_level, race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_rate, settings_r.rider_performance_failure_rate_max, settings_r.performance_failure_probability_exponent, settings_r.performance_failure_effort_importance_multiplier);
+            if (Math.random() < performance_failure_probability){
+              //rider fails to perform target power, but by how much?
+              let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, settings_r.performance_failure_effort_importance_multiplier);
+              //add an entry to performance_failures
+              let timestep_rider = race_r.race_clock + "_" + race_r.current_order[i];
+              race_r.performance_failures[timestep_rider] = performance_failure_percentage;
+
+              //console.log("RIDER FAILURE (prob " + performance_failure_probability + ")" + performance_failure_percentage + " of target_power: updated from " + target_power + " to " + (target_power - (target_power*performance_failure_percentage)));
+
+             target_power = target_power - (target_power*performance_failure_percentage);
+
+            }
+        }
 
         //to stop radical slowing down/speeding up, need to reduce it as the target rider's velocity is approched
         let damping = 1;
@@ -1862,6 +1956,9 @@ function run_race(settings_r,race_r,riders_r){
         //can now save this power
         rider_power[race_r.current_order[i]].push(powerv);
 
+        //dk2021 set the log info
+        race_rider.step_info = "(" + target_power + "|" + powerv + "|" + race_rider.aero_A2 + "|" + race_rider.accumulated_fatigue + "|" + race_rider.endurance_fatigue_level + "|" + race_rider.output_level + ")";
+
         if(race_rider.power_out < 0){
           console.log("crap! race_rider.power_out = " + race_rider.power_out);
           debugger;
@@ -1930,7 +2027,7 @@ function run_race(settings_r,race_r,riders_r){
         display_rider.number_of_riders_in_front = number_of_riders_in_front;
 
       if(global_log_message_now || (settings_r.ga_log_each_step && settings_r.run_type == "single_race")){
-        logMessage += " " + race_r.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race_r.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
+        logMessage += " " + race_r.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race_r.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| " + display_rider.step_info;
       }
     }
       if(settings_r.ga_log_each_step && settings_r.run_type == "single_race"){

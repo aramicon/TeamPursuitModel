@@ -4,6 +4,7 @@ let selected_id ="";
 let selected_ga_settings_id = "";
 let selected_settings_name = "";
 let selected_notes = "";
+let selected_short_title = "";
 let selected_global_settings = {};
 let selected_race_settings ={};
 let selected_rider_settings = {};
@@ -25,6 +26,20 @@ const saveGraphAsPng = () => {
 const draw_power_graph = (generation) => {
   //just call draw_line_graph with the specified generation
   draw_line_graph("power_graph_generation_" + generation);
+
+}
+const show_power_data = (generation) => {
+  //put the pwer data directly into the data display textarea
+  let raw_data = JSON.stringify(selected_ga_results.generations[generation].best_race_rider_power);
+
+  //also display it in a vertical format with a line per generation
+  let data_vertical = "";
+  for(let i = 0; i < selected_ga_results.generations[generation].best_race_rider_power[0].length; i++){
+    if (selected_ga_results.generations[generation].best_race_rider_power[0][i] && selected_ga_results.generations[generation].best_race_rider_power[1][i] && selected_ga_results.generations[generation].best_race_rider_power[2][i] && selected_ga_results.generations[generation].best_race_rider_power[3][i]){
+      data_vertical += i + "\t" + selected_ga_results.generations[generation].best_race_rider_power[0][i].toString().padEnd(6) + "\t" + selected_ga_results.generations[generation].best_race_rider_power[1][i].toString().padEnd(6) + "\t" + selected_ga_results.generations[generation].best_race_rider_power[2][i].toString().padEnd(6) + "\t" + selected_ga_results.generations[generation].best_race_rider_power[3][i].toString().padEnd(6) + "\n";
+    }
+  }
+  $('#data_display').val("Data for GA best race generation  " + generation + "\n\n" + raw_data + "\n\nGA: Vertical Format by Timestep\n" + data_vertical);
 
 }
 const draw_finish_times_graph = (generation) => {
@@ -82,6 +97,7 @@ const draw_line_graph = (graph_name_opt) =>{
       let graph_data_2 = {};
       let graph_data_3 = {};
       let graph_data_4 = {};
+      let graph_data_5 = {};
 
       //set the data based on the selection
       if (graph_name=="best_fitness_per_generation"){
@@ -500,14 +516,280 @@ const draw_line_graph = (graph_name_opt) =>{
                   .style("font-size", "16px")
                   .style("font-style", "italic")
                   .text(selected_settings_name + ": " + graph_title);
-      break;
+                  break;
 
-    default:
-    console.log("graph " + graph_name + " not found: nothing drawn");
+      default:
+      console.log("graph " + graph_name + " not found: nothing drawn");
+    }
   }
 }
 
+const draw_multi_line_graph = (graph_name_opt) =>{
+//draws a graph based on selected results (can put data from multiple results on one graph)
+let graph_name = $("#select_graph_multi").val();
+if (graph_name == "0")
+{
+    $("#select_graph_info").html(" ");
+}
+else
+{
+    //check what rows been selected -- need to have something checked
 
+    let selectedIDs = [];
+
+    $("input:checkbox[name=results_checkbox]:checked").each(function(){
+      selectedIDs.push($(this).val());
+    });
+
+    let no_of_selected_ids = selectedIDs.length;
+
+    if (no_of_selected_ids <= 0){
+      $("#select_graph_info").html("No results selected (click 1+ checkboxes)");
+    }
+    else{
+        // go get data then draw graph
+
+        let loaded_graph_data = [];
+
+        let serverURL = 'http://127.0.0.1:3003/'+graph_name+'/' + JSON.stringify(selectedIDs);
+        $("#select_graph_info").html("Attempting to connect to <a href='"+serverURL+"'>server to load data</a>");
+        fetch(serverURL,{method : 'get'}).then((response)=>{
+          console.log(response);
+          return response.json();
+          if (!response.ok) {
+                throw Error(response.statusText);
+          }
+        }).then((data)=>{
+          console.log(" multi-id data");
+          console.log(data);
+
+          //titles will be first element: take these OUT
+          let short_titles = Array.from(data[0]);
+          data = data.splice(1);
+
+
+          switch(graph_name) {
+          case "best_fitness_per_generation":
+
+            let graph_title ="unknown";
+            let graph_data_1 = {};
+            let graph_data_2 = {};
+            let graph_data_3 = {};
+            let graph_data_4 = {};
+            let graph_data_5 = {};
+
+            //set the data based on the selection
+            if (graph_name=="best_fitness_per_generation"){
+              graph_title = "Best Race Finish Time per Generation";
+              graph_data_1 = {};
+              graph_data_1.x_label = "GA Generation";
+              graph_data_1.y_label = "Race Finish Time (s)";
+              graph_data_1.x_scale_from = 0;
+              graph_data_1.x_scale_to = data[0].length;
+              //ned to work out the scale from the data (max)
+              var max_all_data = d3.max(data, function(array) {
+                return d3.max(array);
+              });
+              graph_data_1.y_scale_to = max_all_data+5;
+
+              var min_all_data = d3.min(data, function(array) {
+                return d3.min(array);
+              });
+              // y axis scale from min of data
+              graph_data_1.y_scale_from = min_all_data-5;
+
+              if(data[0]){
+                graph_data_1.title = short_titles[0];
+                graph_data_1.data = [];
+                for (i=0;i<data[0].length;i++){
+                  graph_data_1.data.push({x:i, y:data[0][i]});
+                }
+              }
+              if(data[1]){
+                graph_data_2.title =short_titles[1];
+                graph_data_2.data = [];
+                for (i=1;i<data[1].length;i++){
+                  graph_data_2.data.push({x:i, y:data[1][i]});
+                }
+              }
+              if(data[2]){
+                graph_data_3.title = short_titles[2];
+                graph_data_3.data = [];
+                for (i=1;i<data[2].length;i++){
+                  graph_data_3.data.push({x:i, y:data[2][i]});
+                }
+              }
+              if(data[3]){
+                graph_data_4.title = short_titles[3];
+                graph_data_4.data = [];
+                for (i=1;i<data[3].length;i++){
+                  graph_data_4.data.push({x:i, y:data[3][i]});
+                }
+              }
+              if(data[4]){
+                graph_data_5.title = short_titles[4];
+                graph_data_5.data = [];
+                for (i=1;i<data[4].length;i++){
+                  graph_data_5.data.push({x:i, y:data[4][i]});
+                }
+              }
+            }
+            //D3
+            // set the dimensions and margins of the graph
+              let totalWidth = 900;
+              let totalHeight = 440;
+              let legendLeftIndent = 280;
+              let bulletIndent = 20;
+
+                var margin = {top: 30, right: legendLeftIndent, bottom: 30, left: 60},
+                    width = totalWidth - margin.left - margin.right,
+                    height = totalHeight - margin.top - margin.bottom;
+
+                // append the svg object to the body of the page
+                var svg = d3.select("#graph")
+                  .append("svg")
+                    .attr("width", width + margin.left + margin.right)
+                    .attr("height", height + margin.top + margin.bottom)
+                  .append("g")
+                    .attr("transform",
+                          "translate(" + margin.left + "," + margin.top + ")");
+                  //  data = selected_ga_results;
+
+                    // Add X axis --> it is a date format
+                    var x = d3.scaleLinear()
+                      .domain([graph_data_1.x_scale_from, graph_data_1.x_scale_to])
+                      .range([ 0, width ]);
+                    svg.append("g")
+                      .attr("transform", "translate(0," + height + ")")
+                      .call(d3.axisBottom(x));
+
+                    // Add Y axis
+                    var y = d3.scaleLinear()
+                      .domain([graph_data_1.y_scale_from, graph_data_1.y_scale_to])
+                      .range([ height, 0 ]);
+                    svg.append("g")
+                      .call(d3.axisLeft(y));
+
+                    // Add the line 1
+                    svg.append("path")
+                      .datum(graph_data_1.data)
+                      .attr("fill", "none")
+                      .attr("stroke", "#0000ff")
+                      .attr("stroke-width", 1.5)
+                      .attr("d", d3.line()
+                        .x(function(d) { return x(d.x) })
+                        .y(function(d) { return y(d.y) })
+                      );
+
+                      if (!jQuery.isEmptyObject(graph_data_2)){
+                        //draw second line if data is given
+                        svg.append("path")
+                          .datum(graph_data_2.data)
+                          .attr("fill", "none")
+                          .attr("stroke", "#ff0000")
+                          .attr("stroke-width", 1.5)
+                          .attr("d", d3.line()
+                            .x(function(d) { return x(d.x) })
+                            .y(function(d) { return y(d.y) })
+                          );
+                      }
+
+                      if (!jQuery.isEmptyObject(graph_data_3)){
+                        //draw second line if data is given
+                        svg.append("path")
+                          .datum(graph_data_3.data)
+                          .attr("fill", "none")
+                          .attr("stroke", "#00ff00")
+                          .attr("stroke-width", 1.5)
+                          .attr("d", d3.line()
+                            .x(function(d) { return x(d.x) })
+                            .y(function(d) { return y(d.y) })
+                          );
+                      }
+                      if (!jQuery.isEmptyObject(graph_data_4)){
+                        //draw second line if data is given
+                        svg.append("path")
+                          .datum(graph_data_4.data)
+                          .attr("fill", "none")
+                          .attr("stroke", "#000000")
+                          .attr("stroke-width", 1.5)
+                          .attr("d", d3.line()
+                            .x(function(d) { return x(d.x) })
+                            .y(function(d) { return y(d.y) })
+                          );
+                      }
+                      if (!jQuery.isEmptyObject(graph_data_5)){
+                        //draw second line if data is given
+                        svg.append("path")
+                          .datum(graph_data_5.data)
+                          .attr("fill", "none")
+                          .attr("stroke", "#00ffff")
+                          .attr("stroke-width", 1.5)
+                          .attr("d", d3.line()
+                            .x(function(d) { return x(d.x) })
+                            .y(function(d) { return y(d.y) })
+                          );
+                      }
+                        // X and Y labels
+                        svg.append("text")
+                        .attr("class", "x label")
+                        .attr("text-anchor", "end")
+                        .attr("x", width)
+                        .attr("y", height - 6)
+                        .text(graph_data_1.x_label); // e.g. "GA Generation"
+
+                        svg.append("text")
+                        .attr("class", "y label")
+                        .attr("text-anchor", "end")
+                          .attr("x", -220)
+                        .attr("y", 6)
+                        .attr("dy", ".75em")
+                        .attr("transform", "rotate(-90)")
+                        .text(graph_data_1.y_label); // e.g. "Race Finish Time (s)"
+
+                        //Colour Legend
+                        svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",6).attr("r", 6).style("fill", "#0000ff");
+
+                        svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 6).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
+
+                        if (!jQuery.isEmptyObject(graph_data_2)){
+                            svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",40).attr("r", 6).style("fill", "#ff0000");
+                            svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 40).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                        }
+                        if (!jQuery.isEmptyObject(graph_data_3)){
+                            svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",60).attr("r", 6).style("fill", "#00ff00");
+                            svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 60).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                        }
+                        if (!jQuery.isEmptyObject(graph_data_4)){
+                            svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",80).attr("r", 6).style("fill", "#000000");
+                            svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 80).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                        }
+                        if (!jQuery.isEmptyObject(graph_data_5)){
+                            svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",100).attr("r", 6).style("fill", "#00ffff");
+                            svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 100).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                        }
+                        //add a title
+                        svg.append("text")
+                        .attr("x", (width / 2))
+                        .attr("y", 0 - (margin.top / 2))
+                        .attr("text-anchor", "middle")
+                        .style("font-size", "16px")
+                        .style("font-style", "italic")
+                        .text(graph_title);
+                        break;
+
+            default:
+            console.log("graph " + graph_name + " not found: nothing drawn");
+          }
+        }).catch((error) => {
+          console.log("Error loading data from server");
+          $("#select_graph_info").text("ERROR CONNECTING TO SERVER " + error)
+          console.log(error)
+        });
+    }
+
+
+  }
 }
 
 const showColName = (c_name) =>{
@@ -534,7 +816,7 @@ const  build_results_table = () =>{
 
     results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\">" + g + "</td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Best Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations) + "</td><td onmouseover=\"showColName('Best Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].best_race_performance_failures) + "</td> <td onmouseover=\"showColName('Run BEST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_instructions)) + "&noise_alterations=" + encodeURI(JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations))   + "&performance_failures=" +  encodeURI(JSON.stringify(ga_results.generations[g].best_race_performance_failures)) + "'> Run </a></td>";
 
-    results_html += "<td> <button onclick = 'draw_power_graph("+g+")'>DRAW</button>" + "</td>";
+    results_html += "<td> <button onclick = 'draw_power_graph("+g+")'>DRAW</button><button type='button' class='btn btn-info' onclick = 'show_power_data("+g+")'><i class='fas fa-info-circle'></i></button></td>";
     results_html += "<td> <button onclick = 'draw_finish_times_graph("+g+")'>DRAW</button>" + "</td>";
 
     results_html += "</td><td onmouseover=\"showColName('WORST Populaton index/ID')\">" + ga_results.generations[g].final_worst_race_properties_index + "/" + ga_results.generations[g].worst_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Worst Race Time')\">" + ga_results.generations[g].worst_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_worst_race_start_order + "]</td><td onmouseover=\"showColName('WORST Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_worst_race_instructions) + "</td><td onmouseover=\"showColName('WORST Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations) + "</td><td onmouseover=\"showColName('Worst Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].worst_race_performance_failures)  + " </td><td onmouseover=\"showColName('Run WORST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_worst_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_worst_race_instructions)) + "&noise_alterations=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations))   + "&performance_failures=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_performance_failures)) + "'> Run </a></td>";
@@ -568,6 +850,8 @@ const draw_results = (data) => {
   selected_ga_settings_id = results.ga_settings_id;
   selected_settings_name = results.settings_name;
   selected_notes = results.notes;
+  selected_short_title = results.short_title;
+
 
   selected_global_settings = JSON.parse(results.global_settings);
   selected_race_settings = JSON.parse(results.race_settings);
@@ -598,7 +882,8 @@ const load_results = (id) =>{
 
 
 
-    $("#race_result_message").html("Loaded Results " + id + " | <strong>" + selected_settings_name + "</strong>" + "<ul><li>Run Date: " + selected_ga_results.start_time + "</li><li>Generations: " + selected_ga_results.generations.length + "</li><li>Population: " +  selected_ga_results.generations[0].population_size + "</li></ul>" );
+
+    $("#race_result_message").html("Loaded Results " + id + " | <strong>" + selected_settings_name + "</strong>" + "<ul><li>Run Date: " + selected_ga_results.start_time + "</li><li>Generations: " + selected_ga_results.generations.length + "</li><li>Population: " +  selected_ga_results.generations[0].population_size + "</li></ul><div class='form-group'>    <label for='notes'>Notes</label><textarea class='form-control' id='notes' rows='2'>" + (selected_notes?selected_notes:'') + "</textarea></div><div class='form-group'><label for='shortTitle'>Short Title (shown on graphs)</label><input type='text' class='form-control' id='shortTitle' value = '" + (selected_short_title?selected_short_title:'') +"'></div><button class='btn btn-primary' onClick='updateResults()' >Update</button>" );
 
   }).catch((error) => {
     console.log("Error loading results from server");
@@ -612,9 +897,9 @@ const draw_table = (data) => {
   //draw the table of results
   if (data.length > 0){
     let tableHTML = "<table class='table table-striped table-bordered '>";
-    tableHTML+="<thead class='thead-dark'><tr><th scope='col'>ID (click to load)</th><th scope='col'>Settings Name</th><th scope='col'>Notes</th><th scope='col'>Date</th></tr></thead>"
+    tableHTML+="<thead class='thead-dark'><tr><th scope='col'>Select</th><th scope='col'>ID (click to load)</th><th scope='col'>Settings Name</th><th scope='col'>S.Title</th><th scope='col'>Notes</th><th scope='col'>Date</th></tr></thead>"
     for(i=0;i<data.length;i++){
-        tableHTML += "<tr><th scope='row'><button type='button' class='btn btn-light' onclick = 'load_results(\""+ data[i]._id+"\")'>"+ data[i]._id+"</button></th><td>" + data[i].settings_name + "</td><td>" + data[i].notes + "</td><td>"+ data[i].date_created + "</td></tr>";
+        tableHTML += "<tr><th scope='row'><div class='form-check'><input class='form-check-input resultsCheckbox' type='checkbox' id='results_checkbox_" + i + "' name='results_checkbox' value='" + data[i]._id + "'></div></th><th scope='row'><button type='button' class='btn btn-light' onclick = 'load_results(\""+ data[i]._id+"\")'>"+ data[i]._id+"</button></th><td>" + data[i].settings_name + "</td><td>" + data[i].short_title + "</td><td>" + data[i].notes + "</td><td>"+ data[i].date_created + "</td></tr>";
     }
 
     tableHTML += "</table>";
@@ -643,6 +928,41 @@ const getResults = () => {
       $("#results_info_label").text("ERROR CONNECTING TO SERVER " + error)
       console.log(error)
 });
+  }
+
+  const updateResults = () => {
+    //save the short_title and notes to the db
+    let short_title = $("#shortTitle").val();
+    let notes = $("#notes").val();
+
+    let serverURL = 'http://127.0.0.1:3003/update_results/'+selected_id;
+     $("#race_result_col").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
+
+     let dataToSend = {
+             "short_title":short_title,
+             "notes":notes
+           };
+           let jsonToSendS = JSON.stringify(dataToSend);
+
+           fetch(serverURL,{
+             method : 'post',
+             headers: {
+            'Content-Type': 'application/json',
+            },
+            mode : 'cors',
+            body : jsonToSendS
+          }).then((response)=>{
+            console.log(response);
+         return response.json();
+         if (!response.ok) {
+               throw Error(response.statusText);
+         }
+       }).then((data)=>{
+         console.log('data ' + JSON.stringify(data));
+       $("#race_result_col").html("Details Updated");
+     });
+
+
   }
 
 $(document).ready(function() {

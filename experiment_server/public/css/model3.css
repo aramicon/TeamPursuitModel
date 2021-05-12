@@ -192,6 +192,9 @@ input::-moz-focus-inner {
 .results_table td{
   border:1px solid #666666;
   padding:2px;
+  max-width: 300px;
+  max-height: 100px;
+  overflow: auto;
 }
 .results_table tr:nth-child(even) {
   background-color: #dddddd;

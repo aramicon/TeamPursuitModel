@@ -1,6 +1,7 @@
 <html>
   <head>
     <title>Team Pursuit Strategy Game</title>
+    <link rel="shortcut icon" type="image/jpg" href="images/favicon.png"/>
     <link rel="stylesheet" type = "text/css" href = "css/model3.css">
     <link rel="stylesheet" type = "text/css" href = "css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
@@ -27,6 +28,9 @@
                   </li>
                   <li class="nav-item ">
                     <a class="nav-link" href="ga">GA <span class="sr-only">(current)</span></a>
+                  </li>
+                  <li class="nav-item ">
+                    <a class="nav-link" href="sequence">Sequence<span class="sr-only">(current)</span></a>
                   </li>
                   <li class="nav-item ">
                     <a class="nav-link" href="results">Results <span class="sr-only">(current)</span></a>
@@ -90,10 +94,10 @@
               <a class="nav-link active" id="instructions-tab" data-toggle="tab" href="#instructions" role="tab" aria-controls="instructions" aria-selected="true">Instructions</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" id="noise_alterations-tab" data-toggle="tab" href="#noise_alterations" role="tab" aria-controls="noise_alterations" aria-selected="false">Noise</a>
+              <a class="nav-link" id="noise_alterations-tab" data-toggle="tab" href="#noise_alterations_tab" role="tab" aria-controls="noise_alterations_tab" aria-selected="false">Noise</a>
             </li>
             <li class="nav-item">
-              <a class="nav-link" id="performance_failures-tab" data-toggle="tab" href="#performance_failures" role="tab" aria-controls="performance_failures" aria-selected="false">Failures</a>
+              <a class="nav-link" id="performance_failures-tab" data-toggle="tab" href="#performance_failures_tab" role="tab" aria-controls="performance_failures_tab" aria-selected="false">Failures</a>
             </li>
           </ul>
           <div class="tab-content" id="myTabContent">
@@ -101,12 +105,12 @@
               <label for="instructions_textarea">Instructions:</label>
               <textarea class="form-control" rows="5" id="instructions_textarea"></textarea>
             </div>
-            <div class="tab-pane fade" id="noise_alterations" role="tabpanel" aria-labelledby="noise_alterations-tab">
-            <label for="instruction_noise_alterations">Instruction Noise Alterations:</label>
+            <div class="tab-pane fade" id="noise_alterations_tab" role="tabpanel" aria-labelledby="noise_alterations-tab">
+            <label for="instruction_noise_alterations_textarea">Instruction Noise Alterations:</label>
               <textarea class="form-control" rows="5" id="instruction_noise_alterations_textarea"></textarea>
             </div>
-            <div class="tab-pane fade" id="performance_failures" role="tabpanel" aria-labelledby="performance_failures-tab">
-            <label for="performance_failures">Performance Failures:</label>
+            <div class="tab-pane fade" id="performance_failures_tab" role="tabpanel" aria-labelledby="performance_failures-tab">
+            <label for="performance_failures_textarea">Performance Failures:</label>
             <textarea class="form-control" rows="5" id="performance_failures_textarea"></textarea>
           </div>
           </div>
@@ -205,7 +209,7 @@
 
     <div class="row">
       <div class="col">
-          <div><button class="btn btn-outline-success" id="draw_power">DRAW POWER GRAPH</button></div>
+          <div><button class="btn btn-outline-success" id="draw_power">DRAW POWER GRAPH</button> <button type='button' class='btn btn-info' id = 'show_power_data'><i class='fas fa-info-circle'></i></button></div>
       </div>
       <div class="col">
         <button type="button" class="btn btn-outline-success" id = "saveGraphAsPng">Save as PNG</button>
@@ -216,6 +220,14 @@
     <div class="row">
       <div class="col">
         <div id = "graph"></div>
+      </div>
+    </div>
+    <div class="row">
+      <div class="col">
+        <div class="form-group">
+        <label for="data_display">Data Display</label>
+        <textarea class="form-control" id="data_display" rows="10"></textarea>
+        </div>
       </div>
     </div>
 

@@ -26,6 +26,8 @@ let rider_power_data = []; //record power outpur of each rider to generate graph
 
 let continue_racing = true; //false when race finishes
 
+let use_lookup_velocity = false;
+
 
 console.log("Track bend radius = 22m");
 console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/2 );
@@ -285,13 +287,17 @@ function moveRace(){
   ctx.clearRect(0, 0, c.width, c.height);
 
   //add any stored instructions if found
-  let new_instructions = race.race_instructions_r.filter(a=>parseInt(a[0]) == race.race_clock);
+  let new_instructions_a = race.race_instructions_r.filter(a=>parseInt(a[0]) == race.race_clock);
+   //dk2021Jan: added slice()
+  //need to make sure this is a deep copy operation
+  // ref: https://stackoverflow.com/questions/122102/what-is-the-most-efficient-way-to-deep-clone-an-object-in-javascript
+  let new_instructions = JSON.parse(JSON.stringify(new_instructions_a));
 
   if(new_instructions.length > 0){
     //also check for any alterations due to noise
     let instruction_noise_alterations = race.instruction_noise_alterations_r[race.race_clock];
     if (instruction_noise_alterations !== undefined && !(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
-      console.log("Instruction alterations found: " + JSON.stringify(instruction_noise_alterations));
+      console.log("Instruction alterations found: " + JSON.stringify(instruction_noise_alterations) + " new_instructions " + JSON.stringify(new_instructions));
       //Is this a delay?
       if(instruction_noise_alterations["type"]=="random_delay"){
         console.log("random delay alteration");
@@ -302,16 +308,18 @@ function moveRace(){
           if(race.race_instructions_r[i_s][0] == instruction_noise_alterations["original_instruction"][0] && race.race_instructions_r[i_s][1] == instruction_noise_alterations["original_instruction"][1]){
             console.log("found instruction to delay instruction " + i_s + " from " + race.race_instructions_r[i_s][0] + " to " + instruction_noise_alterations["altered_instruction"][0]);
               if ( instruction_noise_alterations["altered_instruction"][0] >  race.race_instructions_r[i_s][0]){ //only change things id the delay is actually for a future timestep
+                console.log("new_instructions BEFORE update to race_instructions_r " + JSON.stringify(new_instructions));
                 race.race_instructions_r[i_s][0] = instruction_noise_alterations["altered_instruction"][0]; //this SHOULD update it
-
+                  console.log("new_instructions AFTER update to race_instructions_r " + JSON.stringify(new_instructions));
                 //search the new_instructions for this same instruction and remove it (if delay is > 0)
                 for(let i_i=0;i_i<new_instructions.length;i_i++){
                     //need the loop in case there are > 1 instructions (for the same timestep)
+                    console.log("Remove existing delayed instruction (" + JSON.stringify(instruction_noise_alterations) + ") from new_instructions " + JSON.stringify(new_instructions) );
                     if(new_instructions[i_i][0] == instruction_noise_alterations["original_instruction"][0] && new_instructions[i_i][1] == instruction_noise_alterations["original_instruction"][1]){
                       //remove that element in the array
                       new_instructions.splice(i_i,1);
                       i_i--; //need to hold the index counter as array elements wil be shifted left
-                      console.log("delay instruction: current timestep instruciton removed from array!");
+                      console.log("delay instruction: current timestep instruciton removed from array! new_instructions  " + JSON.stringify(new_instructions));
                     }
                 }
               }
@@ -397,6 +405,8 @@ function moveRace(){
     let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
     race_rider.aero_A2 = Math.round((0.5 * settings.frontalArea * race_rider.aero_density)*10000)/10000;   // full air resistance parameter
 
+    race_rider.step_info = ""; //dk2021 used to add logging info
+
     if (race_rider.current_aim =="lead"){
       //push the pace at the front
       //what's the current effort?
@@ -426,6 +436,17 @@ function moveRace(){
       }
 
       let powerv = race_rider.power_out, power_adjustment = 0;
+
+      //donalK2020: check if there is a performance failure
+      let pf_id = race.race_clock + "_" + race.current_order[i];
+
+      if (race.performance_failures_r[pf_id]){
+        //reduce the target power by this %
+        let failure_p = race.performance_failures_r[pf_id];
+        console.log("Performance failure " + pf_id + " of " + failure_p + " reducing power from " + target_power + " to " + (target_power - (target_power * failure_p)));
+        target_power = target_power - (target_power * failure_p);
+      }
+
       //compare power required to previous power and look at how it can increase or decrease
       if (powerv > target_power){ //slowing down
         if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
@@ -450,38 +471,53 @@ function moveRace(){
 
 
       //check the lookup table
-      let lookup_velocity = -1;
-      if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
-        if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
-          lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)];
-        }
-      }
-      if ( lookup_velocity === undefined || lookup_velocity === -1){
-        //does not exist in the lookup so call the function and save it
-        race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
-        if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+      if (use_lookup_velocity)
+      {
+        let lookup_velocity = -1;
+        if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
           if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+            lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)];
+          }
+        }
+        if ( lookup_velocity === undefined || lookup_velocity === -1){
+          //does not exist in the lookup so call the function and save it
+          race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
+          if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+            if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
+              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+            }
+            else{
+              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
+              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+            }
           }
           else{
+            //add new array for total weight and A2 values
+            newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
             newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
             newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
           }
         }
         else{
-          //add new array for total weight and A2 values
-          newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
-          newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
-          newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+          race_rider.velocity = lookup_velocity;
         }
       }
-      else{
-        race_rider.velocity = lookup_velocity;
-      }
+      else {
+        //use_lookup_velocity is turned off, so always call the newton function (slower)
+        race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
+    }
+
+    if(powerv < 0){
+      console.log("crap! powerv 2 = " + powerv);
+      debugger;
+    }
       race_rider.power_out = powerv;
 
       //can now save this power
       rider_power_data[race.current_order[i]].push(powerv);
+
+      //dk2021 set the log info
+      race_rider.step_info = "(" + target_power + "|" + powerv + "|" + race_rider.aero_A2 + "|" + race_rider.accumulated_fatigue + "|" + race_rider.endurance_fatigue_level + "|" + race_rider.output_level + ")";
 
       //add fatigue if going harder than the threshold or recover if going under it
       //recover if going under the threshold
@@ -519,7 +555,7 @@ function moveRace(){
       // assume we are drafting and try to cover the same distance as the race_rider in front, which will take a certain amount of power
       //need to factor in the original offset
       //let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
-      let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings.target_rider_gap) -  (race_rider.distance_covered-race_rider.start_offset);
+      let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset - settings.target_rider_gap) -  (race_rider.distance_covered - race_rider.start_offset);
       //this is your target velocity, but it might not be possible. assuming 1 s - 1 step
       let target_velocity = distance_to_cover;
       //work out the power needed for this velocity- remember we are drafting
@@ -586,6 +622,15 @@ function moveRace(){
         target_power = current_max_power; //can't go over this (for now)
       }
 
+      //donalK2020: check if there is a performance failure
+      let pf_id = race.race_clock + "_" + race.current_order[i];
+      if (race.performance_failures_r[pf_id]){
+        //reduce the target power by this %
+        let failure_p = race.performance_failures_r[pf_id];
+        console.log("Performance failure " + pf_id + " of " + failure_p + " reducing power from " + target_power + " to " + (target_power - (target_power * failure_p)));
+        target_power = target_power - (target_power * failure_p);
+      }
+
       //BUT, can this power be achieved? we may have to accelerate, or decelerate, or it might be impossible
       let powerv = race_rider.power_out, power_adjustment = 0;
 
@@ -613,33 +658,39 @@ function moveRace(){
       powerv+=power_adjustment;
       powerv = Math.round((powerv)*100)/100;
 
-      let lookup_velocity = -1;
-      if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
-        if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
-          lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)];
-        }
-      }
-      if ( lookup_velocity === undefined || lookup_velocity === -1){
-        //does not exist in the lookup so call the function and save it
-        race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
-        if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+      if (use_lookup_velocity){
+        let lookup_velocity = -1;
+        if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
           if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+            lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)];
+          }
+        }
+        if ( lookup_velocity === undefined || lookup_velocity === -1){
+          //does not exist in the lookup so call the function and save it
+          race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
+          if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
+            if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
+              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+            }
+            else{
+              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
+              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
+            }
           }
           else{
+            //add new array for total weight and A2 values
+            newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
             newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
             newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
           }
-        }
-        else{
-          //add new array for total weight and A2 values
-          newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
-          newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
-          newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
-        }
       }
       else{
         race_rider.velocity = lookup_velocity;
+      }
+    }
+    else {
+       //use_lookup_velocity is turned off, so always call the newton function (slower)
+       race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
       }
 
       //if you are dropping back and get back to the rider in front, go back to a follow state
@@ -658,6 +709,9 @@ function moveRace(){
 
       //can now save this power
       rider_power_data[race.current_order[i]].push(powerv);
+
+      //dk2021 set the log info
+      race_rider.step_info = "(" + target_power + "|" + powerv + "|" + race_rider.aero_A2 + "|" + race_rider.accumulated_fatigue + "|" + race_rider.endurance_fatigue_level + "|" + race_rider.output_level + ")";
 
       //fatigue if over the threshold, recover if under
       if (race_rider.power_out < race_rider.threshold_power ){
@@ -843,11 +897,13 @@ function moveRace(){
       }
       display_rider.distance_from_rider_in_front = min_distance;
       display_rider.number_of_riders_in_front = number_of_riders_in_front;
+
+
       //display the rider properties
        $("#rider_values_"+i).html("<div class='info_column' style='background-color:"+display_rider.colour+"' >" + display_rider.name + "<span class = 'rider_aim'>" + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' <i class="fas fa-flag-checkered"></i>':'') + " </span></div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div><div class='info_column'>" + display_rider.time_on_front + " ( " + DecimalPrecision.round((display_rider.time_on_front / race.race_clock)*100,2) + " %) </div>");
 
       if(settings.log_each_step){
-        logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| ";
+        logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| " + display_rider.step_info;
       }
     }
     if(settings.log_each_step){
@@ -1015,8 +1071,13 @@ function load_race(){
 
     load_rider.time_on_front = 0; //dksep24: want to track how much time each rider spends at the front.
 
+    //dk2021 new rider property to add info to the log message
+    load_rider.step_info = "";
+
   }
 
+  //load instrucitons from textarea
+  race.race_instructions_r =[];
   let instructions_t = [];
   let new_instructions = $('#instructions_textarea').val();
   if(new_instructions.length > 5){
@@ -1028,8 +1089,11 @@ function load_race(){
     race.race_instructions_r = instructions_t;
 }
 
+  //load instruction noise from textarea
+  race.instruction_noise_alterations_r = {};
   let instruction_noise_alterations = {};
   let instruction_noise_alterations_string = $('#instruction_noise_alterations_textarea').val();
+
   if(instruction_noise_alterations_string.length > 5){
     //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
     instruction_noise_alterations = JSON.parse(instruction_noise_alterations_string);
@@ -1039,14 +1103,16 @@ function load_race(){
     console.log("loaded noise alterations from textarea: " + JSON.stringify(race.instruction_noise_alterations_r) );
   }
 
-  let performance_failures = {};
+  //load performance failures from textarea
+  race.performance_failures_r = {};
+  let performance_failures_t = {};
   let performance_failures_string = $('#performance_failures_textarea').val();
   if(performance_failures_string.length > 5){
     //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
-    performance_failures = JSON.parse(performance_failures_string);
+    performance_failures_t = JSON.parse(performance_failures_string);
   }
-  if (!(Object.keys(performance_failures).length === 0 && performance_failures.constructor === Object)){ //i.e. if it is a non-empty object
-    race.performance_failures_r = performance_failures;
+  if (!(Object.keys(performance_failures_t).length === 0 && performance_failures_t.constructor === Object)){ //i.e. if it is a non-empty object
+    race.performance_failures_r = performance_failures_t;
     console.log("loaded performance failures from textarea: " + JSON.stringify(race.performance_failures_r) );
   }
 
@@ -1074,6 +1140,7 @@ $(document).ready(function() {
   $(".switch_lead").on("click", switchLeadInstruction);
 
   $("#draw_power").on("click",draw_power_graph);
+  $("#show_power_data").on("click",show_power_data);
   $("#saveGraphAsPng").on('click',saveGraphAsPng);
   $("#clearCanvas").on('click',clearCanvas);
 
@@ -1156,28 +1223,28 @@ function load_details_from_url(){
 
 
           //set the start order and instructions
-          let start_order = url.searchParams.get("startorder");
-          let instructions = url.searchParams.get("instructions");
-          let instruction_noise_alterations = url.searchParams.get('noise_alterations');
-          let performance_failures = url.searchParams.get('performance_failures');
+          let start_order_from_url = url.searchParams.get("startorder");
+          let instructions_from_url = url.searchParams.get("instructions");
+          let instruction_noise_alterations_from_url = url.searchParams.get('noise_alterations');
+          let performance_failures_from_url = url.searchParams.get('performance_failures');
 
-          if(start_order.length > 0){
-            console.log("loaded start_order from URL: " + start_order);
-            $("#teamorder").val(start_order);
+          if(start_order_from_url.length > 0){
+            console.log("loaded start_order from URL: " + start_order_from_url);
+            $("#teamorder").val(start_order_from_url);
           }
-          if(instructions.length > 0){
-            console.log("loaded instructions from URL: " + instructions);
-            $("#instructions_textarea").val(instructions);
-          }
-
-          if(!(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
-            console.log("loaded instruction_noise_alterations from URL: " + JSON.stringify(instruction_noise_alterations));
-            $("#instruction_noise_alterations").val(instruction_noise_alterations);
+          if(instructions_from_url.length > 0){
+            console.log("loaded instructions from URL: " + instructions_from_url);
+            $("#instructions_textarea").val(instructions_from_url);
           }
 
-          if(!(Object.keys(performance_failures).length === 0 && performance_failures.constructor === Object)){
-            console.log("loaded performance_failures from URL: " + JSON.stringify(performance_failures));
-            $("#performance_failures_textarea").val(performance_failures);
+          if(!(Object.keys(instruction_noise_alterations_from_url).length === 0 && instruction_noise_alterations_from_url.constructor === Object)){
+            console.log("loaded instruction_noise_alterations from URL: " + JSON.stringify(instruction_noise_alterations_from_url));
+            $("#instruction_noise_alterations").val(instruction_noise_alterations_from_url);
+          }
+
+          if(!(Object.keys(performance_failures_from_url).length === 0 && performance_failures_from_url.constructor === Object)){
+            console.log("loaded performance_failures from URL: " + JSON.stringify(performance_failures_from_url));
+            $("#performance_failures_textarea").val(performance_failures_from_url);
           }
 
           //need to make sure the race is loaded AFTER we get the settings
@@ -1219,26 +1286,26 @@ function load_details_from_url(){
 
 
           //set the start order and instructions
-          let start_order = url.searchParams.get("startorder");
-          let instructions = url.searchParams.get("instructions");
-          let instruction_noise_alterations = url.searchParams.get('noise_alterations');
-          let performance_failures = url.searchParams.get('performance_failures');
+          let start_order_from_url = url.searchParams.get("startorder");
+          let instructions_from_url = url.searchParams.get("instructions");
+          let instruction_noise_alterations_from_url = url.searchParams.get('noise_alterations');
+          let performance_failures_from_url = url.searchParams.get('performance_failures');
 
-          if(start_order.length > 0){
-            console.log("loaded start_order from URL: " + start_order);
-            $("#teamorder").val(start_order);
+          if(start_order_from_url.length > 0){
+            console.log("loaded start_order from URL: " + start_order_from_url);
+            $("#teamorder").val(start_order_from_url);
           }
-          if(instructions.length > 0){
-            console.log("loaded instructions from URL: " + instructions);
-            $("#instructions_textarea").val(instructions);
+          if(instructions_from_url.length > 0){
+            console.log("loaded instructions from URL: " + instructions_from_url);
+            $("#instructions_textarea").val(instructions_from_url);
           }
-          if(!(Object.keys(instruction_noise_alterations).length === 0 && instruction_noise_alterations.constructor === Object)){
-            console.log("loaded instruction_noise_alterations from URL: " + JSON.stringify(instruction_noise_alterations));
-            $("#instruction_noise_alterations_textarea").val(instruction_noise_alterations);
+          if(!(Object.keys(instruction_noise_alterations_from_url).length === 0 && instruction_noise_alterations_from_url.constructor === Object)){
+            console.log("loaded instruction_noise_alterations from URL: " + JSON.stringify(instruction_noise_alterations_from_url));
+            $("#instruction_noise_alterations_textarea").val(instruction_noise_alterations_from_url);
           }
-          if(!(Object.keys(performance_failures).length === 0 && performance_failures.constructor === Object)){
-            console.log("loaded performance_failures from URL: " + JSON.stringify(performance_failures));
-            $("#performance_failures_textarea").val(performance_failures);
+          if(!(Object.keys(performance_failures_from_url).length === 0 && performance_failures_from_url.constructor === Object)){
+            console.log("loaded performance_failures from URL: " + JSON.stringify(performance_failures_from_url));
+            $("#performance_failures_textarea").val(performance_failures_from_url);
           }
 
           //need to make sure the race is loaded AFTER we get the settings
@@ -1258,6 +1325,19 @@ function load_details_from_url(){
 function draw_power_graph(){
   draw_line_graph("power_graph");
 
+}
+
+function show_power_data(){
+  let raw_data = JSON.stringify(rider_power_data);
+
+  //also display it in a vertical format with a line per generation
+  let data_vertical = "";
+  for(let i = 0; i < rider_power_data[0].length; i++){
+    if (rider_power_data[0][i] && rider_power_data[1][i] && rider_power_data[2][i] && rider_power_data[3][i]){
+      data_vertical += i + "\t" + rider_power_data[0][i].toString().padEnd(6) + "\t" + rider_power_data[1][i].toString().padEnd(6) + "\t" + rider_power_data[2][i].toString().padEnd(6) + "\t" + rider_power_data[3][i].toString().padEnd(6) + "\n";
+    }
+  }
+  $('#data_display').val("Data for GAME race  \n\n" + raw_data + "\n\nGAME: Vertical Format by Timestep\n" + data_vertical);
 }
 
 
