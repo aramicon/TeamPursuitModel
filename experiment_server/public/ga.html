@@ -139,14 +139,23 @@
         </div>
 
     <div class="row">
+
       <div class="col-2">
-      </div>
-      <div class="col-6">
         <div class="form-group">
           <button type="button" id="button_evolve_instructions" class="btn btn-success btn-lg">
             <i class="far fa-play-circle" style="color:#e62e50;"></i> RUN GA
           </button>
+
         </div>
+      </div>
+      <div class="col-6">
+        <!-- Default switch -->
+        <label for="sequence_mode_switch" > Sequence Mode:</label>
+
+         <label class="switch">
+          <input type="checkbox" id = "sequence_mode_switch" onchange="toggleSequenceMode(this)">
+          <span class="slider round"></span>
+        </label>
       </div>
       <div class="col-1">
         <div class="current_activity" id = "current_activity"></div>

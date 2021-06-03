@@ -2405,4 +2405,48 @@ Whitley, D. A genetic algorithm tutorial. Stat Comput 4, 65–85 (1994). https:/
 }
 
 
+-- 25/05/2021
+-- need to start back at it... so so so much to do
 
+-- improve the sequences tool
+
+-- doesn't load the seq. props. 
+-- invalid jSON, need to parse/stringify and use the right format: 
+{"testdewqde":"val"}
+
+-- ok so improvements there but adding it also needs to be fixed
+
+-- june 01 tuesday
+-- how to load and run a sequence?
+from the GA ui?
+
+-- sketched out a design, need to implement lots
+-- put a visual switch on the GA page to enable run_sequences 'mode'
+-- need very clear messages of what is going on at each step
+-- awkward to get the IP address and the browser type but worth trying, want to use them to generate a useful client id
+-- want to be able to run the whole thing on two browsers on the one machine (mainly to test it)
+-- created an id that looks like 86.43.200.150_Galway_IE_None_2021_6_1_16_31_15. using http://www.geoplugin.net/json.gp
+-- add a sequence mode switch variable 
+-- let sequences_mode = 0;
+
+-- added switch and a 5 second timed loop that currently just prints a dumb message
+-- BUG, can't load settings, throws an invalid JSON error
+RangeError: Invalid status code: 0
+    at ServerResponse.writeHead (_http_server.js:192:11)
+    at ServerResponse._implicitHeader (_http_server.js:157:8)
+    at ServerResponse.OutgoingMessage.end (_http_outgoing.js:571:10)
+    at ServerResponse.send (C:\Users\Donal\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\express\lib\response.js:221:10)
+    at ServerResponse.json (C:\Users\Donal\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\express\lib\response.js:267:15)
+    at app.use (C:\Users\Donal\Documents\RESEARCH\TeamPursuitModel\experiment_server\app.js:224:25)
+    at Layer.handle_error (C:\Users\Donal\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\express\lib\router\layer.js:71:5)
+    at trim_prefix (C:\Users\Donal\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\express\lib\router\index.js:315:13)
+    at C:\Users\Donal\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\express\lib\router\index.js:284:7
+    at Function.process_params (C:\Users\Donal\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\express\lib\router\index.js:335:12)
+
+-- had to move the funcitons to load the names back inside $(document).ready(function() {HERE}
+-- otherwise it cannot seem to get the IDs from the attached event... could probably fix this a better way?
+
+-- wednesday 2nd.
+-- keep working on getting this running
+-- set up a node endpoint to return the top active sequence
+-- sequence_options currently stored as a string in mongo, but that means I can't easily filter on it... need to change the format/structure

@@ -70,20 +70,18 @@ const getSequences = () => {
       selected_id = results._id
       selected_seq_name = results.sequence_name;
       selected_seq_results = results;
-
-
-
+      //let s_options = results.sequence_options;
+      let s_options = JSON.stringify(results.sequence_options);
 
       $("#sequences_info_label").text(data.length + " sequences found.");
-
-
-
 
       $("#sequence_result_message_info").html("Loaded Sequence " + selected_id + " | <strong>" + selected_seq_name + "</strong>" + "<ul><li>Run Date: " + selected_seq_results.date_updated + "</li><li>Settings Id: " + selected_seq_results.settings_id + "</li></ul>" );
 
       $("#sequence_form_notes").val((selected_seq_results.notes?selected_seq_results.notes:''));
 
       $("#sequence_form_shortTitle").val((selected_seq_name?selected_seq_name:''));
+
+      $("#sequence_form_options").val((s_options?s_options:''));
 
     //  $("#experiment_names select").val(selected_seq_results.settings_id);
     //  $('.#experiment_names option[value='+selected_seq_results.settings_id+']').attr('selected','selected');
@@ -104,13 +102,35 @@ const getSequences = () => {
     let serverURL = 'http://127.0.0.1:3003/update_sequence/'+selected_id;
      $("#sequence_result_col").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
 
+     let validProps = true; //boolean to check if data is ok
+
      let new_sequence_name = $("#sequence_form_shortTitle").val();
      let new_sequence_notes = $("#sequence_form_notes").val();
-     let new_sequence_options = JSON.stringify($("#sequence_form_options").val());
+     let new_sequence_options = "";
+     let optionsObject ={};
+     try {
+       optionsObject = JSON.parse($("#sequence_form_options").val());
+       //new_sequence_options = JSON.stringify(optionsObject);
+       //had been saving a strign but need to save a JSON object
+      } catch (error) {
+        alert("ERROR parsing sequence settings \n\n" + error);
+        console.log(error);
+        validProps = false;
+      }
+
      let selected_settings_id = $('#experiment_names').val();
 
+     if(new_sequence_name.length <= 0){
+        alert("Sequence name cannot be empty");
+     }
+     if(new_sequence_notes.length <= 0){
+        alert("Sequence notes cannot be empty");
+     }
+     if(!selected_settings_id){
+        alert("Experiment settings must be set");
+     }
 
-     if (new_sequence_name.length > 0 && new_sequence_notes.length > 0 && new_sequence_options.length > 0){
+     if (new_sequence_name.length > 0 && new_sequence_notes.length > 0 && validProps && selected_settings_id){
        let t = new Date();
      dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate() + " " + t.getHours() + ":" + t.getMinutes() + ":" + t.getSeconds();
 
@@ -118,7 +138,7 @@ const getSequences = () => {
            "sequence_name":new_sequence_name,
            "notes":new_sequence_notes,
            "settings_id":selected_settings_id,
-           "sequence_options":new_sequence_options,
+           "sequence_options":optionsObject,
            "date_updated":dateString
            };
            let jsonToSendS = JSON.stringify(dataToSend);

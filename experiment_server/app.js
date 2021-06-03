@@ -363,7 +363,7 @@ app.post('/update_sequence/:id',cors(corsOptions),(req,res)=>{
 	const sequence_settings = req.body;
   console.log("updating sequence ", sequence_id);
   console.log(sequence_settings);
-  
+
 	 db.getDB().collection(collectionSequences).findOneAndUpdate({_id : db.getPrimaryKey(sequence_id)},{$set : {sequence_name : sequence_settings.sequence_name,notes : sequence_settings.notes, settings_id : sequence_settings.settings_id, sequence_options : sequence_settings.sequence_options, date_updated : sequence_settings.date_updated}},{returnOriginal : false},(err,result)=>{
 	    if(err){
 			console.log("error when updating sequence err = " + err);
@@ -407,4 +407,63 @@ app.post("/add_sequence",cors(),(req,res,next) => {
 		}
 	})
 
+});
+
+app.get('/getOldestActiveSequenceDetails',cors(corsOptions), (req,res)=>{
+	db.getDB().collection(collectionSequences).find({'sequence_options.active':1}).sort({date_created:-1}).toArray((err,documents)=>{
+		if(err){
+			console.log("error getting collection of active sequences:  err " + err);
+		}
+		else{
+				console.log("getting list of active sequences");
+			  res.json(documents);
+		}
+	});
+});
+
+app.options('/assign_sequence_iteration/:id', cors())
+app.post('/assign_sequence_iteration/:id',cors(corsOptions),(req,res)=>{
+  const sequence_id = req.params.id;
+  const sequence_settings = req.body;
+
+  console.log("updating sequence ", sequence_id);
+  console.log(sequence_settings);
+
+  let t = new Date();
+dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate() + " " + t.getHours() + ":" + t.getMinutes() + ":" + t.getSeconds();
+
+	  db.getDB().collection(collectionSequences).findOneAndUpdate({_id : db.getPrimaryKey(sequence_id)},{$set : {'sequence_options.experiments' : sequence_settings, date_updated : dateString}},{returnOriginal : false},(err,result)=>{
+	     if(err){
+	 		console.log("error when updating sequence err = " + err);
+	 	}
+	 	else{
+	 		res.json(result);
+	 	}
+  });
+});
+
+app.options('/update_sequence_iteration/:id', cors())
+app.post('/update_sequence_iteration/:id',cors(corsOptions),(req,res)=>{
+  const sequence_id = req.params.id;
+  const sequence_settings = req.body;
+
+  console.log("updating sequence ", sequence_id);
+  console.log(sequence_settings);
+
+  let t = new Date();
+dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate() + " " + t.getHours() + ":" + t.getMinutes() + ":" + t.getSeconds();
+
+	  db.getDB().collection(collectionSequences).findOneAndUpdate({_id : db.getPrimaryKey(sequence_id)},{$set : { "sequence_options.experiments.$[elem].status" : "complete" }
+
+  },{  multi: true,
+            returnOriginal : false,
+            arrayFilters: [{ $and: [{"elem.client_id": sequence_settings.client_id}, {"elem.iteration": sequence_settings.iteration}] }]
+          },(err,result)=>{
+	     if(err){
+	 		console.log("error when updating sequence err = " + err);
+	 	}
+	 	else{
+	 		res.json(result);
+	 	}
+  });
 });
