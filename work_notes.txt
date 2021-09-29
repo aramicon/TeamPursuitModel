@@ -2450,3 +2450,276 @@ RangeError: Invalid status code: 0
 -- keep working on getting this running
 -- set up a node endpoint to return the top active sequence
 -- sequence_options currently stored as a string in mongo, but that means I can't easily filter on it... need to change the format/structure
+-- ok, so now it gets back an active sequence... need to 
+
+-- did a ton of work, made progress, it finds an active sequence, gets an iteration if there is one, gets experiment settings, but when it goes to run the GA it immediately tries to save results - needs to be asynchronous... 
+-- can I make the runGA function implement a promise?
+
+-- thursdee 3rd. 
+-- so the GA runs but it immediately tries to save results without waiting, even though I ran this as a callback - problem is that I use web workers and the callback ignores these.
+-- need to get the webworker to trigger a save (and update the sequence and start the timer again) AFTER it has run the experiment.
+-- could make enough info global to allow this independently?
+WHEN experiment completes (results are returned and displayed)
+IF sequence mode is ON
+IF sequence mode global info variables are set
+SAVE results
+UPDATE sequence info
+RESTART sequence checking (i.e. run another one if it exists)
+
+-- right, coded this up, and it kinda works, does run the GA and wait for that before trying to save results
+-- bugs tho... updating the sequence fails
+error when updating sequence err = MongoError: No array filter found for identifier 'elem' in path 'experiments.$[elem].status'
+-- changed code now have
+error when updating sequence err = MongoError: The path 'experiments' must exist in the document in order to apply array updates.
+-- nice, it now updates, and fixing this also fixed the issue where it only ran 2/5 - it now runs all five
+-- bunch of outstanding issues
+-- 1 - need a quick way on the UI to delete junk results; there are lots of them now. also delete settings?
+-- 2 - there is no title on the results, just has 'undefined' (this tho is added after for graphing?)
+-- 3 - it has object Object instead of the interval number
+-- 4 - the time is wrong in the results Notes
+-- 5 - ideally would include the results id in the sequence experiments array, though this could be awk
+-- 6 - obvs need to extend the capabilities, i.e. not just repeat experiments but vary values each time or number of times
+-- 7 - need to store more info in the experiments array, like time started/finished
+-- 8 get the page/list to refresh after you add/change something 
+-- 9 need to also be able to delete sequences and settings
+-- create a new function to return datetime in a decent format that can be used everywhere (use mysql compatible string)
+
+-- Friyay 4th June 2021
+
+-- add delete feature
+
+-- was able to use code from the multi-graph function, can now select results and hit a 'delete selected results' button.
+-- test another sequence
+
+-- Tuesday 8th, need to get back into it
+
+-- just start goign through the list of things to do
+
+-- main thing is to have ti not just repeat tests but vary properties in controllable ways
+-- might look at the sequencing part first, i.e. that if i run 5 then change the iterations to 8, it will end up running 5,4,3,2,1,3,2,1 or something
+
+-- adding a new sequence screws up the json.. i fixed this for the update. fix this first
+
+-- Wednesday 9th, need to put in some solid hours
+-- test adding a new sequence
+-- getDateTime missing from sequences.js
+-- add still fails, JOI error on the Node end
+-- ok, adding and updating now works
+-- add a delete option
+-- added button, function, new app.js endpoint, but it doesn't run, seemsw to go awol when it gets to node.
+-- huh, it is deleting a sequence, just not clear from the front end
+-- had tp clean up the messagin but it now deletes multiple sequences... need to get it to refresh after they are deleted?
+-- now refreshes the list, need to do this when adding as well?
+-- fine, refreshes
+-- got the list to also refresh when deleting results
+
+-- example of how I might store sequence option variations:
+"sequence_options" : {
+        "iterations" : 5,
+        "active" : 1,
+		"variations" : [
+			{
+			"iterations" : [5,4,3,2,1],
+			"type" : "rider",
+			"rider_no" : 0,
+			"property" : "threshold_power",
+			"values" : [200,300,400,500,600,]
+			},
+			{
+			"iterations" : [5,4,3,2,1],
+			"type" : "rider",
+			"rider_no" : 0,
+			"property" : "max_power",
+			"values" : [800,900,1000,1100,1200]
+			},
+		]
+}
+
+-- but first I have to get the iteration numbers solid... i.e. when running one you need to find the next highest one left to run and not just look at the length... e.g. if n = 5 and 3,1,4 are done, run 5, then 2
+
+-- cool, so I got it to create an array of 0 and 1s for the iterations, initialised all to 0, and looped through the experments using the iteration in each to update the corresponding array 0 to a 1...this means you only have to go through the experiments once and can find the highest undone iteration by starting at the end of the array and working back until you hit a zero.
+
+-- so, will have to send the variations to the GA somehow, as it will have to load the settings, THEN apply these... look at extracting and logging them first.
+
+-- Thursday 10th. 
+
+-- at least get the settings to the ga part.. could actually apply them after it reads the settings from the text box and before it runs the race... but it needs to be clearly shown what variation was being run
+-- update the titles on the pages
+
+-- added code but doesn't look like it works yet, no crashin just not logging any variation text.
+
+-- fixed issue with seq_noes being used instead of notes
+
+-- bug- 3/3 experiment in sequence is not ruuning,  or at leas ts results are not being saved
+
+-- Friday 11th
+
+-- test the new feature again (wasn't working)
+-- defo not saving the 3/3 result, which is the first one that should run. warum?
+-- time and date are wrong in experiments inside sequences
+-- 2/2 doesn't save either
+-- ooh, found a bug, had accidentally written the rider variation code in the wrong if/else block
+-- ok, seemed to run, at least the console logs now print
+-- need to fix the bug whereby the first test doesn't run
+-- maybe need to cancel the timer whenever it finds an active sequence? it seems that the 2nd experiment is kickign off before the first one returns.
+-- huh, maybe I just need to move this line
+    //assign that iteration to this client and run the experiment
+            sequence_experiment_underway = 1;
+-- hmm.. issue is that the timer gets kicked off again because that line is inside an sync return so the code blitzes on 
+-- need to set sequence_experiment_underway = 1; at the very beginning and then set it back to 0 if no active sequence is found or an iteration is fully run
+-- could probably move the timer call entirely to those 2 positions:
+A: check for free iteration in active sequence:
+	if found
+		run iteration
+		save results
+		goto A
+	else
+		wait for a period
+		gotoA (check again)
+-- note if there are errors when trying to run an iteration the client will stop checking to run another... makes sense tho no?
+-- huh, do I not have to either go through ALL active sequences or set active to 0 when no free iterations are found (so it will then find the next active sequence)?
+-- second option seems better no? that's another call tho
+-- do it- another fetch to update the sequence
+-- some progress, now runs 1/2 and 2/2/, but crashes late on when trying to deactivate the sequence... 
+ga.js:1123 POST http://127.0.0.1:3003/deactivate_sequence/0 400 (Bad Request)
+id given is 0... what if there is no active sequence? i.e. should only try to deactivate if a genuine sequence has been returned (that has no iteration to run)
+-- forgot to restart node
+-- still getting
+POST http://127.0.0.1:3003/deactivate_sequence/60c09021a171a41e28d0e8ff 400 (Bad Request)
+no error or log in the node console... something wrong with the fetch?
+-- still a 400. maybe because the request body is {} ?
+-- ah wait, does that data not jsut need to be a string?
+-- yup, now runs BUT the sequence is not being deactivated :-( somethign up with the update?
+-- ah, I need sequence_options.active not just active
+
+-- Monday 14th
+-- start testing sequences again
+-- create two active sequences and see do both run, I think it was just running one last time I checked
+-- had to rerun, bad optins syntax
+-- 2nd 3 tests not saved
+-- huh... looks like it returns 2 active sequences in the loop that goes through results from getOldestActiveSequenceDetails. I thought this only returned 1 value? It looks like when you try to run multiple tests here parts do run but the setting of the global vars gets confused and some are not saved.
+-- try limiting the rows returned and also limiting the loop to 1 ?
+-- added a .limit() 
+-- too madly distracted why?
+-- that seems to have gotten it to roll again
+-- set up a longer batch where the first rider power starts low and ends high
+
+-- ran a big batch of 20, they ran but it doesn't look like the variations are actually being applied.
+-- yeah defo not picking them up... i suspect it is reading the settings from the db and not appling those changes? Could move the changes application to inside the runGA() and not apply them beforehand?
+-- it does look like the ga applies the settings from the input box... maybe build a test with one iteration?
+-- looks like the variation is not actually applied to the data before it is plugged into the textarea after all
+-- is this line failing?
+data[0].rider_settings[0]['threshold_power'] = 800
+-- maybe the format of
+  data[0].rider_settings[v_details.rider_no][v_details.property] = v_details.value;
+ let data = []
+ r = {rider_settings:[{threshold_power:300}]}
+ data.push(r)
+let v_details = {rider_no:0, property:'threshold_power',value:800}
+-- works when I test this snippet... so is it failing?
+-- huh, so I parsed it, updated it, then stringified it back, and it now seems to wurk
+-- delete those 50 tests from yesterday
+
+idea: take out the idea of distinct generations where fitness can be globally counted
+in real life generations are blurry as people of all ages exist at once
+but in biology fitness IS the reproduction rate, or directly links to it.
+in gas we run a generatoin then rank afterards from a global view
+could have a local view where each agent can see its neighbours only and reproduces if it does well relative to them.
+each agent will have a different set of neighbours
+each agent will have a lifespan, could be fixed or random... fitness is not actually social, so only needs to be calculated once... 
+population size needs to be limited so that it doesn't explode or shrink too much
+
+-- Munday 28th 6
+
+-- need to finish that paragraph with a sentence and reference for each of the 4 main strands of evolutionary computation
+
+-- piece that may be wort reading - David B. Fogoel, The advantages of Evolutionary Computation https://books.google.ie/books?hl=en&lr=&id=TR7QDgAAQBAJ&oi=fnd&pg=PA1&dq=fogel+evolutionary+computation&ots=vsfUDh-JpV&sig=3E-olgWqvZMB5JhonfBFXwHa1bw&redir_esc=y#v=onepage&q=fogel%20evolutionary%20computation&f=false
+
+Koza's Genetic Programming book is here: https://books.google.ie/books?hl=en&lr=&id=Bhtxo60BV0EC&oi=fnd&pg=PR11&dq=genetic+programming&ots=9rcRlwa4LN&sig=2r8qkh1_vBhCISGxQM20BYkYKKc&redir_esc=y#v=onepage&q=genetic%20programming&f=false
+
+'fitness begets structure'
+
+-- Wed 7/7
+
+-- need to add references to work on sport with AI
+
+-- googd paper from 2007 looking at what makes swimmers faster, could be used top predict the potential/expected times of swimmers
+@article{silva2007use,
+  title={The use of neural network technology to model swimming performance},
+  author={Silva, Ant{\'o}nio Jos{\'e} and Costa, Aldo Manuel and Oliveira, Paulo Moura and Reis, Victor Machado and Saavedra, Jos{\'e} and Perl, Jurgen and Rouboa, Abel and Marinho, Daniel Almeida},
+  journal={Journal of sports science \& medicine},
+  volume={6},
+  number={1},
+  pages={117},
+  year={2007},
+  publisher={Dept. of Sports Medicine, Medical Faculty of Uludag University}
+}
+
+-- predicting football winners in Iranian league 
+@article{arabzad2014football,
+  title={Football match results prediction using artificial neural networks; the case of Iran Pro League},
+  author={Arabzad, S Mohammad and Tayebi Araghi, ME and Sadi-Nezhad, S and Ghofrani, Nooshin},
+  journal={Journal of Applied Research on Industrial Engineering},
+  volume={1},
+  number={3},
+  pages={159--179},
+  year={2014},
+  publisher={Ayandegan Institute of Higher Education, Iran}
+}
+
+
+C:\Users\Donal\Documents\Projects
+
+-- 20th July, tuesday
+
+-- link citations to their references
+\usepackage[colorlinks,citecolor=red,urlcolor=blue,bookmarks=false,hypertexnames=true]{hyperref} 
+-- does add links tho they seem to all just jump to the references page
+
+-- improve the colours and ui of the race (for colour blind support)
+
+-- can't use white against a light background (e.g. in line graphs). soooo. maybe if I don't overlay text over it in the main graphic? could just show a circle of that colour next to the text? could use dark colours then, and they would also work in the graph
+
+-- replace that first image
+
+-- ages of course. now need to replace the figure references across the board :-( 
+
+-- maybe i can better centre things with
+ \includegraphics[width=1\textwidth]{fatigue_500_1200_20_50_100_fE2.png}
+ 
+captions still don't seem to centre that well. added then removed a centering option, and lengthened a couple of the captions. looking at a sample paper as a guide. 
+
+-- thursday 22nd. still at paper.
+-- need to get graphs to all look consistent. the Excel ones are not the same as the D3 ones. 
+-- try to add grid lines to the D3 and make it look more like the Excel. But can I even redraw those ones?
+
+-- almost works following https://www.essycode.com/posts/adding-gridlines-chart-d3/ BUT the top horizontal grid line is black not gray... odd
+
+-- issue seems to be an extra path being added, .ike an extra axis but top instead of bottom. why?
+<path class="domain" stroke="#000" d="M0.5,6V0.5H560.5V6"></path>
+-- move legends to try copy the excel.
+-- think the font shoudl be arial?
+
+oneWeakgen_50_best_2020-8-10_12-38.png
+
+-- friday 23. failed to finish the updates yesterday, got stuck on the images/graphs.
+
+-- wednesday september 22nd
+
+-- add line styles and line style segments to the legends : need to redo most of the graphs
+-- get good color blind palette
+-- this page has a 5 colour one that it references as IBM
+https://davidmathlogic.com/colorblind/#%23648FFF-%23785EF0-%23DC267F-%23FE6100-%23FFB000
+rider 1 #648FFF
+rider 2 #785EF0
+rider 3 #DC267F
+rider 4 #FE6100
+rider 5 #FFB000
+
+-- need to update existing results in mongo to be able to see these?
+-- yup, this works but need to update all of the latest results (that I need to graph)
+
+-- get the last 20 results from the db
+db.getCollection('experiment_results').find({}).sort({_id:-1}).limit(20);
+
+

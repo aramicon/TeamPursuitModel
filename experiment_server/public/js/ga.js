@@ -9,6 +9,7 @@ let sequences_mode = 0; //mode switch to run or not run sequences
 let sequence_experiment_underway = 0;
 let sequence_selected_seq_id = 0;
 let sequence_selected_iteration = 0;
+let sequence_iteration_variations = []; //used to apply variations to a sequence experiment
 
 let rider_power_data = [];
 
@@ -71,7 +72,7 @@ function run_single_race(){
     let singleRaceWorker = new Worker("js/race_function_no_vis.js");
     let start_time = 0;
     singleRaceWorker.onmessage = function(e) {
-      let end_time = new Date().getTime();
+      let end_time = getDateTime();
       let result = e.data;
       console.log('Single race result = ' + JSON.stringify(result) + ' at ' + end_time);
 
@@ -121,51 +122,51 @@ function run_ga(callback_func){
         console.log("@sequences_mode: browser_client_id " + browser_client_id+ " sequence_selected_seq_id " + sequence_selected_seq_id + " sequence_selected_iteration " + sequence_selected_iteration);
         if (browser_client_id && sequence_selected_seq_id && sequence_selected_iteration){
 
-        console.log("@sequences_mode: save results");
-        saveResults();
-        //update the experiment details (again)
-        console.log("@sequences_mode:update sequence info");
-        serverURL = 'http://127.0.0.1:3003/update_sequence_iteration/'+sequence_selected_seq_id;
+          console.log("@sequences_mode: save results");
+          saveResults();
+          //update the experiment details (again)
+          console.log("@sequences_mode:update sequence info");
+          serverURL = 'http://127.0.0.1:3003/update_sequence_iteration/'+sequence_selected_seq_id;
 
-        $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
+          $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
 
-        let dataObject = {
-          "client_id":browser_client_id,
-          "iteration":sequence_selected_iteration
-        };
-        fetch(serverURL,{
-          method : 'post',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          mode : 'cors',
-          body : JSON.stringify(dataObject)
-        }).then((response)=>{
-          console.log(response);
-          return response.json();
-          if (!response.ok) {
-            throw Error(response.statusText);
-          }
-        }).then((data)=>{
-          console.log('@sequences_mode: updated sequence after running experiment, data ' + JSON.stringify(data));
+          let dataObject = {
+            "client_id":browser_client_id,
+            "iteration":sequence_selected_iteration
+          };
+          fetch(serverURL,{
+            method : 'post',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            mode : 'cors',
+            body : JSON.stringify(dataObject)
+          }).then((response)=>{
+            console.log(response);
+            return response.json();
+            if (!response.ok) {
+              throw Error(response.statusText);
+            }
+          }).then((data)=>{
+            console.log('@sequences_mode: updated sequence after running experiment, data ' + JSON.stringify(data));
 
-          //finished running and it ran ok, can now look to do another experiment
-          console.log("@sequences_mode: restart the check_for_sequences timer");
-          sequence_experiment_underway = 0;
-          setTimeout(check_for_sequences, 10.0*1000);
+            //finished running and it ran ok, can now look to do another experiment
+            console.log("@sequences_mode: restart the check_for_sequences timer");
+            sequence_experiment_underway = 0;
+            setTimeout(check_for_sequences, 10.0*1000);
 
-          $("#database_connection_label").html("<strong>Updated Settings "+data.value.name+"</strong> | _id | <span id = 'settings_id'>"+data.value._id + "</span>");
+            $("#database_connection_label").html("<strong>Updated Settings "+data.value.name+"</strong> | _id | <span id = 'settings_id'>"+data.value._id + "</span>");
 
-        }).catch((error) => {
-          console.log("@sequences_mode: Error updating sequence after running experiment (on experiment server)");
-          $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
-          console.log(error)
-        });
-        //reset globals, should these be outside the fetches?
-        sequence_selected_seq_id = 0;
-        sequence_selected_iteration = 0;
+          }).catch((error) => {
+            console.log("@sequences_mode: Error updating sequence after running experiment (on experiment server)");
+            $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
+            console.log(error)
+          });
+          //reset globals, should these be outside the fetches?
+          sequence_selected_seq_id = 0;
+          sequence_selected_iteration = 0;
+        }
       }
-    }
 
 
     }
@@ -189,6 +190,9 @@ function run_ga(callback_func){
           chosen_rider_settings = current_settings_rider;
         }
 
+        console.log("****Rider settings before GA is run****");
+        console.log(JSON.stringify(current_settings_rider));
+
 
         gaWorker.postMessage(["run_ga",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
         start_time =  new Date().getTime();
@@ -207,6 +211,7 @@ function run_ga(callback_func){
 
   //if a callback funciton was sent, run it
   if(callback_func){
+    console.log("## RUN CALLBACK FUNCTION ##");
     callback_func();
   }
 }
@@ -232,7 +237,7 @@ function build_results_table(ga_results){
   }
   results_html += "</table>";
 
-  console.log(results_html);
+  //console.log(results_html);
 
   $("#race_result").html(results_html);
 
@@ -488,7 +493,7 @@ const  saveResults = () => {
       "rider_settings":current_settings_rider,
       "name":$("#new_settings_name").val(),
       "notes": notes,
-      "date_created": new Date()
+      "date_created": getDateTime()
     };
     let jsonToSendS = JSON.stringify(dataToSend);
 
@@ -744,9 +749,8 @@ const saveGraphAsPng = () => {
   console.log("try to save the graph as a PNG");
 
   //generate a useful name
-  let d = new Date();
 
-  let image_filename =  "power_graph_sim_" +  d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate() + "_" + d.getHours() + "-" + d.getMinutes();
+  let image_filename =  "power_graph_sim_" + getDateTime("nospace");
 
   // Get the d3js SVG element and save using saveSvgAsPng.js
   saveSvgAsPng(document.getElementsByTagName("svg")[0], image_filename, {scale: 2, backgroundColor: "#FFFFFF"});
@@ -844,9 +848,7 @@ const setClientID = () => {
       console.log("calling gd.geobytes.com to get IP address")
       console.log(JSON.stringify(data, null, 2));
 
-      let d = new Date();
-      let dstring = d.getFullYear()+"_" + (d.getMonth()+1) + "_" + d.getDate() + "_" + d.getHours()+"_" + d.getMinutes() + "_" + d.getSeconds();
-
+      let dstring = getDateTime();
       let new_id = data['geoplugin_request'] + "_" + data['geoplugin_city'] + "_" + data['geoplugin_countryCode'] + "_" + getBrowserType() + "_" + dstring;
       console.log('new id is ' + new_id);
       //save to sessionStorage
@@ -866,139 +868,322 @@ const check_for_sequences = () => {
     //console.log('active sequence data ' + JSON.stringify(data));
 
     //need to find out if there are unrun experiments in any sequence
+    //if there is no active sequence we wait and check again later
+    if (data.length == 0){
+      if(sequences_mode==1 && sequence_experiment_underway==0){ //check again after some time period
+      setTimeout(check_for_sequences, 10.0*1000);
+      }
+    }
+    else{
+      //should be only 1 sequence returned
+      console.log("@sequences " + data.length + " active sequences returned");
+      for(let i = 0;i< data.length; i++){
+        let seq_details = data[i];
+        let seq_id = seq_details._id;
+        let seq_settings_id = seq_details.settings_id
+        let seq_name = seq_details.sequence_name;
+        let seq_notes = seq_details.notes;
+        console.log("**Check active sequence " + seq_id);
+        let found_experiment_to_run = 0;
 
-    for(let i = 0;i< data.length; i++){
-      let seq_details = data[i];
-      let seq_id = seq_details._id;
-      let seq_settings_id = seq_details.settings_id
-      let seq_name = seq_details.sequence_name;
-      let seq_notes = seq_details.seq_notes;
-      console.log("**Check active sequence " + seq_id);
-      let found_experiment_to_run = 0;
+        if(seq_details.sequence_options){
+          if (seq_details.sequence_options.iterations){ //how many should be run?
+            let total_iterations = seq_details.sequence_options.iterations;
+            console.log("found active sequence with " +  total_iterations + " iterations");
 
-      if(seq_details.sequence_options){
-        if (seq_details.sequence_options.iterations){ //how many should be run?
-          let total_iterations = seq_details.sequence_options.iterations;
-          console.log("found active sequence with " +  total_iterations + " iterations");
+            let iterations_run_or_running = 0;
+            let selected_iteration = total_iterations;
 
-          let iterations_run_or_running = 0;
-          let selected_iteration = 0;
-
-          if(seq_details.sequence_options.experiments){
-            iterations_run_or_running = seq_details.sequence_options.experiments.length;
-          }
-          //is there an iteration left to run?
-          console.log(iterations_run_or_running + " iterations are run or running, out of total " + total_iterations);
-          if(iterations_run_or_running < total_iterations){
-            //there is at least one left to run
-            selected_iteration = (total_iterations-iterations_run_or_running);
-            console.log(" run iteration " + selected_iteration);
-
-            //assign that iteration to this client and run the experiment
-            sequence_experiment_underway = 1;
-
-            //update the sequence settings
-            let serverURL = 'http://127.0.0.1:3003/assign_sequence_iteration/'+seq_id;
-
-            $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
-
-            let experiment_iteration = {
-              "client_id":browser_client_id,
-              "iteration":selected_iteration,
-              "status":"active"
-            };
-            //need to add this to the experiments object
-            let experiments = []
-            if (iterations_run_or_running > 0){
-              experiments = seq_details.sequence_options.experiments;
+            if(seq_details.sequence_options.experiments){
+              iterations_run_or_running = seq_details.sequence_options.experiments.length;
             }
-            experiments.push(experiment_iteration);
+            //is there an iteration left to run?
+            console.log(iterations_run_or_running + " iterations are run or running, out of total " + total_iterations);
+            if(iterations_run_or_running < total_iterations){
+              //there is at least one left to run
+              //go through what is already run and select the highest undone iteration
 
-            fetch(serverURL,{
-              method : 'post',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              mode : 'cors',
-              body : JSON.stringify(experiments)
-            }).then((response)=>{
-              console.log(response);
-              return response.json();
-              if (!response.ok) {
-                throw Error(response.statusText);
+              //don't want the timer to run again until this iteration is run and saved
+              sequence_experiment_underway = 1;
+
+              // create an empty list
+              let all_iterations = [];
+              for (let i = 0; i< total_iterations; i++){
+                all_iterations.push(0);
               }
-            }).then((data)=>{
-              console.log('data ' + JSON.stringify(data));
+              //now go through the run ones
+              if(seq_details.sequence_options.experiments){
+                for (let i = 0; i < seq_details.sequence_options.experiments.length; i++){
+                  if(seq_details.sequence_options.experiments[i].iteration){
+                    let iteration_run = seq_details.sequence_options.experiments[i].iteration;
+                    console.log("found iteration " + iteration_run);
+                    all_iterations[iteration_run-1] = 1;
+                  }
+                }
+                console.log("all iterations after checking experiments run " + all_iterations);
+                //find the highest unrun iteration
+                for (let i = (total_iterations-1); i >= 0; i--){
+                  if (all_iterations[i] == 0){
+                    selected_iteration =i+1;
+                    break;
+                  }
+                }
+              }
+              //selected_iteration = (total_iterations-iterations_run_or_running);
+              console.log(" run iteration " + selected_iteration);
 
-              //$("#database_connection_label").text("setting updated");
-              $("#database_connection_label").html("<strong>Updated Settings "+data.value.name+"</strong> | _id | <span id = 'settings_id'>"+data.value._id + "</span>");
+              //now need to check for any variations that apply to this iteration
+              sequence_iteration_variations = [];
+              if(seq_details.sequence_options.variations){
+                let variations = seq_details.sequence_options.variations;
+                console.log("variations found " + JSON.stringify(variations));
+                //this shuld contain an array
+                if (variations.length){
+                  if (variations.length > 0){
+                    for(let i = 0; i < variations.length; i++){
+                      if(variations[i].iterations){
+                        if (variations[i].iterations.indexOf){
+                          let found_iteration_position = variations[i].iterations.indexOf(selected_iteration)
+                          if(found_iteration_position >= 0){
+                            console.log("This iteration contains a variation that must be sent to the GA at position " + found_iteration_position);
+                            console.log(JSON.stringify(variations[i]));
+                            let variation_to_send = {};
+                            if(variations[i].type && variations[i].property && variations[i].values){
+                              variation_to_send.type = variations[i].type;
+                              variation_to_send.property = variations[i].property;
+                              //console.log("variation of type " + variation_to_send.type + " property " + variation_to_send.property );
+                              if (variations[i].type == "rider"){
+                                variation_to_send.rider_no = variations[i].rider_no;
+                              }
+                              if(found_iteration_position >= 0 && found_iteration_position < variations[i].values.length){
+                                variation_to_send.value = variations[i].values[found_iteration_position];
+                                sequence_iteration_variations.push(variation_to_send);
+                              }
+                            }
+                            else{
+                              console.log("Variation is missing type, property, or values");
+                            }
+                          }
+                        }
+                        else{
+                          console.log("Variation iterations has NO indexOf property, ");
+                        }
+                      }
+                    }
+                  }
+                  else{
+                    console.log("VARIATIONS ARRAY EMPTY");
+                  }
+                }
+                else{
+                  console.log("VARIATIONS WRONG FORMAT?");
+                }
+              } //end of variation checking
+              if(sequence_iteration_variations.length > 0){
+                console.log("Variations to send**");
+                console.log(sequence_iteration_variations);
+              }
+              else{
+                console.log("No variations for this iteration")
+              }
 
 
-              //run the actual experiment now
-              //first need to get the settings
+              //update the sequence settings
+              let serverURL = 'http://127.0.0.1:3003/assign_sequence_iteration/'+seq_id;
 
-              //make a call to get the settings
-              serverURL = 'http://127.0.0.1:3003/getExperimentSettingFromID/' + seq_settings_id;
-              console.log("run experiment, get settings, fetch from " + serverURL);
+              $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
 
-              fetch(serverURL,{method : 'get'}).then((response)=>{
-                return response.json()
+              let experiment_iteration = {
+                "client_id":browser_client_id,
+                "iteration":selected_iteration,
+                "status":"active"
+              };
+              //need to add this to the experiments object
+              let experiments = []
+              if (iterations_run_or_running > 0){
+                experiments = seq_details.sequence_options.experiments;
+              }
+              experiments.push(experiment_iteration);
+
+              fetch(serverURL,{
+                method : 'post',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                mode : 'cors',
+                body : JSON.stringify(experiments)
+              }).then((response)=>{
+                console.log(response);
+                return response.json();
+                if (!response.ok) {
+                  throw Error(response.statusText);
+                }
               }).then((data)=>{
-                console.log('get experiment settings, data ' + JSON.stringify(data));
-                //console.log('data ' + JSON.stringify(data[0].global_settings) );
-                console.log('Run experiment: load settings');
-                $("#global_settings").val(data[0].global_settings);
-                $("#race_settings").val(data[0].race_settings);
-                $("#rider_settings").val(data[0].rider_settings);
-                $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id + "</span>");
-                $("#new_settings_name").val(data[0].name);
-                //set the id (global)
-                selected_settings_id = data[0]._id;
-                //populateNamesDropdown(data);
+                console.log('data ' + JSON.stringify(data));
 
-                //need to select the settings value in the dropdown box
-                //weird mix of UI and other stuff here, yikes
-                let element = document.getElementById("experiment_names");
-                element.value = seq_settings_id;
+                //$("#database_connection_label").text("setting updated");
+                $("#database_connection_label").html("<strong>Updated Settings "+data.value.name+"</strong> | _id | <span id = 'settings_id'>"+data.value._id + "</span>");
 
-                $("#save_results_notes").val("Experiment interval " + experiment_iteration + " of " + total_iterations + " sequence " + seq_id + " " + seq_name + " " + seq_notes);
+                //run the actual experiment now
+                //first need to get the settings
+                //make a call to get the settings
+                serverURL = 'http://127.0.0.1:3003/getExperimentSettingFromID/' + seq_settings_id;
+                console.log("run experiment, get settings, fetch from " + serverURL);
 
-                //run the ga, try to send the rest of the code as a callback
-                //need to set variables to be able to update/save after running the GAS (asynchronous as heck)
-                sequence_selected_seq_id = seq_id;
-                sequence_selected_iteration = selected_iteration;
-                run_ga();
-                //note the GA uses web workers, and when this returns you need to triger it to save results automatically and update the sequence info
+                fetch(serverURL,{method : 'get'}).then((response)=>{
+                  return response.json()
+                }).then((data)=>{
+                  //console.log('get experiment settings, data ' + JSON.stringify(data));
+                  //console.log('data ' + JSON.stringify(data[0].global_settings) );
+
+                  //need to apply any variations if they exist
+                  let sequence_variations_info = "";
+                  console.log('Variation: Check for variations');
+                  if(sequence_iteration_variations.length > 0){
+
+                    //data[0].rider_settings and data[0].global_settings are STRINGs, so need to convert it to an object, modify it as needed, then change it back to a string
+
+                    let globalSettingsObject = JSON.parse(data[0].global_settings);
+                    let riderSettingsObject = JSON.parse(data[0].rider_settings);
+
+                    for(let i = 0; i < sequence_iteration_variations.length; i++){
+                      console.log('Variation: Process variation ' + (i+1) + " of " + sequence_iteration_variations.length );
+
+                      let v_details = sequence_iteration_variations[i];
+                      console.log(JSON.stringify(v_details));
+                      if(v_details.type == "global"){
+                        //adjust a global setting to the given value
+                        console.log("Variation: update global property " + v_details.property + " to " + v_details.value);
+
+                        try {
+                        globalSettingsObject[v_details.property] = v_details.value;
+                          sequence_variations_info += "Global variation: " + v_details.property + " = " + v_details.value + "||";
+                        }
+                        catch(err) {
+                          alert("Variation:error applying global variation " + JSON.stringify(v_details) + "  ---  " + err.message);
+                        }
+                      }
+                      else if (v_details.type == "rider"){
+                        //this is a rider prop so need to specify the actual rider
+                        if(v_details.rider_no >= 0){
+                          console.log("Variation: update rider " + v_details.rider_no + " property " + v_details.property + " to " + v_details.value);
+                          try {
+                          riderSettingsObject[v_details.rider_no][v_details.property] = v_details.value;
+                            sequence_variations_info += "Rider " + v_details.rider_no + " variation: " + v_details.property + " = " + v_details.value + "||";
+                            console.log("#### riderSettingsObject["+v_details.rider_no+"]['"+v_details.property+"'] = " + v_details.value);
+                          }
+                          catch(err) {
+                            alert("Variation:error applying rider variation " + JSON.stringify(v_details) + "  ---  " + err.message);
+                          }
+                        }
+                        else{
+                          console.log("Variation: error, rider variation has no number");
+                        }
+                      }
+                      else{
+                        console.log("Variation: invalid variation type " + v_details.type);
+                      }
+                    }
+                    //empty the global variations array
+                    sequence_iteration_variations = [];
+                    data[0].global_settings = JSON.stringify(globalSettingsObject);
+                    data[0].rider_settings = JSON.stringify(riderSettingsObject);
+
+                  }
+                  else{
+                    console.log("Variation: No variations to run")
+                  }
+                  console.log('Run experiment: load settings');
+                  //console.log("#### rider settings before applying");
+                  //console.log(JSON.stringify(data[0].rider_settings));
+                  $("#global_settings").val(data[0].global_settings);
+                  $("#race_settings").val(data[0].race_settings);
+                  $("#rider_settings").val(data[0].rider_settings);
+                  $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id + "</span>");
+                  $("#new_settings_name").val(data[0].name);
+                  //set the id (global)
+                  selected_settings_id = data[0]._id;
+                  //populateNamesDropdown(data);
+
+                  //need to select the settings value in the dropdown box
+                  //weird mix of UI and other stuff here, yikes
+                  let element = document.getElementById("experiment_names");
+                  element.value = seq_settings_id;
+
+                  $("#save_results_notes").val("Experiment interval " + selected_iteration + "/" + total_iterations + " sequence " + seq_id + " " + seq_name + " " + seq_notes + "||" + sequence_variations_info);
+
+                  //run the ga, try to send the rest of the code as a callback
+                  //need to set variables to be able to update/save after running the GAS (asynchronous as heck)
+                  sequence_selected_seq_id = seq_id;
+                  sequence_selected_iteration = selected_iteration;
+                  run_ga();
+                  //note the GA uses web workers, and when this returns you need to triger it to save results automatically and update the sequence info
 
 
+                });
+
+              }).catch((error) => {
+                console.log("Error updating settings on experiment server");
+                $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
+                console.log(error)
               });
 
-            }).catch((error) => {
-              console.log("Error updating settings on experiment server");
-              $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
-              console.log(error)
-            });
+            }
+            else{
+              //no iteration left to do found, update this sequence to active=0, wait and check again later for a different sequence
 
+
+              serverURL = 'http://127.0.0.1:3003/deactivate_sequence/'+seq_id;
+
+              console.log("@sequences_mode:deactivate sequence url " + serverURL);
+
+              $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
+
+              fetch(serverURL,{
+                method : 'post',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                mode : 'cors',
+                body : ''
+              }).then((response)=>{
+                console.log(response);
+                return response.json();
+                if (!response.ok) {
+                  throw Error(response.statusText);
+                }
+              }).then((data)=>{
+                console.log('@sequences_mode: deactivated sequence after finding no iteration to run, data ' + JSON.stringify(data));
+
+              }).catch((error) => {
+                console.log("@sequences_mode: Error deactivating sequence");
+                $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error);
+                console.log(error);
+              });
+
+              //check again after a wait period
+              if(sequences_mode==1 && sequence_experiment_underway==0){ //check again after some time period
+                setTimeout(check_for_sequences, 10.0*1000);
+              }
+            }
+          }
+          else{
+            console.log("sequence has no iterations specified");
           }
         }
         else{
-          console.log("sequence has no iterations specified");
+          console.log("sequence has no sequence_options specified");
         }
-      }
-      else{
-        console.log("sequence has no sequence_options specified");
-      }
 
-    }//end of sequences loop
+      }//end of sequences loop
+    }
+
 
 
 
   });
 
 
-  if(sequences_mode==1 && sequence_experiment_underway==0){ //check again after some time period
-    setTimeout(check_for_sequences, 10.0*1000);
-  }
 }
 
 //function to handle sequence mode toggling
@@ -1011,6 +1196,21 @@ const toggleSequenceMode = (checkboxElem) =>{
     console.log("Sequence mode deactivated");
     sequences_mode = 0;
   }
+}
+
+const getDateTime = (format) => {
+  let t = new Date();
+  let datestring = "";
+  if (format=="nospace"){
+    dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate() + "-" + t.getHours() + "-" + t.getMinutes() + "-" + t.getSeconds();
+  }
+  else if (format=="notime"){
+    dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate();
+  }
+  else{
+    dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate() + " " + t.getHours() + ":" + t.getMinutes() + ":" + t.getSeconds();
+  }
+  return dateString;
 }
 
 

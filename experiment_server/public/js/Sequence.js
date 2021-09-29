@@ -8,6 +8,7 @@ let selected_seq_results = {};
 $(document).ready(function() {
   getSequences();
   getSettingNames();
+  d3.select("#deleteSelectedResults").on('click',deleteSelectedResults);
 });
 
 
@@ -111,7 +112,7 @@ const getSequences = () => {
      try {
        optionsObject = JSON.parse($("#sequence_form_options").val());
        //new_sequence_options = JSON.stringify(optionsObject);
-       //had been saving a strign but need to save a JSON object
+       //had been saving a string but need to save a JSON object
       } catch (error) {
         alert("ERROR parsing sequence settings \n\n" + error);
         console.log(error);
@@ -131,15 +132,13 @@ const getSequences = () => {
      }
 
      if (new_sequence_name.length > 0 && new_sequence_notes.length > 0 && validProps && selected_settings_id){
-       let t = new Date();
-     dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate() + " " + t.getHours() + ":" + t.getMinutes() + ":" + t.getSeconds();
 
      let dataToSend = {
            "sequence_name":new_sequence_name,
            "notes":new_sequence_notes,
            "settings_id":selected_settings_id,
            "sequence_options":optionsObject,
-           "date_updated":dateString
+           "date_updated":getDateTime()
            };
            let jsonToSendS = JSON.stringify(dataToSend);
 
@@ -173,11 +172,11 @@ const getSequences = () => {
 
         let new_sequence_name = $("#sequence_form_shortTitle").val();
         let new_sequence_notes = $("#sequence_form_notes").val();
-        let new_sequence_options = JSON.stringify($("#sequence_form_options").val());
+        let new_sequence_options = JSON.parse($("#sequence_form_options").val());
         let selected_settings_id = $('#experiment_names').val();
 
 
-        if (new_sequence_name.length > 0 && new_sequence_notes.length > 0 && new_sequence_options.length > 0){
+        if (new_sequence_name.length > 0 && new_sequence_notes.length > 0){
           let t = new Date();
         dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate() + " " + t.getHours() + ":" + t.getMinutes() + ":" + t.getSeconds();
         let dataToSend = {
@@ -185,8 +184,8 @@ const getSequences = () => {
                 "notes":new_sequence_notes,
                 "settings_id":selected_settings_id,
                 "sequence_options":new_sequence_options,
-                "date_created":dateString,
-                "date_updated":dateString
+                "date_created":getDateTime(),
+                "date_updated":getDateTime()
               };
       let jsonToSendS = JSON.stringify(dataToSend);
       console.log("jsonToSendS ", jsonToSendS);
@@ -212,6 +211,9 @@ const getSequences = () => {
         console.log("saved as new sequence with data " +  data.document._id);
         selected_sequence_id =data.document._id;
 
+        //refresh the list to show the new one
+        getSequences();
+
       }).catch((error) => {
         console.log("Error updating sequence on experiment server");
         $("#sequence_result_col").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
@@ -223,6 +225,67 @@ const getSequences = () => {
     alert("Cannot add new sequence: check that values are provided")
   }
 
+  }
+
+  const deleteSelectedResults = () => {
+    //does exactly what it sez on the tin
+    //check what rows been selected -- need to have something checked
+    console.log("delete selected results");
+    let selectedIDs = [];
+
+    $("input:checkbox[name=results_checkbox]:checked").each(function(){
+      selectedIDs.push($(this).val());
+    });
+
+    let no_of_selected_ids = selectedIDs.length;
+
+    if (no_of_selected_ids <= 0){
+      $("#sequence_result_col").html("No sequences selected (click 1+ checkboxes)");
+    }
+    else{
+
+      let serverURL = 'http://127.0.0.1:3003/deleteSelectedSequences/' + JSON.stringify(selectedIDs);
+      $("#sequence_result_col").html("Attempting to connect to "+serverURL+" to delete selected sequences</a>");
+      fetch(serverURL,{method : 'post'}).then((response)=>{
+        console.log(response);
+        return response.json();
+        if (!response.ok) {
+          throw Error(response.statusText);
+        }
+      }).then((data)=>{
+        console.log(" sequences removed");
+        console.log(data);
+        let count = 0;
+        if(data.deletedCount){
+            count = data.deletedCount;
+        }
+          $("#sequence_result_col").text(count + " sequences removed ");
+          //refresh the main list
+          getSequences();
+
+    }).catch((error) => {
+      console.log("Error loading data from server (deleting sequences)");
+      $("#sequence_result_col").text("ERROR CONNECTING TO SERVER " + error);
+      console.log(error);
+    });
+
+
+  }
+  }
+
+  const getDateTime = (format) => {
+    let t = new Date();
+    let datestring = "";
+    if (format=="nospace"){
+      dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate() + "-" + t.getHours() + "-" + t.getMinutes() + "-" + t.getSeconds();
+    }
+    else if (format=="notime"){
+          dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate();
+    }
+    else{
+      dateString = t.getFullYear() + "-" + (t.getUTCMonth()+1) + "-" + t.getUTCDate() + " " + t.getHours() + ":" + t.getMinutes() + ":" + t.getSeconds();
+  }
+  return dateString;
   }
 
   const populateNamesDropdown = (data) => {

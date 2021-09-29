@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>Team Pursuit Results Browser</title>
+    <title>TP Results</title>
     <link rel="shortcut icon" type="image/jpg" href="images/favicon.png"/>
     <link rel="stylesheet" type = "text/css" href = "css/model3.css">
     <link rel="stylesheet" type = "text/css" href = "css/bootstrap.min.css">
@@ -47,7 +47,6 @@
           </nav>
         </div>
       </div>
-
       <div class="row">
         <div class="col-7">
             <h1>Team Pursuit Strategy Game GA Results</h1>
@@ -57,26 +56,23 @@
               <div id = "results_info_label" class="alert alert-primary">Checking Db connection to read results...</div>
           </div>
         </div>
-
       </div>
       <div class="row">
         <div class="col">
           <div id = "results_list" >-- no Results loaded yet... --</div>
         </div>
       </div>
-
       <div class="row">
         <div class="col">
             <p>
               <a class="btn btn-primary" data-toggle="collapse" href="#collapseResults" role="button" aria-expanded="false" aria-controls="collapseResults">
                   Show Loaded Results
                 </a>
+              <button type="button" class="btn btn-danger"  id = "deleteSelectedResults">Delete Selected Results</button>
             <div class="collapse" id="collapseResults">
               <div id = "race_result">-- no Results selected (click id) --</div>
             </div>
           </p>
-
-
         </div>
       </div>
       <div class="row">
@@ -99,9 +95,7 @@
             <option value = "best_fitness_robustness_check">Best Fitness Robustness (LINE)</option>
           </select>
           </div>
-
         <div class="col">
-
           <div class="form-group">
             <label for="select_graph_multi">Select a Multi-Results Graph</label>
             <select class="form-control" id="select_graph_multi" onchange = 'draw_multi_line_graph()'>
@@ -138,8 +132,6 @@
           </div>
         </div>
       </div>
-
     </div>
-
     </body>
 </html>

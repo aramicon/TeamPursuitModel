@@ -584,7 +584,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
     if (global_log_message && g == (number_of_generations-1) ){
       console.log("***BEST RACE GENERATION " + g + " LOG START***");
-      console.log(global_log_message_final);
+      //console.log(global_log_message_final);
     }
 
     stats_average_time = stats_total_time/population.length;
@@ -620,9 +620,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     generation_results.final_worst_race_instructions = final_worst_race_properties.instructions;
     generation_results.worst_race_time = final_worst_race_properties.time_taken;
 
-    console.log("final_worst_race_start_order" + JSON.stringify(final_worst_race_properties.start_order));
-    console.log("final_worst_race_instructions" + JSON.stringify(final_worst_race_properties.instructions));
-    console.log("worst_race_time" + JSON.stringify(final_worst_race_properties.time_taken));
+    //console.log("final_worst_race_start_order" + JSON.stringify(final_worst_race_properties.start_order));
+    //console.log("final_worst_race_instructions" + JSON.stringify(final_worst_race_properties.instructions));
+    //console.log("worst_race_time" + JSON.stringify(final_worst_race_properties.time_taken));
 
     generation_results.worst_race_instruction_noise_alterations = worst_race_instruction_noise_alterations;
 
