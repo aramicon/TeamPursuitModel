@@ -2722,4 +2722,165 @@ rider 5 #FFB000
 -- get the last 20 results from the db
 db.getCollection('experiment_results').find({}).sort({_id:-1}).limit(20);
 
+-- also update the ga rider settings (top few?)
 
+-- save the colours as an array in the JS to make it easier to apply/change there e.g. rider_colours[0]
+
+-- seems to work, now I need to set stroke-dasharray values for each. 1st can be solid
+-- maybe put these in an array as well to make em easier to access? rider_line_styles[0]
+
+-- much better. now need to apply these changes to the other places it draws graphs?
+-- example that works
+if (!jQuery.isEmptyObject(graph_data_5)){
+  //draw second line if data is given
+  svg.append("path")
+  .datum(graph_data_5.data)
+  .attr("fill", "none")
+  .attr("stroke", rider_colours[4])
+  .attr("stroke-width", 1.5)
+  .style("stroke-dasharray", rider_line_styles[4])
+  .attr("d", d3.line()
+  .x(function(d) { return x(d.x) })
+  .y(function(d) { return y(d.y) })
+);
+}
+for line and
+
+if (!jQuery.isEmptyObject(graph_data_5)){
+  svg.append("circle").attr("cx",450).attr("cy",-10).attr("r", 6).style("fill", rider_colours[4]);
+  svg.append("text").attr("x", 462).attr("y", -10).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  svg.append("line")//making a line for legend
+        .attr("x1", 450)
+        .attr("x2", 510)
+        .attr("y1", 4)
+        .attr("y2", 4)
+        .style("stroke-dasharray",rider_line_styles[4])
+        .style("stroke", rider_colours[4]);
+}
+
+for legend
+
+-- maybe also have a unique stroke-width for each? 
+rider_line_stroke_width[0]
+
+will need to do a bit of work on the multi-line multi-results graph, title is in the way for starts
+
+set the colours in the game and GA code as well. guess i will have to dupe the arrays 
+
+lagend labels intrude, too close, how do i put a fixed space between them?
+
+-- ok, so added some more dynamic code that seems to work ok, uses the number of characters in a label to space out the legend
+
+-- need to also put this in the multi-line one?
+
+-- multiline one needs work :-( might as well do that now.
+
+1: make it wider
+2: remove the title (put caption underneath in paper)
+3: move x/y labels outside the axes
+4: dynamically set the legend marker positions
+
+-- done. 
+-- bug, legend line segments can be hit by graph lines
+
+
+
+-- October 10th, 2021
+finish the fucking paper ok?
+
+replace the triple-image with a table (it is too small to see). need to compare strategies for different rider settings (add more power to one)
+
+-- all 400
+[[11,"effort=6.72"],[26,"drop=2"],[42,"drop=3"],[56,"drop=1"],[65,"drop=3"],[67,"effort=6.34"],[73,"drop=1"],[86,"drop=3"],[112,"drop=1"],[114,"drop=1"],[145,"drop=3"],[169,"drop=1"],[171,"drop=1"],[173,"drop=2"],[180,"effort=7.59"],[194,"drop=3"],[231,"drop=2"],[244,"drop=2"],[272,"effort=8.71"]]	
+effort:4
+drop: 15
+time on front: 17,21,39,23
+
+-- all 400 v2
+[[22,"drop=1"],[31,"drop=1"],[37,"effort=8.32"],[56,"drop=3"],[63,"drop=2"],[86,"drop=1"],[89,"drop=1"],[90,"drop=2"],[114,"drop=3"],[134,"drop=1"],[137,"drop=2"],[148,"drop=3"],[171,"drop=2"],[195,"drop=2"],[220,"drop=2"],[226,"drop=1"],[241,"effort=7"],[243,"drop=2"],[260,"drop=2"],[269,"effort=8.54"],[282,"drop=2"]]	
+effort:3
+drop:18
+time on front:28/25/18/29
+-- one rider gets droppped
+
+-- 1 at 440/1050, 3 at 400/1000
+[[1,"effort=6.31"],[44,"drop=2"],[72,"drop=3"],[87,"drop=2"],[109,"effort=5.79"],[120,"effort=1.32"],[122,"effort=6.21"],[137,"drop=3"],[170,"drop=1"],[190,"drop=3"],[209,"effort=6.46"],[218,"drop=3"],[231,"drop=3"],[256,"drop=1"],[262,"effort=9.42"],[273,"effort=7.52"],[275,"drop=3"]]
+effort: 7, drop: 10
+time on front: 48/21/19/12
+
+-- 3 at 400/1000, 1 at 480/1100
+[[35,"effort=6.06"],[224,"drop=1"],[238,"effort=7.95"],[248,"effort=9.31"],[250,"drop=3"],[257,"effort=8.690000000000001"],[273,"drop=2"]]
+effort:4,drop:3 
+time on front: 91,9,0,0
+
+
+-- 3 at 400/1000, 1 at 540/1200
+[[184,"effort=6.49"],[221,"effort=6.38"],[236,"drop=1"],[243,"drop=3"],[247,"effort=8.99"],[253,"effort=9.16"],[256,"drop=3"],[257,"drop=1"],[260,"drop=1"]]
+effort:4
+drop: 5
+time on front:97,0,0,3
+
+-- 1 rider at 1000/1600, 3 at 400/1000
+[[5,"drop=1"],[27,"drop=3"],[205,"drop=1"],[206,"effort=6.1"],[214,"drop=3"],[246,"effort=7.32"]]
+effort: 2, drop: 4
+time on front: 93,0,1,6
+
+
+
+
+-- Tuesday 12th of Octobee
+-- update the graphs for the robustness. does that code still run? 
+-- very slow to run with pop 3000 and 50 gens and robustness checks with 1000 variants on each gen.
+
+-- maybe I should run robustness tests with and without noise and see is there a difference there?
+
+-- try to set up and run a sequence for the noise
+"sequence_options" : {
+        "iterations" : 5,
+        "active" : 1,
+		"variations" : [
+			{
+			"iterations" : [5,4,3,2,1],
+			"type" : "global",			
+			"property" : "enable_instruction_noise_1_random",
+			"values" : [0,1,1,0,1]
+			},
+			{
+			"iterations" : [5,4,3,2,1],
+			"type" : "global",			
+			"property" : "noise_1_probability_instruction_delayed",
+			"values" : [0.3,0.3,1,0.3,0.3]
+			},
+			{
+			"iterations" : [5,4,3,2,1],
+			"type" : "global",			
+			"property" : "performance_failure_enabled",
+			"values" : [0,0,0,1,1]
+			}				
+		]
+}
+
+-- invalid JSON
+
+       {"iterations" : 5,
+        "active" : 1,
+		"variations" : [
+			{
+			"iterations" : [5,4,3,2,1],
+			"type" : "global",			
+			"property" : "enable_instruction_noise_1_random",
+			"values" : [0,1,1,0,1]
+			},
+			{
+			"iterations" : [5,4,3,2,1],
+			"type" : "global",			
+			"property" : "noise_1_probability_instruction_delayed",
+			"values" : [0.3,0.3,1,0.3,0.3]
+			},
+			{
+			"iterations" : [5,4,3,2,1],
+			"type" : "global",			
+			"property" : "performance_failure_enabled",
+			"values" : [0,0,0,1,1]
+			}			
+		]}

@@ -9,9 +9,9 @@ let selected_global_settings = {};
 let selected_race_settings ={};
 let selected_rider_settings = {};
 
-let rider_colours = ['#648FFF','#785EF0','#DC267F','#FE6100','FFB000'];
-let rider_line_styles = ['1,0','2, 1','5,3','12,3','20,3'];
-let rider_line_stroke_width = [1,1.5,2,2.5,3];
+let rider_colours = ['#648FFF','#785EF0','#DC267F','#FE6100','#FFB000'];
+let rider_line_styles = ['1, 0','2, 1','5,3','12,3','18,4'];
+let rider_line_stroke_width = [1,1.5,2,2.5,2.8];
 
 const saveGraphAsPng = () => {
 
@@ -551,7 +551,7 @@ let legend_label_offset = 50;
 let legend_icon_gap = 12;
 let legend_line_length = 60;
 let legend_average_char_width = 10;
-let legend_gap_length = 40;
+let legend_gap_length = 10;
 let legend_line_segment_y = -22;
 
 

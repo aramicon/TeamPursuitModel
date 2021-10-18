@@ -211,8 +211,11 @@ function run_ga(callback_func){
 
   //if a callback funciton was sent, run it
   if(callback_func){
-    console.log("## RUN CALLBACK FUNCTION ##");
-    callback_func();
+    //dk_2021 was sending a click event, need to run only if it is a function
+    if (typeof callback_func === 'function') {
+      console.log("## RUN CALLBACK FUNCTION ##");
+      callback_func();
+  }
   }
 }
 
