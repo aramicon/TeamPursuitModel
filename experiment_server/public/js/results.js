@@ -800,8 +800,8 @@ const draw_multi_line_graph = (graph_name_opt) =>{
           // svg.append("g")
           // .call(d3.axisLeft(y));
 
-          const xAxis     = d3.axisBottom(x).ticks(10);
-          const yAxis     = d3.axisLeft(y).ticks(10);
+          const xAxis = d3.axisBottom(x).ticks(10);
+          const yAxis = d3.axisLeft(y).ticks(10);
           const xAxisGrid = d3.axisBottom(x).tickSize(-INNER_HEIGHT).tickFormat('').ticks(10);
           const yAxisGrid = d3.axisLeft(y).tickSize(-INNER_WIDTH).tickFormat('').ticks(10);
 

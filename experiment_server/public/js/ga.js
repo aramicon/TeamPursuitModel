@@ -119,7 +119,7 @@ function run_ga(callback_func){
       //IF we are in sequence mode, we need to now automatically save the results, update the sequence details, and kick off the periodic check-for-sequence routine again
       if(sequences_mode == 1){
         console.log("@sequences_mode: experiment web worker returned, sequence mode running");
-        console.log("@sequences_mode: browser_client_id " + browser_client_id+ " sequence_selected_seq_id " + sequence_selected_seq_id + " sequence_selected_iteration " + sequence_selected_iteration);
+        console.log("@sequences_mode: browser_client_id " + browser_client_id+  " sequence_selected_seq_id " + sequence_selected_seq_id + " sequence_selected_iteration " + sequence_selected_iteration);
         if (browser_client_id && sequence_selected_seq_id && sequence_selected_iteration){
 
           console.log("@sequences_mode: save results");
@@ -856,7 +856,13 @@ const setClientID = () => {
       console.log('new id is ' + new_id);
       //save to sessionStorage
       sessionStorage.setItem('client_id', new_id);
+      // dk22jan need to update browser_client_id as it will not be read back form the session storage here?
+      browser_client_id = new_id;
     });
+  }
+  //if still empty set a default
+  if(!browser_client_id){
+    browser_client_id = "NO_ID_"
   }
 }
 
@@ -1039,6 +1045,7 @@ const check_for_sequences = () => {
                   //console.log('get experiment settings, data ' + JSON.stringify(data));
                   //console.log('data ' + JSON.stringify(data[0].global_settings) );
 
+
                   //need to apply any variations if they exist
                   let sequence_variations_info = "";
                   console.log('Variation: Check for variations');
@@ -1054,6 +1061,7 @@ const check_for_sequences = () => {
 
                       let v_details = sequence_iteration_variations[i];
                       console.log(JSON.stringify(v_details));
+
                       if(v_details.type == "global"){
                         //adjust a global setting to the given value
                         console.log("Variation: update global property " + v_details.property + " to " + v_details.value);
@@ -1099,7 +1107,25 @@ const check_for_sequences = () => {
                   console.log('Run experiment: load settings');
                   //console.log("#### rider settings before applying");
                   //console.log(JSON.stringify(data[0].rider_settings));
-                  $("#global_settings").val(data[0].global_settings);
+
+                  let global_settings_object = data[0].global_settings;
+
+                  //***dk22: run besy-in-final-gen tests if needed ***//
+                    if(seq_details.sequence_options){
+                      if (seq_details.sequence_options.best_in_final_gen_tests){
+                        console.log("<><><><><><> BEST IN FINAL GEN TESTS  <><><><><><>");
+                        console.log(JSON.stringify(seq_details.sequence_options.best_in_final_gen_tests));
+                        //set the global settings property to this objects
+                        
+                        let global_settings_object_parse = JSON.parse(global_settings_object);
+                        global_settings_object_parse['best_in_final_gen_tests'] = [];
+                        global_settings_object_parse['best_in_final_gen_tests'] = seq_details.sequence_options.best_in_final_gen_tests;
+                        global_settings_object = JSON.stringify(global_settings_object_parse);
+                      }
+                  }
+
+
+                  $("#global_settings").val(global_settings_object);
                   $("#race_settings").val(data[0].race_settings);
                   $("#rider_settings").val(data[0].rider_settings);
                   $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id + "</span>");
@@ -1119,6 +1145,9 @@ const check_for_sequences = () => {
                   //need to set variables to be able to update/save after running the GAS (asynchronous as heck)
                   sequence_selected_seq_id = seq_id;
                   sequence_selected_iteration = selected_iteration;
+
+
+
                   run_ga();
                   //note the GA uses web workers, and when this returns you need to triger it to save results automatically and update the sequence info
 

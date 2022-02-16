@@ -13,6 +13,13 @@ let global_log_message_now = true;
 
 let use_lookup_velocity = false;
 
+// ** var to check the max performance failure
+let max_performance_failure_percentage = 0;
+let max_fatigue_rise = 0;
+let max_endurance_fatigue_level = 0;
+//let max_endurance_fatigue_level_instructions = []; //save these to be able to re-run odd results
+//let max_endurance_fatigue_level_start_order = [];
+
 onmessage = function(e) {
   console.log('Message received from main script ');
   let messageType = (e.data[0]);
@@ -99,9 +106,16 @@ function calculate_rider_performance_failure_probability(effort, effort_max, cur
   return DecimalPrecision.round(rider_performance_failure_probability,4);
 }
 
-function calculate_rider_performance_failure_percentage_amount(effort, effort_max, current_fatigue, current_fatigue_max, accumulated_fatigue, accumulated_fatigue_max, rider_performance_failure_multiplier,rider_performance_failure_multiplier_max,  performance_failure_base_max_percentage,performance_failure_amount_exponent,performance_failure_effort_importance_multiplier ){
+function calculate_rider_performance_failure_percentage_amount(effort, effort_max, current_fatigue, current_fatigue_max, accumulated_fatigue, accumulated_fatigue_max, rider_performance_failure_multiplier,rider_performance_failure_multiplier_max,  performance_failure_base_max_percentage,performance_failure_amount_exponent,performance_failure_effort_importance_multiplier,failure_type ){
 
     //how much will the rider fail by?
+    // dk feb 22; adding a new version of this where the % of failure amount is more random
+
+    //dk22 found issue where current_fatigue > current_fatigue_max sometimes... can happen 'legally'
+    //set the upper bound to be current_fatigue_max and just limit current_fatigue
+    if (current_fatigue > current_fatigue_max){
+      current_fatigue_max = current_fatigue; //current_fatigue/current_fatigue_max will now max out at 1
+    }
 
     let rider_performance_failure__percentage_amount = (
         (
@@ -117,7 +131,42 @@ function calculate_rider_performance_failure_percentage_amount(effort, effort_ma
     //console.log("rider_performance_failure__percentage_amount =  " + rider_performance_failure__percentage_amount + " * " + performance_failure_base_max_percentage + " = " + (rider_performance_failure__percentage_amount*performance_failure_base_max_percentage));
     rider_performance_failure__percentage_amount  = rider_performance_failure__percentage_amount*performance_failure_base_max_percentage;
 
-    return DecimalPrecision.round(rider_performance_failure__percentage_amount,4);
+    //check the type to applying#
+    let version = 1;
+    if(failure_type){
+      version = failure_type;
+    }
+
+    if(version == 2){
+      // make it a probabilitsic range from 0 to the original amount
+      let p1 = Math.random();
+      let amount1 = (rider_performance_failure__percentage_amount*p1);
+
+      if (amount1 > max_performance_failure_percentage){
+        max_performance_failure_percentage = amount1;
+        //log info if this is really high
+        console.log("####****max_performance_failure_percentage breached****####");
+        console.log("max_performance_failure_percentage " + max_performance_failure_percentage
+        + " effort " + effort + " effort_max " + effort_max
+        + " current_fatigue " + current_fatigue + " current_fatigue_max " + current_fatigue_max
+        + "\n accumulated_fatigue " +  accumulated_fatigue
+        + "\n accumulated_fatigue_max " +  accumulated_fatigue_max
+        + " rider_performance_failure_multiplier " + rider_performance_failure_multiplier
+        + " rider_performance_failure_multiplier_max " + rider_performance_failure_multiplier_max
+        + "\n performance_failure_base_max_percentage " + performance_failure_base_max_percentage
+        + " performance_failure_amount_exponent " + performance_failure_amount_exponent
+        + "\n performance_failure_effort_importance_multiplier " + performance_failure_effort_importance_multiplier
+        + " failure_type " + failure_type);
+
+      }
+      //console.log("Performance failure, adjusting from deterministic " + rider_performance_failure__percentage_amount + "to randomised " + amount1);
+      return DecimalPrecision.round(amount1,4);
+
+    }
+    else // assume version == 1, i.e. the standard
+    {
+      return DecimalPrecision.round(rider_performance_failure__percentage_amount,4);
+    }
 }
 
 //test mapPowerToEffort() and mapEffortToPower()
@@ -399,6 +448,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   ga_results.generations = [];
 
 
+
+
   //warn user if the population_size is not an even square
   //dk2020: commenting this out as it is relevant only for the original perfect squares populaiton generation
   // if(!Number.isInteger(Math.sqrt(population_size))){
@@ -446,6 +497,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
   let race_tracker = {}; //store ids of every race run to try find cases where the times differ
 
+  max_performance_failure_percentage = 0;
+  max_fatigue_rise = 0;
+  max_endurance_fatigue_level = 0;
   for(let g=0;g<number_of_generations;g++){
 
     if (g==(number_of_generations-1)){
@@ -478,9 +532,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let best_race_performance_failures = {};
     let worst_race_performance_failures = {};
 
+
+
     //print % progress every segment
     if (g % one_segment == 0){
-      console.log(one_segment_count*(100/segment_size) + "% done");
+      console.log(one_segment_count*(100/segment_size) + "% done, max_performance_failure_percentage found " + max_performance_failure_percentage);
       one_segment_count++;
     }
 
@@ -731,6 +787,128 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     }
     else if(g==(number_of_generations-1)){
       // last gen doesn't produce new population
+      //last gen might also need to run best_in_final_gen_tests
+      if (settings_r.best_in_final_gen_tests){
+        // There may be more than one so we need a list of em
+        // not sure if I need a deep clone operation here but should just in cases
+        let test_settings_r = JSON.parse(JSON.stringify(settings_r));
+        let test_race_r = JSON.parse(JSON.stringify(race_r));
+        let test_riders_r = JSON.parse(JSON.stringify(riders_r));
+
+        if (settings_r.best_in_final_gen_tests[0]){
+          let best_in_gen_tests_results = [];
+          for(let i_t = 0; i_t< settings_r.best_in_final_gen_tests.length;i_t++ ){
+            console.log("--------> found set of best_in_final_gen_tests to run");
+
+            let tests = settings_r.best_in_final_gen_tests[i_t];
+            console.log(JSON.stringify(tests));
+            // go through iterations (if they exist)
+            if(tests.iterations){
+
+              for(let current_iteration = 0; current_iteration <   tests.iterations; current_iteration++){
+
+                //might repeat the test and average the results
+                let repeat_each = 1;
+                if (tests.repeat_each){
+                  repeat_each = tests.repeat_each;
+                }
+                //look for any variation to add to this iteration
+                let best_in_gen_test_result = {};
+                best_in_gen_test_result.variation = [];
+                best_in_gen_test_result.reps = repeat_each;
+                best_in_gen_test_result.test_result = -1;
+
+                if(tests.variations){
+                  let test_variations_info = "";
+                  let test_iteration_variations = tests.variations;
+                    for(let i = 0; i < test_iteration_variations.length; i++){
+                      console.log('---best_in_final_gen_tests---> Variation: Process variation ' + (i+1) + " of " + test_iteration_variations.length );
+
+                      let v_details = test_iteration_variations[i];
+                      console.log(JSON.stringify(v_details));
+                      //if this variation has a value for this iteration, need to add it
+                      if(v_details.values){
+                        if(typeof v_details.values[current_iteration] !== 'undefined'){
+                          let v_detail_value = v_details.values[current_iteration];
+
+                          if(v_details.type == "global"){
+                            //adjust a global setting to the given value
+                            console.log("---best_in_final_gen_tests---> Variation: update global property " + v_details.property + " to " + v_detail_value);
+
+                            try {
+                            test_settings_r[v_details.property] = v_detail_value;
+                              test_variations_info += "---best_in_final_gen_tests---> Global variation: " + v_details.property + " = " + v_detail_value + "||";
+                              best_in_gen_test_result.variation.push({"type":"global","property":v_details.property,"value":v_detail_value} );
+                            }
+                            catch(err) {
+                              console.log("ERROR!!!---best_in_final_gen_tests---> Variation:error applying global variation " + JSON.stringify(v_details) + "  ---  " + err.message);
+                            }
+                          }
+                          else if (v_details.type == "rider"){
+                            //this is a rider prop so need to specify the actual rider
+                            if(v_details.rider_no >= 0){
+                              console.log("---best_in_final_gen_tests---> Variation: update rider " + v_details.rider_no + " property " + v_details.property + " to " + v_detail_value);
+                              try {
+                              test_riders_r[v_details.rider_no][v_details.property] = v_detail_value;
+                                test_variations_info += "Rider " + v_details.rider_no + " variation: " + v_details.property + " = " + v_detail_value + "||";
+                                console.log("---best_in_final_gen_tests---> #### riderSettingsObject["+v_details.rider_no+"]['"+v_details.property+"'] = " + v_detail_value);
+                                best_in_gen_test_result.variation.push({"type":"rider","rider":v_details.rider_no,"property":v_details.property,"value":v_detail_value} );
+
+                              }
+                              catch(err) {
+                                  console.log("---best_in_final_gen_tests---> Variation:error applying rider variation " + JSON.stringify(v_details) + "  ---  " + err.message);
+                              }
+                            }
+                            else{
+                              console.log("---best_in_final_gen_tests---> Variation: error, rider variation has no number");
+                            }
+                          }
+                          else{
+                            console.log("---best_in_final_gen_tests---> Variation: invalid variation type " + v_details.type);
+                          }
+
+                        }
+                      }
+
+                    }
+                  }
+                  // run the darn race and collect the result. may need to run more than once
+                  let total_test_time = 0;
+                  //generation_results.number_of_mutants_added_total = stats.number_of_mutants_added_total;
+
+                  for(let test_race = 0; test_race < repeat_each; test_race++){
+                    test_race_r.drop_instruction = 0;
+                    test_race_r.live_instructions = [];
+                    test_race_r.race_instructions = [];
+                    test_race_r.race_instructions_r = [];
+
+                    //need to apply the best race instructions from the generation
+                    test_race_r.race_instructions_r = [...final_best_race_properties.instructions];
+                    test_race_r.start_order = [...final_best_race_properties.start_order];
+
+                    console.log("-----best_in_final_gen_tests--> best race instructions " + JSON.stringify(test_race_r.race_instructions_r));
+
+                    //run the actual race, i.e. the fitness function, returning just a time taken
+                    test_settings_r.run_type = "ga";
+
+                    let test_race_results = run_race(test_settings_r,test_race_r,test_riders_r);
+                    total_test_time += test_race_results.time_taken;
+                }
+
+                let test_result = (total_test_time/repeat_each);
+                best_in_gen_test_result.test_result = test_result;
+                //add to the results for this test
+                //need to include variation info
+                best_in_gen_tests_results.push(best_in_gen_test_result);
+              }
+            }
+          }
+          generation_results.best_in_gen_tests_results = JSON.stringify(best_in_gen_tests_results);
+        }
+
+
+
+      }
       generation_results.population_size = 0;
       generation_results.variants_size =0;
       generation_results.number_of_instructions_added_total = 0;
@@ -1657,7 +1835,12 @@ function run_race(settings_r,race_r,riders_r){
             let performance_failure_probability = calculate_rider_performance_failure_probability(race_rider.output_level, settings_r.maximum_effort_value, race_rider.endurance_fatigue_level, settings_r.fatigue_failure_level, race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_rate, settings_r.rider_performance_failure_rate_max, settings_r.performance_failure_probability_exponent, settings_r.performance_failure_effort_importance_multiplier);
             if (Math.random() < performance_failure_probability){
               //rider fails to perform target power, but by how much?
-              let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, settings_r.performance_failure_effort_importance_multiplier);
+              //check if new type setting exists #
+              let performance_failure_effect_type = 1; //default to 1, the olden deterministic one
+              if (settings_r.hasOwnProperty('performance_failure_effect_type')){
+                performance_failure_effect_type = settings_r.performance_failure_effect_type;
+              }
+              let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, settings_r.performance_failure_effort_importance_multiplier,performance_failure_effect_type);
               //add an entry to performance_failures
               let timestep_rider = race_r.race_clock + "_" + race_r.current_order[i];
               race_r.performance_failures[timestep_rider] = performance_failure_percentage;
@@ -1770,6 +1953,35 @@ function run_race(settings_r,race_r,riders_r){
           let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings_r.fatigue_power_rate);
           race_rider.endurance_fatigue_level += fatigue_rise;
           race_rider.accumulated_fatigue += fatigue_rise;
+          // print info if the maximum is exceeded
+
+          if (  race_rider.endurance_fatigue_level > max_endurance_fatigue_level){
+            max_endurance_fatigue_level =   race_rider.endurance_fatigue_level;
+            // console.log("#####****New max_endurance_fatigue_level****#####");
+            // console.log("max_endurance_fatigue_level " + max_endurance_fatigue_level
+            //     + " fatigue_rise " + fatigue_rise
+            //     + " race_rider.fatigue_rate " + race_rider.fatigue_rate
+            //     + " race_rider.power_out " + race_rider.power_out
+            //     + " race_rider.threshold_power " + race_rider.threshold_power
+            //     + " race_rider.max_power " + race_rider.max_power
+            //     + " settings_r.fatigue_power_rate " + settings_r.fatigue_power_rate
+            //     + " Start Order " + JSON.stringify(race_r.start_order)
+            //     + " Instructions " + JSON.stringify(race_r.race_instructions_r));
+
+          }
+          if (fatigue_rise > max_fatigue_rise){
+            max_fatigue_rise = fatigue_rise;
+            // console.log("#####~~~~New max_fatigue_rise~~~~#####");
+            // console.log("max_endurance_fatigue_level " + max_endurance_fatigue_level
+            //     + " fatigue_rise " + fatigue_rise
+            //     + " race_rider.fatigue_rate " + race_rider.fatigue_rate
+            //     + " race_rider.power_out " + race_rider.power_out
+            //     + " race_rider.threshold_power " + race_rider.threshold_power
+            //     + " race_rider.max_power " + race_rider.max_power
+            //     + " settings_r.fatigue_power_rate " + settings_r.fatigue_power_rate
+            //     + " Start Order " + JSON.stringify(race_r.start_order)
+            //     + " Instructions " + JSON.stringify(race_r.race_instructions_r));
+          }
         }
 
       }
@@ -1862,7 +2074,11 @@ function run_race(settings_r,race_r,riders_r){
             let performance_failure_probability = calculate_rider_performance_failure_probability(race_rider.output_level, settings_r.maximum_effort_value, race_rider.endurance_fatigue_level, settings_r.fatigue_failure_level, race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_rate, settings_r.rider_performance_failure_rate_max, settings_r.performance_failure_probability_exponent, settings_r.performance_failure_effort_importance_multiplier);
             if (Math.random() < performance_failure_probability){
               //rider fails to perform target power, but by how much?
-              let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, settings_r.performance_failure_effort_importance_multiplier);
+              let performance_failure_effect_type = 1; //default to 1, the olden deterministic one
+              if (settings_r.hasOwnProperty('performance_failure_effect_type')){
+                performance_failure_effect_type = settings_r.performance_failure_effect_type;
+              }
+              let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, performance_failure_effect_type);
               //add an entry to performance_failures
               let timestep_rider = race_r.race_clock + "_" + race_r.current_order[i];
               race_r.performance_failures[timestep_rider] = performance_failure_percentage;
@@ -1990,6 +2206,16 @@ function run_race(settings_r,race_r,riders_r){
             let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings_r.fatigue_power_rate);
           race_rider.endurance_fatigue_level += fatigue_rise;
           race_rider.accumulated_fatigue += fatigue_rise;
+          if (fatigue_rise > max_fatigue_rise){
+            max_fatigue_rise = fatigue_rise;
+            // console.log("#####~~~~New max_fatigue_rise~~~~#####");
+            // console.log("fatigue_rise " + fatigue_rise
+            //     + " race_rider.fatigue_rate " + race_rider.fatigue_rate
+            //     + " race_rider.power_out " + race_rider.power_out
+            //     + " race_rider.threshold_power " + race_rider.threshold_power
+            //     + " race_rider.max_power " + race_rider.max_power
+            //     + " settings_r.fatigue_power_rate " + settings_r.fatigue_power_rate);
+          }
         }
       }
 

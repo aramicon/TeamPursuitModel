@@ -2825,6 +2825,20 @@ time on front:97,0,0,3
 effort: 2, drop: 4
 time on front: 93,0,1,6
 
+-- tuesday october 26tyh. trying to read the paper as a whole. want to tefer to the scale of the sports industry. how do I cite this: https://signa-sportsunited.com/app/uploads/2021/05/signa-sports-united-bcg-study-infographic-1.pdf
+
+or here https://www.businesswire.com/news/home/20210511005210/en/
+
+-- would this roll?
+
+@article{bwire.2021,
+ author  = {Signa Sports United, Boston Consulting Group},
+ date    = {2021-05-11},
+ title   = {New Study from SIGNA Sports United and Boston Consulting Group Reports $1.1 Trillion Global Sports Market},
+ journal = {Business Wire},
+ url     = {https://www.businesswire.com/news/home/20210511005210/en/},
+ urldate = {2021-10-20}
+}
 
 
 
@@ -2884,3 +2898,29 @@ time on front: 93,0,1,6
 			"values" : [0,0,0,1,1]
 			}			
 		]}
+		
+		
+-- friday 5th
+need to get back learning, maybe this?
+https://ocw.mit.edu/courses/electrical-engineering-and-computer-science/6-00sc-introduction-to-computer-science-and-programming-spring-2011/unit-2/lecture-18-optimization-problems-and-algorithms/
+
+-- finsih goign through the paper and email COlm.
+
+-- if I run one-very-strong 3-weak do I always get the mechanism where the 2nd-place rider be dropped? Or does it happen sometimes, or when the popualtion is bigger or more gens are run? 
+
+
+-- need to get started on the next paper.
+
+-- ideas to keep current codebase (mostly) and use it to write/run more
+
+-- 1: improve performance failure amount formula and make it optional (so the original can still be re-run)
+-- 2: add a function to generate a starting population, save it to the db, then allow it to be reused, i.e. make an experiment repeatable
+-- 3: run more robustness tests: compare the robustness when noise is added. gradually increase levels of noise. how quickly do the strategies change and how can those changes be articulated/interpreted?
+-- 4: use an ML algo to cluster strategies 
+-- 5: run a large sequence of experiments, vary lots of params, define types of rider and make teams with them. how to visualise?
+-- 6: 
+
+
+-- need to read TONS. start with this?
+https://books.google.ie/books?hl=en&lr=&id=yAg-mAkx0yAC&oi=fnd&pg=PA1&dq=genetic+algorithm&ots=JVrzMV2xTK&sig=qTohallnHtSHUcUecX9DkplUHag&redir_esc=y#v=onepage&q=genetic%20algorithm&f=false
+

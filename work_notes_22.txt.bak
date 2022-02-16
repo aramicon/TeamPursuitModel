@@ -1,0 +1,351 @@
+-- startign a new notes file in 2022. just trying to get a shift, to see if I can actually make something happen here.
+
+-- got mongodb ported across to the new G14, system seems to run, had already installed Node and other stuff.
+
+-- have to get the next paper work started... maybe test running sequences again first?
+
+or maybe a better idea would be to being collecting references? Build up a database somehow? Online?
+
+
+--test out the sequences again: do a run of experiments where noise increases each time?
+
+-- performance noise only, go from 0 to 100 in steps of 10?
+
+-- how does the sequence setup work again?
+
+
+-- example (after running)
+
+{"iterations":2,"active":0,"variations":[{"iterations":[3,2,1],"type":"rider","rider_no":0,"property":"threshold_power","values":[200,300,400]},{"iterations":[3,2,1],"type":"rider","rider_no":0,"property":"max_power","values":[800,900,1000]}],"experiments":[{"client_id":"86.43.200.150_Galway_IE_None_2021-6-14 10:41:47","iteration":2,"status":"complete"},{"client_id":"86.43.200.150_Galway_IE_None_2021-6-14 10:41:47","iteration":1,"status":"complete"}]}
+
+-- strip it back to the basics
+
+{"iterations":11,"active":1,"variations":[{"iterations":[10,9,8,7,6,5,4,3,2,1],"type":"global","property":"performance_failure_enabled","values":[1,1,1,1,1,1,1,1,1,1]},{"iterations":[10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":0,"property":"performance_failure_rate","values":[10,9,8,7,6,5,4,3,2,1]},{"iterations":[10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":1,"property":"performance_failure_rate","values":[10,9,8,7,6,5,4,3,2,1]},{"iterations":[10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":2,"property":"performance_failure_rate","values":[10,9,8,7,6,5,4,3,2,1]},{"iterations":[10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":3,"property":"performance_failure_rate","values":[10,9,8,7,6,5,4,3,2,1]}]}
+
+-- hmmm, doesn't seem to work, adds "experiments":[{"client_id":"","iteration":2,"status":"active"}]} so maybe it runs or tries to run once and crashes? One experiment defo ran.
+
+-- Hmmm, browser_client_id is empty so maybe this causes it to end without saving anything?
+
+-- ok, so this is failing:
+  $.getJSON('http://www.geoplugin.net/json.gp', function(data) {
+  
+  jquery-3.4.1.min.js:2 GET http://www.geoplugin.net/json.gp net::ERR_BLOCKED_BY_CLIENT
+  
+-- so need a different way to get the IP address? Or can I find another way to 
+
+-- huh, seems to work in Postman, so maybe it is the adblocker?
+
+-- turned those off; it is defo doing more  now but still failing :-(
+
+-- problem seems to be Ghostery
+
+-- ok I think  it ran?
+
+-- need to make a bunch of code changes, e.g. more realistic start, better performace failure, need to run whole bunches of experiments and collate lots and lots of results.##
+
+
+	
+
+get the paper into their format (tomorrow)
+
+special case of scheduling. maybe in gecco. 
+
+sac
+gecco 
+
+
+suggested reviewers.
+
+-- run a sequence again
+{"iterations":2,"active":1,"variations":[{"iterations":[2,1],"type":"global","property":"performance_failure_enabled","values":[1,1]},{"iterations":[2,1],"type":"rider","rider_no":0,"property":"performance_failure_rate","values":[10,1]},{"iterations":[2,1],"type":"rider","rider_no":1,"property":"performance_failure_rate","values":[10,1]},{"iterations":[2,1],"type":"rider","rider_no":2,"property":"performance_failure_rate","values":[10,1]},{"iterations":[2,1],"type":"rider","rider_no":3,"property":"performance_failure_rate","values":[10,1]}]}
+
+format for sciendo IJCSS International Journal of Computer Science in Sport (https://sciendo.com/journal/IJCSS)
+> Times New Roman size 12 DONE
+> fully justified - seems already ok?
+> indented by 3cm from both sides - seems already ok? Nope, seems bigger on mine than on the sample. Check another sample or two and compare font/spacing/etc. 
+
+Ok, used the geometry package and it seeems to work now, just visually basing it on the other sample papers
+
+> Number the pages
+consecutively, with no line numbering and no 'headers and footers'
+> no footnotes
+
+How do I remove the force calculator website footnote? Add it as a reference?
+
+added it as an @online entry in the bib
+
+-- tried to fix up the one table, improved but probably  not perfect. need to look again at the online citation, think it has no year showing?
+
+-- oh nope it's fine.
+
+
+> headers:
+“Section_Headline_IJCSS” (Arial 12, bold),
+“Subsection_Headline_IJCSS” (Arial 12, bold and italic) and
+“Subsubsection_Headline_IJCSS” (Times New Roman 12, italic)
+
+-- right, lotsa work there,  has it improved? sore eyes again.
+
+> title
+Title and subtitle are separated by a hyphen “-“. Each word starts with a capital letter, except
+conjunction such as “and”, “or”, “a”, “on” etc. Use font Times New Roman size 18 and bold
+style print (see Example 1).
+
+> authors
+Authors and institution must be written in size 12 and in italics. Sur- and forename of multiple
+authors are separated by a comma. The first name(s) is/are abbreviated with the first letter of
+the name. eg. Novatchkov, H., Bichler, S., Tampier, M., Kornfeind, P.
+Department of Biomechanics, Kinesiology and Computer Science,
+Faculty of Sport Science,University of Vienna,
+Auf der Schmelz 6A, 1150 Vienna, Austria
+
+> abstract
+The abstract must not exceed 200 words and it should summarize the paper, giving a clear
+indication of the conclusions it contains. It must be inserted in the article after the authors’
+addresses, indented by 1 cm from both sides of the normal text. The abstract must not contain
+figures or tables (see Example 4)
+
+left-align abstract header
+
+-- remove paragraph indentation
+-- done
+
+-- why do the images take up whole pages in some places?
+
+-- right, have to finish tthis paper reformat, need to add in their seciton headers, but where? feel lost right now
+Introduction
+Methods
+Results
+Discussion
+Conclusion
+
+-- guess I just have to try find the most natural home for them and go form there, email Colm tomorrow and mention that?
+
+
+
+From: https://tex.stackexchange.com/questions/69869/image-taking-up-full-page
+Most likely it ended up being a float page p because the constraints on size stopped it being a t float. in which case change [htp] which allows p and constrains the number and size of floats in the t area to [!ht] which does not allow p and removes the numeric and size constraints.
+
+If that isn't sufficient, edit the question to add a complete example which shows the problem.
+
+-- adjust other image placements?
+
+
+-- need to put fulls stops and not commas to get the proper APA format in the references?
+
+-- maybe usepackage{apacite} ?
+
+-- took time but i think? the apa format is now ok... certainly looks like the sample ones. 
+
+-- need to put in Methods, Discussion, and Results and fit everything under those headers? But my stuff doesn't map to those does it?
+
+
+
+
+-- meeting with COlm... 
+
+idea for paper 2
+exploration of noise and robustness
+-- try out different kinds of failure and noise and find ways to measure their robustness
+
+-- improve the performance failure and the size of the failures (don't tie them directly to the rate of failure)
+-- find different ways to work out robustness and compare strategies.
+
+-- e.g. 1: evolve strategies in a  noisy environment, as I have done
+-- 2, evolve in a clean environment and then somehow 'add perturbations' to the final strategy, I guess to improve robustness? Or do I use mutations to measure it as I had done before?
+
+-- need a form of noise to model a coach's lack of knowledge about a rider, or a general ambiguity about a rider's actual power, which at the beginning of any race may vary within some range instead of being a fixed point
+
+-- need to be able to add enough noise in different ways to make it totally chaotic, or serene, and all of these have to be replayable as before.
+
+
+-- how do I take an evolved strategy and consider how risky it is? E.g. evolve one then run it with some rider failure. And some noise. How Bout just small changes in the timing. 
+
+
+
+
+-- monday feb 7th.
+--  need to begin the next piece of work and paper... no idea what will happen if paper 1 doesn't get accepted. but what can ya do?
+
+-- need a title... Robustness and Noise in a Genetic Algorithm Search for Simulated Track Cycling Strategies?  Good enough for now.
+
+-- created a new doc and added a title and abstract.
+
+-- first extend the performance failure and add the 'hot headed' noise?
+
+-- yup yup, get coding, but make the new form of performance failure optional so the old stuff for now is still repeatable.
+
+-- added  "performance_failure_effect_type": 2,#-- type 1 can be the old one, and the default, and type 2 can be a new version 
+
+-- so I can add this in calculate_rider_performance_failure_percentage_amount()
+
+
+-- how do i see again if a setting exists and default it if not?
+
+-- ran a test version but there's not a ton of failure happening- want to max it out to see it... 
+
+-- yeah more failure, tho not really maxxxing it out, I wanna see mad chaos when everyone keeps failing all the time?
+
+-- maybe I can make the performance failure larger, i.e. that they can fail by more... what's the max % they can fail by now?
+
+-- hmmmm, the value seems > 1, that's mad odd
+
+-- yikes, getting very high fatigue values... wonder what those races are up to? 
+
+-- looks like race_rider.endurance_fatigue_level gets very high... but how can it if a rider is supposed to recover after crossing their limit?
+
+effort 4 effort_max 9 current_fatigue 181.42766666666668 current_fatigue_max 100
+ accumulated_fatigue 181.42766666666668
+ accumulated_fatigue_max 500 rider_performance_failure_multiplier 10 rider_performance_failure_multiplier_max 10
+ performance_failure_base_max_percentage 1 performance_failure_amount_exponent 2
+ performance_failure_effort_importance_multiplier 1 failure_type 2
+ 
+  accumulated_effect = (settings_r.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings_r.accumulated_fatigue_maximum;
+  
+  failure_level = settings_r.fatigue_failure_level*accumulated_effect;
+  
+  accumulated_effect = (500 - 181.42766666666668)/500;
+  failure_level = 100*0.6371446666666666;
+  = 63.71446666666666
+    if(race_rider.endurance_fatigue_level >= failure_level){
+if (181.42766666666668 > 63.71446666666666)	
+-- how can fatigue get so high like this?
+-- maybe it is sometimes adding a ton of fatigue in one go?
+ let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings_r.fatigue_power_rate);
+ 
+ -- max fatigue rise doe snot look so high, so it is being let grow very high... how so?
+ -- does it happen without noise?
+ -- fatigue_rise 15.563999999999998 max wihout performance failure... but in this case I don't see the max failure level? That's what is driving the effect?
+ 
+ 
+-- ok, so very high fatigu can accumulate even with no noise at all. need to store the settings of a race that has this (instructions and start order only needed as I know which set of settings are being used....)
+
+-- can i replicate this race?
+max_endurance_fatigue_level 182.16366666666664 fatigue_rise 0.9056666666666673 race_rider.fatigue_rate 20 race_rider.power_out 427.17 race_rider.threshold_power 400 race_rider.max_power 1000 settings_r.fatigue_power_rate 1 Start Order [2,3,0,1] Instructions [[16,"drop=3"],[19,"drop=3"],[78,"effort=6.16"],[116,"drop=3"],[119,"drop=3"],[169,"effort=5.94"],[194,"drop=3"],[198,"drop=2"],[202,"effort=5.32"],[207,"drop=1"],[219,"drop=3"],[223,"effort=8.71"],[227,"effort=9.98"],[255,"drop=2"],[266,"effort=6.89"],[267,"effort=9.68"],[289,"effort=4.32"]]
+
+doesn't seem to pick up the instructions?
+
+-- ah, ok, good news is that it seems legit, that if a rider gets an effort 9 with no fatigue it builds up a head of steam and can only reduce power so fast, ends up clocking up a ton of fatigue.
+
+-- so,  clarify again what the issue is... ah, the maximum 
+
+-- oh dear, so max_performance_failure_percentage found 1.1843064351922996. what happens when this happens? 
+-- shite,  target_power = target_power - (target_power*performance_failure_percentage); 
+-- this can return a BIGGER value, not a smaller... performance_failure_percentage needs to be limited to < 1.
+-- end up with NEGATIVE target power :-( I guess this just means the rider will start slowing down, and since they can only slow down by a certian rate this is very limited, and if they are just following they will essentially reset their effort in the next timestep?
+-- huh, so the failure is actually constrained by the maximum power drop allowed per step... currently 40 
+-- does this get weird tho if the LEADING rider fails? probably IS the leading rider accumuating this big level of fatigue?
+-- how do we fix this and allow a rider to really fail in a seemingly organic way?
+-- 1: allow the rider to slow by more than 40 watts in one go (e.g. 100)?
+-- 2: maximum failure amount = 1, never > 1. This will make them slow by 100 and no more.
+
+-- worth a try to see what happens
+-- so the crux is where I use current_fatigue/current_fatigue_max and current_fatigue>current_fatigue_max.
+
+-- simples fix: if (current_fatigue>current_fatigue_max) then current_fatigue_max = current_fatigue, so this will just max out this?
+
+change "power_adjustment_step_size_down": -40
+to
+"power_adjustment_step_size_down": -100
+
+-- results are... different. riders get dropped far more easily... step size down is probably too big in some cases? like are there cases where it hsould be lower or higher? try run 20 gens with no noise and see what happens
+
+-- idea, use robustness to represent or influence  fitness. Here' how I explained the idea in an email to Colm> split the population into tournaments as usual.
+> run each race and record its result (finish time, lower = better). But also, for each, run N other races, where for each one you add a mutation. So, for race 0 there is no mutation, for race 1 there is 1, and so on until race N includes N mutations (either accumulate the mutations or generate new ones each time). Record the result of each. The original genome is selected, not the mutated ones.
+> return, as fitness, 0_mutations_result*x + (average_cost_of_each_additional_mutation)*y where x,y are [0,1] range so can weight the importance of each. I'd like to see what happens if you make the fitness purely based on the cost of mutations, might look strange! Could also try out a few other metrics other than average_cost_of_each_additional_mutation, or a different way to generate mutations that would be probing the landscape around a solution to try and find the slopes.
+
+-- need to build a sequence that will trigger the testing of best_in_final_gen strategy for different noise levels and store the results: end goal is to make a 3d graph
+
+x-axis: evolved fitness noise level
+y-axis: test fitness noise level
+z-axis: average speed of ten runs of best-in-gen from x in y  noise level
+
+-- to test, try it with two main iterations.
+
+{"iterations":2,"active":0,"variations":[{"iterations":[2,1],"type":"global","property":"enable_instruction_noise_1_random","values":[1,1]},{"iterations":[2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[0.5,0]}],"best_in_final_gen_tests":[{"iterations":[11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]}]}
+
+what would we need to add to results?
+
+in results, add a new struct; key thing is to be able to name/label each result correctly, i.e. the x,y,z of any graph
+
+best_in_gen_tests: [{variation:[{type:"global","property":"noise_1_probability_instruction_misheard","value":1}],"reps":10,"test_result":276.45},{"noise_1_probability_instruction_misheard":0.9,"reps":10,"average_result":304.01}...]
+
+-- where do i start? add them to the sequence, read them, then look at parsing?
+
+-- not running the sequence. json is fierce frail
+
+{"iterations":2,"active":1,"variations":[{"iterations":[2,1],"type":"global","property":"enable_instruction_noise_1_random","values":[1,1]},{"iterations":[2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[0.5,0]}],"best_in_final_gen_tests":[{"iterations":[11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]}],"experiments":[{"client_id":"","iteration":2,"status":"active"}]}
+
+
+{
+	"iterations": 2,
+	"active": 1,
+	"variations": [
+		{
+			"iterations": [
+				2,
+				1
+			],
+			"type": "global",
+			"property": "enable_instruction_noise_1_random",
+			"values": [
+				1,
+				1
+			]
+		},
+		{
+			"iterations": [
+				2,
+				1
+			],
+			"type": "global",
+			"property": "noise_1_probability_instruction_misheard",
+			"values": [
+				0.5,
+				0
+			]
+		}
+	],
+		"best_in_final_gen_tests": [
+		{
+			"iterations": 11,
+			"repeat_each":10,
+			"variations":[
+			{
+					"type": "global",
+					"property": "noise_1_probability_instruction_misheard",
+					"values": [
+						1.0,
+						0.9,
+						0.8,
+						0.7,
+						0.6,
+						0.5,
+						0.4,
+						0.3,
+						0.2,
+						0.1,
+						0.0
+					]
+				}
+			]
+		}
+	]
+}
+
+
+-- error with client_id again, since I am OFFLINE
+
+-- prints the new settings in the sequence running part now, but need to send it to the GA... maybe could add it to the global settings object itself? wouldn't have to add any arg that way.
+
+-- in the GA, need to 
+IF LAST GEN
+run games
+IF best_in_final_gen_tests
+get best-in-gen instructions
+look for iterations, parse variations, for each, update the settings then run the race
+package results and add to the main results data object 
+
+-- finally it is saving new data... doesn't seem to have the last one (0.0). how many does it actually run?
+
+-- doesn't add details for the 0.0 value I guess because 0 is falsy?
