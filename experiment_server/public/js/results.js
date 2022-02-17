@@ -689,13 +689,23 @@ const draw_multi_line_graph = (graph_name_opt) =>{
         console.log(" multi-id data");
         console.log(data);
 
-        //titles will be first element: take these OUT
-        let short_titles = Array.from(data[0]);
-        data = data.splice(1);
 
 
         switch(graph_name) {
+          case "best_in_final_gen_tests":
+            is_raw_data = true;
+
+            console.log("Data for best in gen tests");
+            //output into textarea
+            $("#data_display").val(JSON.stringify(data));
+
+
           case "best_fitness_per_generation":
+
+          //titles will be first element: take these OUT
+          let short_titles = Array.from(data[0]);
+          data = data.splice(1);
+          is_raw_data = false;
 
           let graph_title ="unknown";
           let graph_data_1 = {};
@@ -762,234 +772,237 @@ const draw_multi_line_graph = (graph_name_opt) =>{
           }
           //D3
           // set the dimensions and margins of the graph
+          if(!is_raw_data){
 
-          let totalWidth = 1000;
-          let totalHeight = 450;
-          let legendLeftIndent = 20;
-          let bulletIndent = 20;
+            let totalWidth = 1000;
+            let totalHeight = 450;
+            let legendLeftIndent = 20;
+            let bulletIndent = 20;
 
-          var margin = {top: 30, right: legendLeftIndent, bottom: 40, left: 60},
-          width = totalWidth - margin.left - margin.right,
-          height = totalHeight - margin.top - margin.bottom;
-
-
-          const INNER_WIDTH  = totalWidth - margin.left - margin.right;
-          const INNER_HEIGHT = totalHeight - margin.top - margin.bottom;
-
-          var svg = d3.select("#graph")
-          .append("svg")
-          .attr("width", width + margin.left + margin.right)
-          .attr("height", height + margin.top + margin.bottom)
-          .append("g")
-          .attr("transform",
-          "translate(" + margin.left + "," + margin.top + ")");
-          //  data = selected_ga_results;
-
-          // Add X axis --> it is a date format
-          var x = d3.scaleLinear()
-          .domain([graph_data_1.x_scale_from, graph_data_1.x_scale_to])
-          .range([ 0, width ]);
-          // svg.append("g")
-          // .attr("transform", "translate(0," + height + ")")
-          // .call(d3.axisBottom(x));
-
-          // Add Y axis
-          var y = d3.scaleLinear()
-          .domain([graph_data_1.y_scale_from, graph_data_1.y_scale_to])
-          .range([ height, 0 ]);
-          // svg.append("g")
-          // .call(d3.axisLeft(y));
-
-          const xAxis = d3.axisBottom(x).ticks(10);
-          const yAxis = d3.axisLeft(y).ticks(10);
-          const xAxisGrid = d3.axisBottom(x).tickSize(-INNER_HEIGHT).tickFormat('').ticks(10);
-          const yAxisGrid = d3.axisLeft(y).tickSize(-INNER_WIDTH).tickFormat('').ticks(10);
+            var margin = {top: 30, right: legendLeftIndent, bottom: 40, left: 60},
+            width = totalWidth - margin.left - margin.right,
+            height = totalHeight - margin.top - margin.bottom;
 
 
-          svg.append('g')
-            .attr('class', 'x axis')
-            .attr('transform', 'translate(0,' + INNER_HEIGHT + ')')
-            .call(xAxis);
-          svg.append('g')
-            .attr('class', 'y axis')
-            .call(yAxis);
+            const INNER_WIDTH  = totalWidth - margin.left - margin.right;
+            const INNER_HEIGHT = totalHeight - margin.top - margin.bottom;
+
+            var svg = d3.select("#graph")
+            .append("svg")
+            .attr("width", width + margin.left + margin.right)
+            .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+            .attr("transform",
+            "translate(" + margin.left + "," + margin.top + ")");
+            //  data = selected_ga_results;
+
+            // Add X axis --> it is a date format
+            var x = d3.scaleLinear()
+            .domain([graph_data_1.x_scale_from, graph_data_1.x_scale_to])
+            .range([ 0, width ]);
+            // svg.append("g")
+            // .attr("transform", "translate(0," + height + ")")
+            // .call(d3.axisBottom(x));
+
+            // Add Y axis
+            var y = d3.scaleLinear()
+            .domain([graph_data_1.y_scale_from, graph_data_1.y_scale_to])
+            .range([ height, 0 ]);
+            // svg.append("g")
+            // .call(d3.axisLeft(y));
+
+            const xAxis = d3.axisBottom(x).ticks(10);
+            const yAxis = d3.axisLeft(y).ticks(10);
+            const xAxisGrid = d3.axisBottom(x).tickSize(-INNER_HEIGHT).tickFormat('').ticks(10);
+            const yAxisGrid = d3.axisLeft(y).tickSize(-INNER_WIDTH).tickFormat('').ticks(10);
 
 
-          // Add the line 1
-          svg.append("path")
-          .datum(graph_data_1.data)
-          .attr("fill", "none")
-          .attr("stroke", rider_colours[0])
-          .style("stroke-dasharray", rider_line_styles[0])
-          .attr("stroke-width", rider_line_stroke_width[0])
-          .attr("d", d3.line()
-          .x(function(d) { return x(d.x) })
-          .y(function(d) { return y(d.y) })
-        );
+            svg.append('g')
+              .attr('class', 'x axis')
+              .attr('transform', 'translate(0,' + INNER_HEIGHT + ')')
+              .call(xAxis);
+            svg.append('g')
+              .attr('class', 'y axis')
+              .call(yAxis);
 
-        if (!jQuery.isEmptyObject(graph_data_2)){
+
+            // Add the line 1
+            svg.append("path")
+            .datum(graph_data_1.data)
+            .attr("fill", "none")
+            .attr("stroke", rider_colours[0])
+            .style("stroke-dasharray", rider_line_styles[0])
+            .attr("stroke-width", rider_line_stroke_width[0])
+            .attr("d", d3.line()
+            .x(function(d) { return x(d.x) })
+            .y(function(d) { return y(d.y) })
+          );
+
+          if (!jQuery.isEmptyObject(graph_data_2)){
+            //draw second line if data is given
+            svg.append("path")
+            .datum(graph_data_2.data)
+            .attr("fill", "none")
+            .attr("stroke", rider_colours[1])
+            .style("stroke-dasharray", rider_line_styles[1])
+            .attr("stroke-width", rider_line_stroke_width[1])
+            .attr("d", d3.line()
+            .x(function(d) { return x(d.x) })
+            .y(function(d) { return y(d.y) })
+          );
+        }
+
+        if (!jQuery.isEmptyObject(graph_data_3)){
           //draw second line if data is given
           svg.append("path")
-          .datum(graph_data_2.data)
+          .datum(graph_data_3.data)
           .attr("fill", "none")
-          .attr("stroke", rider_colours[1])
-          .style("stroke-dasharray", rider_line_styles[1])
-          .attr("stroke-width", rider_line_stroke_width[1])
+          .attr("stroke", rider_colours[2])
+          .style("stroke-dasharray", rider_line_styles[2])
+          .attr("stroke-width", rider_line_stroke_width[2])
           .attr("d", d3.line()
           .x(function(d) { return x(d.x) })
           .y(function(d) { return y(d.y) })
         );
       }
-
-      if (!jQuery.isEmptyObject(graph_data_3)){
+      if (!jQuery.isEmptyObject(graph_data_4)){
         //draw second line if data is given
         svg.append("path")
-        .datum(graph_data_3.data)
+        .datum(graph_data_4.data)
         .attr("fill", "none")
-        .attr("stroke", rider_colours[2])
-        .style("stroke-dasharray", rider_line_styles[2])
-        .attr("stroke-width", rider_line_stroke_width[2])
+        .attr("stroke", rider_colours[3])
+        .style("stroke-dasharray", rider_line_styles[3])
+        .attr("stroke-width", rider_line_stroke_width[3])
         .attr("d", d3.line()
         .x(function(d) { return x(d.x) })
         .y(function(d) { return y(d.y) })
       );
     }
-    if (!jQuery.isEmptyObject(graph_data_4)){
+    if (!jQuery.isEmptyObject(graph_data_5)){
       //draw second line if data is given
       svg.append("path")
-      .datum(graph_data_4.data)
+      .datum(graph_data_5.data)
       .attr("fill", "none")
-      .attr("stroke", rider_colours[3])
-      .style("stroke-dasharray", rider_line_styles[3])
-      .attr("stroke-width", rider_line_stroke_width[3])
+      .attr("stroke", rider_colours[4])
+      .style("stroke-dasharray", rider_line_styles[4])
+      .attr("stroke-width", rider_line_stroke_width[4])
       .attr("d", d3.line()
       .x(function(d) { return x(d.x) })
       .y(function(d) { return y(d.y) })
     );
   }
+  // X and Y labels
+  svg.append("text")
+  .attr("class", "x label")
+  .attr("text-anchor", "end")
+  .attr("x", width/2)
+  .attr("y", height + 35)
+  .text(graph_data_1.x_label); // e.g. "GA Generation"
+
+  svg.append("text")
+  .attr("class", "y label")
+  .attr("text-anchor", "end")
+  .attr("x", -150)
+  .attr("y", -50)
+  .attr("dy", ".75em")
+  .attr("transform", "rotate(-90)")
+  .text(graph_data_1.y_label); // e.g. "Race Finish Time (s)"
+
+
+  let legend_label_offset = 50;
+  let legend_icon_gap = 12;
+  let legend_line_length = 60;
+  let legend_average_char_width = 10;
+  let legend_gap_length = 40;
+
+  svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[0]);
+  svg.append("line")//making a line for legend
+        .attr("x1", legend_label_offset)
+        .attr("x2", legend_label_offset+legend_line_length)
+        .attr("y1", 4)
+        .attr("y2", 4)
+        .attr("stroke-width", rider_line_stroke_width[0])
+        .style("stroke-dasharray",rider_line_styles[0])//dashed array for line
+        .style("stroke", rider_colours[0]);
+
+
+  svg.append("text").attr("x", legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
+
+  if (!jQuery.isEmptyObject(graph_data_2)){
+    legend_label_offset += (graph_data_1.title.length * legend_average_char_width) + legend_gap_length;
+
+    svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[1]);
+
+    svg.append("line")//making a line for legend
+          .attr("x1", legend_label_offset)
+          .attr("x2", legend_label_offset+legend_line_length)
+          .attr("y1", 4)
+          .attr("y2", 4)
+          .attr("stroke-width", rider_line_stroke_width[1])
+          .style("stroke-dasharray",rider_line_styles[1])
+          .style("stroke", rider_colours[1]);
+
+    svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  }
+  if (!jQuery.isEmptyObject(graph_data_3)){
+    legend_label_offset += (graph_data_2.title.length * legend_average_char_width) + legend_gap_length;
+
+    svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[2]);
+
+    svg.append("line")//making a line for legend
+          .attr("x1", legend_label_offset)
+          .attr("x2", legend_label_offset+legend_line_length)
+          .attr("y1", 4)
+          .attr("y2", 4)
+          .attr("stroke-width", rider_line_stroke_width[2])
+          .style("stroke-dasharray",rider_line_styles[2])
+          .style("stroke", rider_colours[2]);
+
+    svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  }
+  if (!jQuery.isEmptyObject(graph_data_4)){
+    legend_label_offset += (graph_data_3.title.length * legend_average_char_width) + legend_gap_length;
+
+    svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[3]);
+
+    svg.append("line")//making a line for legend
+          .attr("x1", legend_label_offset)
+          .attr("x2", legend_label_offset+legend_line_length)
+          .attr("y1", 4)
+          .attr("y2", 4)
+          .attr("stroke-width", rider_line_stroke_width[3])
+          .style("stroke-dasharray",rider_line_styles[3])
+          .style("stroke", rider_colours[3]);
+
+    svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  }
   if (!jQuery.isEmptyObject(graph_data_5)){
-    //draw second line if data is given
-    svg.append("path")
-    .datum(graph_data_5.data)
-    .attr("fill", "none")
-    .attr("stroke", rider_colours[4])
-    .style("stroke-dasharray", rider_line_styles[4])
-    .attr("stroke-width", rider_line_stroke_width[4])
-    .attr("d", d3.line()
-    .x(function(d) { return x(d.x) })
-    .y(function(d) { return y(d.y) })
-  );
+    legend_label_offset += (graph_data_4.title.length * legend_average_char_width) + legend_gap_length;
+
+    svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[4]);
+
+    svg.append("line")//making a line for legend
+          .attr("x1", legend_label_offset)
+          .attr("x2", legend_label_offset+legend_line_length)
+          .attr("y1", 4)
+          .attr("y2", 4)
+          .attr("stroke-width", rider_line_stroke_width[4])
+          .style("stroke-dasharray",rider_line_styles[4])
+          .style("stroke", rider_colours[4]);
+
+    svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  }
+  //add a title
+  // svg.append("text")
+  // .attr("x", (width / 2))
+  // .attr("y", 0 - (margin.top / 2))
+  // .attr("text-anchor", "middle")
+  // .style("font-size", "16px")
+  // .style("font-style", "italic")
+  // .text(graph_title);
+  break;
+
 }
-// X and Y labels
-svg.append("text")
-.attr("class", "x label")
-.attr("text-anchor", "end")
-.attr("x", width/2)
-.attr("y", height + 35)
-.text(graph_data_1.x_label); // e.g. "GA Generation"
-
-svg.append("text")
-.attr("class", "y label")
-.attr("text-anchor", "end")
-.attr("x", -150)
-.attr("y", -50)
-.attr("dy", ".75em")
-.attr("transform", "rotate(-90)")
-.text(graph_data_1.y_label); // e.g. "Race Finish Time (s)"
-
-
-let legend_label_offset = 50;
-let legend_icon_gap = 12;
-let legend_line_length = 60;
-let legend_average_char_width = 10;
-let legend_gap_length = 40;
-
-svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[0]);
-svg.append("line")//making a line for legend
-      .attr("x1", legend_label_offset)
-      .attr("x2", legend_label_offset+legend_line_length)
-      .attr("y1", 4)
-      .attr("y2", 4)
-      .attr("stroke-width", rider_line_stroke_width[0])
-      .style("stroke-dasharray",rider_line_styles[0])//dashed array for line
-      .style("stroke", rider_colours[0]);
-
-
-svg.append("text").attr("x", legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
-
-if (!jQuery.isEmptyObject(graph_data_2)){
-  legend_label_offset += (graph_data_1.title.length * legend_average_char_width) + legend_gap_length;
-
-  svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[1]);
-
-  svg.append("line")//making a line for legend
-        .attr("x1", legend_label_offset)
-        .attr("x2", legend_label_offset+legend_line_length)
-        .attr("y1", 4)
-        .attr("y2", 4)
-        .attr("stroke-width", rider_line_stroke_width[1])
-        .style("stroke-dasharray",rider_line_styles[1])
-        .style("stroke", rider_colours[1]);
-
-  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
-}
-if (!jQuery.isEmptyObject(graph_data_3)){
-  legend_label_offset += (graph_data_2.title.length * legend_average_char_width) + legend_gap_length;
-
-  svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[2]);
-
-  svg.append("line")//making a line for legend
-        .attr("x1", legend_label_offset)
-        .attr("x2", legend_label_offset+legend_line_length)
-        .attr("y1", 4)
-        .attr("y2", 4)
-        .attr("stroke-width", rider_line_stroke_width[2])
-        .style("stroke-dasharray",rider_line_styles[2])
-        .style("stroke", rider_colours[2]);
-
-  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
-}
-if (!jQuery.isEmptyObject(graph_data_4)){
-  legend_label_offset += (graph_data_3.title.length * legend_average_char_width) + legend_gap_length;
-
-  svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[3]);
-
-  svg.append("line")//making a line for legend
-        .attr("x1", legend_label_offset)
-        .attr("x2", legend_label_offset+legend_line_length)
-        .attr("y1", 4)
-        .attr("y2", 4)
-        .attr("stroke-width", rider_line_stroke_width[3])
-        .style("stroke-dasharray",rider_line_styles[3])
-        .style("stroke", rider_colours[3]);
-
-  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
-}
-if (!jQuery.isEmptyObject(graph_data_5)){
-  legend_label_offset += (graph_data_4.title.length * legend_average_char_width) + legend_gap_length;
-
-  svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[4]);
-
-  svg.append("line")//making a line for legend
-        .attr("x1", legend_label_offset)
-        .attr("x2", legend_label_offset+legend_line_length)
-        .attr("y1", 4)
-        .attr("y2", 4)
-        .attr("stroke-width", rider_line_stroke_width[4])
-        .style("stroke-dasharray",rider_line_styles[4])
-        .style("stroke", rider_colours[4]);
-
-  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
-}
-//add a title
-// svg.append("text")
-// .attr("x", (width / 2))
-// .attr("y", 0 - (margin.top / 2))
-// .attr("text-anchor", "middle")
-// .style("font-size", "16px")
-// .style("font-style", "italic")
-// .text(graph_title);
-break;
 
 default:
 console.log("graph " + graph_name + " not found: nothing drawn");

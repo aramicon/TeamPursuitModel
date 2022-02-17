@@ -284,6 +284,48 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
       });
     });
 
+
+    app.get('/best_in_final_gen_tests/:id',cors(corsOptions), (req,res)=>{
+      const resultID = req.params.id;
+      console.log("best_in_final_gen_tests with ids " + resultID);
+      let ids = JSON.parse(resultID);
+      let ids_mongo = [];
+      for(let i = 0; i < ids.length;i++){
+        ids_mongo.push(db.getPrimaryKey(ids[i]));
+      }
+      db.getDB().collection(collectionResults).find({_id : {$in: ids_mongo}},{_id:1,'ga_results':1}).toArray((err,documents)=>{
+        if(err){
+          console.log("error getting results using ID " + err);
+        }
+        else{
+          //console.log(documents);
+          console.log(documents.length + " docs");
+          let return_data = [];
+          //aim is to get the test data, currently fixed to noise data, not very dynamic
+
+          for(let i = 0; i < documents.length; i++){
+            let return_data_entry = [];
+            //results are actually a string so need to convert back
+            let ga_results = JSON.parse(documents[i].ga_results);
+            console.log("*****> ga_results");
+            console.log(ga_results);
+
+            let best_in_final_gen_test_results = ga_results["generations"][ga_results["generations"].length-1]["best_in_gen_tests_results"];
+        
+            console.log("****> best_in_final_gen_test_results");
+            console.log(best_in_final_gen_test_results);
+
+            return_data.push(best_in_final_gen_test_results);
+          }
+
+          res.json(return_data);
+        }
+      });
+    });
+
+
+
+
     app.get('/best_fitness_per_generation/:id',cors(corsOptions), (req,res)=>{
       const resultID = req.params.id;
       console.log("best_fitness_per_generation with id " + resultID);

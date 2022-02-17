@@ -354,3 +354,16 @@ package results and add to the main results data object
   if(typeof v_details.values[current_iteration] === 'undefined'){
   instead of
     if(typeof v_details.values[current_iteration] !== 'undefined'){
+	
+	
+-- need to email paper to 
+
+DiscoveringTeamPursuitTrackCyclingStrategiesUsingAGeneticAlgorithm_DK_COR_2022
+
+
+-- try to get the data back out from the mongo 
+
+-- just want simple list of triples or three single lists 
+-- lob it into the data_display textarea
+
+-- results are in the last generation... should really be outside but howsover

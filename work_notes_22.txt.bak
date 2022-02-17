@@ -349,3 +349,10 @@ package results and add to the main results data object
 -- finally it is saving new data... doesn't seem to have the last one (0.0). how many does it actually run?
 
 -- doesn't add details for the 0.0 value I guess because 0 is falsy?
+
+-- arg, thought i had it but i broke it :-( used 
+  if(typeof v_details.values[current_iteration] === 'undefined'){
+  instead of
+    if(typeof v_details.values[current_iteration] !== 'undefined'){
+	
+	
