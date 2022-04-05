@@ -58,7 +58,17 @@
       </div>
       <div class="row">
         <div class="col">
-          <div id = "sequences_list" >-- no Sequences loaded yet... --</div>
+            <div class='form-group'><input type='text' class='form-control' id='searchSequencesTerm'></div>
+          </div>
+              <div class="col">
+                <button type="button" class="btn btn-outline-success" id = "searchSequences">Search Tags/Notes</button>
+                <button type="button" class="btn btn-outline-success" id = "showAll">Show All</button>
+                <button type="button" class="btn btn-outline-dark" id = "selectAll">Select All/None</button>
+        </div>
+      </div>
+      <div class="row">
+        <div class="col">
+          <div id = "sequences_list" class = "results_list">-- no Sequences loaded yet... --</div>
         </div>
       </div>
 
@@ -83,12 +93,15 @@
           <span id = "sequence_result_message_info"></span>
           <div class='form-group'><label for='shortTitle'>Sequence Name</label><input type='text' class='form-control' id='sequence_form_shortTitle' value = 'new'></div>
           <div class='form-group'>    <label for='sequence_form_notes'>Notes</label><textarea class='form-control' id='sequence_form_notes' rows='2'>new</textarea></div>
+          <div class='form-group'>    <label for='sequence_form_tags'>Tags</label>
+            <textarea class='form-control' id='sequence_form_tags' rows='2'></textarea></div>
           <div class="form-group">
+            <label for='sequence_form_tags'>GA Settings</label>
           <select class="form-control" id="experiment_names">
             <option value = "0">SELECT</option>
           </select>
         </div>
-          <div class='form-group'>    <label for='sequence_form_options'>Settings</label><textarea class='form-control' id='sequence_form_options' rows='6'>{'prop':'val'}</textarea></div>
+          <div class='form-group'>    <label for='sequence_form_options'>Sequence Options (JSON)</label><textarea class='form-control' id='sequence_form_options' rows='12'>{'prop':'val'}</textarea></div>
 
 
           <button id = "sequence_form_add" class="btn btn-dark mb-2" onClick='updateSequence()' ><i class="fas fa-save" style="color:#90ec78;"></i> Update to Db</button>

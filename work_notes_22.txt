@@ -367,3 +367,370 @@ DiscoveringTeamPursuitTrackCyclingStrategiesUsingAGeneticAlgorithm_DK_COR_2022
 -- lob it into the data_display textarea
 
 -- results are in the last generation... should really be outside but howsover
+
+-- monday 21st feb
+-- do the results appear in the textarea?
+-- yup, they look like this:
+["[{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":1}],\"reps\":10,\"test_result\":328.5271},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0.9}],\"reps\":10,\"test_result\":319.44710000000003},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0.8}],\"reps\":10,\"test_result\":298.1650000000001},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0.7}],\"reps\":10,\"test_result\":320.9687},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0.6}],\"reps\":10,\"test_result\":317.6809},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0.5}],\"reps\":10,\"test_result\":325.3721},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0.4}],\"reps\":10,\"test_result\":321.40500000000003},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0.3}],\"reps\":10,\"test_result\":303.8983},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0.2}],\"reps\":10,\"test_result\":292.4171999999999},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0.1}],\"reps\":10,\"test_result\":293.97920000000005},{\"variation\":[{\"type\":\"global\",\"property\":\"noise_1_probability_instruction_misheard\",\"value\":0}],\"reps\":10,\"test_result\":288.00500000000005}]"]
+
+-- example variation
+{"variation":[{"type":"global","property":"noise_1_probability_instruction_misheard","value":1}],"reps":10,"test_result":328.5271}
+
+-- see can i parrs this and instead produce simple values with the noise_1_probability_instruction_misheard and test_result... will then just need to add the noise_1_probability_instruction_misheard of the final-best-in-gen-race itself, and select multiple entries to create the 3d dataset.
+
+--  nasty bug based on me not understanding how select case works in JS. fixed.
+
+-- now it shows doubles, but need to add the third datapoint then be able to select multiple data results. how/where do i add this? return it from app.js? might need to extend the data that is sent back, and add on a best_in_final_gen_noise_value?
+
+-- so now the data returned should have
+	return_data.best_in_final_gen_noise_value = 0;
+	return_data.data_rows = [.......];
+	
+-- Tuesday 22/2. need to run a bigger sequence 
+{"iterations":11,"active":1,"variations":[{"iterations":[11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"enable_instruction_noise_1_random","values":[1,1,1,1,1,1,1,1,1,1,1]},{"iterations":[11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]}],"best_in_final_gen_tests":[{"iterations":11,"repeat_each":20,"variations":[{"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.9,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0]}]}]}
+
+
+
+-- have collected data for a few scenarions now, but the terrain is very mountainous... need to rerun one e.g. 3 strong and see if they vary a lot. if they vary a lot then it is struggling to find an optimum?
+
+-- march 7th. can I fix the 3d graphs or even twig the problem?
+
+-- do i need to re-run the 0-strong/2-strong/3-strong versions with the 21 data points instead of 11?
+
+-- 3d graphs defo seem wrong, like it is picking up the wrong points- seems to be peaks at test noise = 0.65 or so, but this is not in the data.
+
+-- hmmm, it does appear that when the ga noise is 0.65, the results are poor, i.e. always slow, much more so than when noise is 0.7
+
+-- does this mean it simply happens to find a bad solution? does it struggle to find good solutions here or is it just chance.
+
+-- rerun the experiment and see if the graph looks very different.
+
+-- March 11th. Set up a few experiments to try find the fastest race for all weak... larger population, more generations, different mutation rates?
+
+-- current default 
+	"ga_population_size": 3000,
+	"ga_population_size_first_generation": 3000,
+	"ga_number_of_generations": 50,
+	"ga_max_timestep": 450,
+	"ga_probability_of_instruction_per_timestep_lower": 0.02,
+	"ga_probability_of_instruction_per_timestep_upper": 0.04,
+	"ga_probability_of_drop_instruction": 0.6,
+	"ga_p_crossover": 0.3,
+	"ga_crossover_length_adjustment_probability": 0.5,
+	"crossover_apply_mutation_probability": 0.5
+	
+	"ga_p_shuffle_start": 0.003,
+	"ga_p_add_instruction": 0.009,
+	"ga_p_delete_instruction": 0.2,
+	"ga_p_change_effort": 0.015,
+	"ga_p_change_drop": 0.015,
+	"ga_p_move_instruction": 0.015,
+	"ga_range_to_move_instruction": 12,
+	"ga_range_to_change_effort": 2.5,
+	
+
+let's try a bunch of these... make pop 5000, 50 gens fine, just tweeak some ga probs
+-- first just see if the crossover choice matters>
+	"ga_p_crossover": 0.3,
+
+
+-- Monday 21st. March. Need to finish paper 2 this week. But what is the actual next task? 
+
+ok, so the issue with the odd 0.65 times in 3 Strong seems to makse sense. The best-in-final-gen race finishes in a speedy 
+
+instructions 
+[[18,"effort=4.63"],[89,"drop=2"],[138,"drop=3"],[142,"drop=1"],[213,"drop=1"],[243,"effort=7.68"],[260,"effort=7.44"]]
+This finishes in 269.894 seconds
+
+how do i cite and image again in Overleaf? Like so: 
+
+refer to figure \ref{fig:powerOutputFailure}
+
+\begin{figure}[htp]
+  \centering
+  \includegraphics[width=1\textwidth]{failure_only_gen50_0_61701aefeeefc52d541b5a36_2021-9-20_14-44.png}
+  \caption{Power Output for Winning Races in High-Failure Environment }
+  \label{fig:powerOutputFailure}
+\end{figure}##
+
+
+-- need the graphs to look alike so will have to do all the graphs with Matplotlib- get it to export the data into the textarea for every graph?
+
+Need to explain WHY the 0.6 levels are so much higher than the 0.7 ones. They require a very specific level of noise, i.e. to push UP the first effort instruction. 
+
+-- run a bunch with 0.6/0.65/0.7 GA noise and tests?
+{
+	"iterations": 12,
+	"active": 0,
+	"variations": [
+		{
+			"iterations": [
+				12,
+				11,
+				10,
+				9,
+				8,
+				7,
+				6,
+				5,
+				4,
+				3,
+				2,
+				1
+			],
+			"type": "global",
+			"property": "enable_instruction_noise_1_random",
+			"values": [
+				1,
+				1,
+				1,
+				1,
+				1,
+				1,
+				1,
+				1,
+				1,
+				1,
+				1,
+				1
+			]
+		},
+		{
+			"iterations": [
+				12,
+				11,
+				10,
+				9,
+				8,
+				7,
+				6,
+				5,
+				4,
+				3,
+				2,
+				1
+			],
+			"type": "global",
+			"property": "noise_1_probability_instruction_misheard",
+			"values": [
+				0.7,
+				0.7,
+				0.7,
+				0.7,
+				0.65,
+				0.65,
+				0.65,
+				0.65,
+				0.6,
+				0.6,
+				0.6,
+				0.6
+			]
+		}
+	],
+	"best_in_final_gen_tests": [
+		{
+			"iterations": 21,
+			"repeat_each": 20,
+			"variations": [
+				{
+					"type": "global",
+					"property": "noise_1_probability_instruction_misheard",
+					"values": [
+						1,
+						0.95,
+						0.9,
+						0.85,
+						0.8,
+						0.75,
+						0.7,
+						0.65,
+						0.6,
+						0.55,
+						0.5,
+						0.45,
+						0.4,
+						0.35,
+						0.3,
+						0.25,
+						0.2,
+						0.15,
+						0.1,
+						0.05,
+						0
+					]
+				}
+			]
+		}
+	]
+}
+
+
+-- thursday 24th of March. Or is it May? September? 2055? did i ever exist? heat death of the universe be the backdrop for all that exist?
+
+-- get the data and graph the 0.6/0.65/0.7 in matplotlib... then get the other diagram in matplotlib, then add graphs for the all weak/1 strong/2strong versions. do i have to run any of those again? could add a search and select-all to the UI?
+
+-- hmmmm, looks like the sequence is ballsed up, the tests only ran up to 0.55. ah crap, I had iterations at 11 instead of 21. SHould have a UI way to re-run those manually :-( Would be slow to make though.
+
+maybe add a tags entry in sequence and results that stores the sequence tags in the results ,which can then be searched? there are kinda too many results to just browse now. can then also add a select all button?
+
+-- added a sequence_form_tags form textarea
+-- more complex than i thought. Added resultTags to results form. 
+
+
+-- added a graph...  but it is so so messy. I need to explain why particular strategies are so noise-intolerant... and then figure out why they are actually found by the GA.	
+
+-- find the result for 0.6 and 0.7 to compare-- 0.6 62260d7a4ebddf4748185351 race url http://127.0.0.1:3003/tpgame.html?source=results&results_id=62260d7a4ebddf4748185351&startorder=1,2,0,3&instructions=%5B%5B18,%22effort=4.63%22%5D,%5B89,%22drop=2%22%5D,%5B138,%22drop=3%22%5D,%5B142,%22drop=1%22%5D,%5B213,%22drop=1%22%5D,%5B243,%22effort=7.68%22%5D,%5B260,%22effort=7.44%22%5D%5D&noise_alterations=%7B%2218%22:%7B%22original_instruction%22:%5B18,%22effort=4.63%22%5D,%22altered_instruction%22:%5B18,%22effort=6.151875784572508%22%5D,%22type%22:%22random_effort%22%7D,%22138%22:%7B%22original_instruction%22:%5B138,%22drop=3%22%5D,%22altered_instruction%22:%5B138,%22drop=2%22%5D,%22type%22:%22random_drop%22%7D,%22142%22:%7B%22original_instruction%22:%5B142,%22drop=1%22%5D,%22altered_instruction%22:%5B142,%22drop=3%22%5D,%22type%22:%22random_drop%22%7D,%22213%22:%7B%22original_instruction%22:%5B213,%22drop=1%22%5D,%22altered_instruction%22:%5B213,%22drop=3%22%5D,%22type%22:%22random_drop%22%7D,%22243%22:%7B%22original_instruction%22:%5B243,%22effort=7.68%22%5D,%22altered_instruction%22:%5B243,%22effort=5.887529149495269%22%5D,%22type%22:%22random_effort%22%7D,%22260%22:%7B%22original_instruction%22:%5B260,%22effort=7.44%22%5D,%22altered_instruction%22:%5B260,%22effort=9%22%5D,%22type%22:%22random_effort%22%7D%7D&performance_failures=%7B%7D
+
+[[18,"effort=4.63"],[89,"drop=2"],[138,"drop=3"],[142,"drop=2"],[213,"drop=1"],[243,"effort=7.68"],[260,"effort=7.44"]]
+[[18,"effort=6.151875784572508"],[89,"drop=2"],[138,"drop=2"],[142,"drop=3"],[213,"drop=3"],[243,"effort=5.887529149495269"],[260,"effort=9"]]
+
+noise 
+{"18":{"original_instruction":[18,"effort=4.63"],"altered_instruction":[18,"effort=6.151875784572508"],"type":"random_effort"},"138":{"original_instruction":[138,"drop=3"],"altered_instruction":[138,"drop=2"],"type":"random_drop"},"142":{"original_instruction":[142,"drop=1"],"altered_instruction":[142,"drop=3"],"type":"random_drop"},"213":{"original_instruction":[213,"drop=1"],"altered_instruction":[213,"drop=3"],"type":"random_drop"},"243":{"original_instruction":[243,"effort=7.68"],"altered_instruction":[243,"effort=5.887529149495269"],"type":"random_effort"},"260":{"original_instruction":[260,"effort=7.44"],"altered_instruction":[260,"effort=9"],"type":"random_effort"}}
+
+
+-- fruiday 25th. mad slow progress. needs to 
+-- maybe I can build the search tags button?
+-- started this. need to get search term then actually filter the results. 
+-- then need to finish the explanation of that noise section. then on on on.
+
+-- mumber of instructions- is it falling as noise is added, i..e does it affect the tolerance?
+
+-- Monday 4 4. let's try do 4 hours.
+
+-- first build that dumb tag search?
+
+-- l ooks like |I might need to create an index on the tags field 
+e.g.
+db.experiment_results.createIndex( { tags: "text", notes: "text" } )
+
+how does this work then?
+
+db.experiment_results.find( { $text: { $search: "\"3StrongA\"" } } )
+
+seems to work... implement this so in the Node code
+
+-- if term is blank show all...
+-- also add a dedicated Show All button ?
+
+-- it is actually searching the tags and the notes... improve the button text 
+
+-- add a Select All button
+
+-- make it a proper toggle, add a gobal var to keep track of the toggle state
+
+-- ok, this now seems to work... do i need to be able to search the sequences?
+
+-- limit the height of the sequences list
+
+-- might as well add the search to the sequences as well, need to keep improving this.
+
+-- nasty issue not reading the e object in the keypress. 
+
+also, search brings back everything... 
+
+-- error searching sequences:  err MongoError: text index required for $text query 
+need to add the index for the sequences
+
+db.experiment_results.createIndex( { tags: "text", notes: "text" } )
+
+had to replace the d3 key handling with jquery.
+
+-- next up, need to get the rawdata from the other graphs so that I can build them in all via Matplotlib
+
+-- have some data in the raw box now... bug, it is missing the 1st entry except for the first selected row? warum?
+
+-- loop was starting at 1 not 0 for some daft reason.
+
+-- try to remake the graph in Overleafd using matplotlib 
+
+-- looks like the original 0.6/.65/.7 data comes from the sequence 621fb189e07d6b17109622cf ?
+result ids 
+621fd5bd44647e2364004b2c
+621fd4f944647e2364004b2b
+621fd41644647e2364004b2a
+
+Nop. It is sequence 621fb189e07d6b17109622cf
+result ids
+62260d7a4ebddf4748185351
+62260ccf4ebddf4748185350
+62260c224ebddf474818534f
+
+ah wait, same sequecne id as I reused it. dumb dumb dumb.
+actual data 
+[[[0,273.795],[1,273.562],[2,272.581],[3,271.882],[4,271.414],[5,272.315],[6,271.97],[7,270.795],[8,270.733],[9,271.662],[10,270.479],[11,271.575],[12,271.786],[13,271.834],[14,270.284],[15,270.743],[16,270.284],[17,270.739],[18,270.936],[19,271.153],[20,271.72],[21,271.701],[22,270.538],[23,271.343],[24,270.918],[25,270.47],[26,269.091],[27,271.143],[28,270.782],[29,270.49],[30,271.478],[31,271.762],[32,270.795],[33,270.947],[34,270.442],[35,271.523],[36,271.758],[37,270.162],[38,270.462],[39,271.793],[40,271.611],[41,271.155],[42,270.453],[43,269.737],[44,271.519],[45,271.096],[46,270.582],[47,271.49],[48,270.245],[49,271.149]],[[0,273.795],[1,273.562],[2,272.581],[3,271.882],[4,271.414],[5,272.315],[6,271.97],[7,270.795],[8,270.733],[9,271.662],[10,270.479],[11,271.575],[12,271.786],[13,271.834],[14,270.284],[15,270.743],[16,270.284],[17,270.739],[18,270.936],[19,271.153],[20,271.72],[21,271.701],[22,270.538],[23,271.343],[24,270.918],[25,270.47],[26,269.091],[27,271.143],[28,270.782],[29,270.49],[30,271.478],[31,271.762],[32,270.795],[33,270.947],[34,270.442],[35,271.523],[36,271.758],[37,270.162],[38,270.462],[39,271.793],[40,271.611],[41,271.155],[42,270.453],[43,269.737],[44,271.519],[45,271.096],[46,270.582],[47,271.49],[48,270.245],[49,271.149]],[[0,273.795],[1,273.562],[2,272.581],[3,271.882],[4,271.414],[5,272.315],[6,271.97],[7,270.795],[8,270.733],[9,271.662],[10,270.479],[11,271.575],[12,271.786],[13,271.834],[14,270.284],[15,270.743],[16,270.284],[17,270.739],[18,270.936],[19,271.153],[20,271.72],[21,271.701],[22,270.538],[23,271.343],[24,270.918],[25,270.47],[26,269.091],[27,271.143],[28,270.782],[29,270.49],[30,271.478],[31,271.762],[32,270.795],[33,270.947],[34,270.442],[35,271.523],[36,271.758],[37,270.162],[38,270.462],[39,271.793],[40,271.611],[41,271.155],[42,270.453],[43,269.737],[44,271.519],[45,271.096],[46,270.582],[47,271.49],[48,270.245],[49,271.149]]]
+
+-- moving python project to main repo... do I need to add stuff to the ignore file? Oh, this top level RESEARCH folder is not the git repo. 
+
+
+-- need to add the result/sequence id to the search index for results/sequences 
+
+-- first get the indexes 
+db.experiment_results.getIndexes()
+
+index name is tags_text_notes_text
+delete this with 
+db.experiment_results.dropIndex( "tags_text_notes_text" )
+-- now recreate it with the id 
+db.experiment_results.createIndex( { _id: "text", tags: "text", notes: "text" } )
+-- new index has name _id_text_tags_text_notes_text
+
+-- do the same for the sequences 
+db.experiment_sequences.dropIndex( "tags_text_notes_text" )
+db.experiment_sequences.createIndex( { _id: "text", tags: "text", notes: "text" } )
+-- new index _id_text_tags_text_notes_text
+
+-- do they work?
+nope. seems to not search but the id :-( 
+
+-- need to add an OR into the find()?
+db.inventory.find( { $or: [ { quantity: { $lt: 20 } }, { price: 10 } ] } )
+
+current 
+  db.getDB().collection(collectionResults).find({ $text: { $search: "\""+ searchTerm +"\"" } }
+new
+  db.getDB().collection(collectionResults).find({ $or: [{ "_id" : ObjectId(searchTerm), "x" : 1 }, {$text: { $search: "\""+ searchTerm +"\"" }}] }
+  
+  nope, returns no results... test one in Robo3T I guess 
+  ObjectId("623c75494c8f6617d4055de0")
+
+
+-- can't match up the data in pycharm with the results now... what the fuck am i even doing?
+-- 0.6 data should be either
+result 62260d7a4ebddf4748185351  or 
+result 621fd5bd44647e2364004b2c (older)
+
+-- search fails if it is not an objectid format... need to improve it; check to see if the term is a valid objectid before using it 
+
+const ObjectId = require('mongoose').Types.ObjectId;
+  function isObjectIdValid(id) {    
+  if (ObjectId.isValid(id)) {
+  if (String(new ObjectId(id)) === id) { 
+  return true      } else {        return false      }    } else {      return false    }  }
+
+-- seems to work, need this for sequences, too?
+
+ok. seems to work.
+
+find result 62260d7a4ebddf4748185351 then find the other two next to it. generate graphs again
+
+data for all three 
+[[[0,273.795],[1,273.562],[2,272.581],[3,271.882],[4,271.414],[5,272.315],[6,271.97],[7,270.795],[8,270.733],[9,271.662],[10,270.479],[11,271.575],[12,271.786],[13,271.834],[14,270.284],[15,270.743],[16,270.284],[17,270.739],[18,270.936],[19,271.153],[20,271.72],[21,271.701],[22,270.538],[23,271.343],[24,270.918],[25,270.47],[26,269.091],[27,271.143],[28,270.782],[29,270.49],[30,271.478],[31,271.762],[32,270.795],[33,270.947],[34,270.442],[35,271.523],[36,271.758],[37,270.162],[38,270.462],[39,271.793],[40,271.611],[41,271.155],[42,270.453],[43,269.737],[44,271.519],[45,271.096],[46,270.582],[47,271.49],[48,270.245],[49,271.149]],
+
+[[0,273.795],[1,273.562],[2,272.581],[3,271.882],[4,271.414],[5,272.315],[6,271.97],[7,270.795],[8,270.733],[9,271.662],[10,270.479],[11,271.575],[12,271.786],[13,271.834],[14,270.284],[15,270.743],[16,270.284],[17,270.739],[18,270.936],[19,271.153],[20,271.72],[21,271.701],[22,270.538],[23,271.343],[24,270.918],[25,270.47],[26,269.091],[27,271.143],[28,270.782],[29,270.49],[30,271.478],[31,271.762],[32,270.795],[33,270.947],[34,270.442],[35,271.523],[36,271.758],[37,270.162],[38,270.462],[39,271.793],[40,271.611],[41,271.155],[42,270.453],[43,269.737],[44,271.519],[45,271.096],[46,270.582],[47,271.49],[48,270.245],[49,271.149]],
+
+[[0,273.795],[1,273.562],[2,272.581],[3,271.882],[4,271.414],[5,272.315],[6,271.97],[7,270.795],[8,270.733],[9,271.662],[10,270.479],[11,271.575],[12,271.786],[13,271.834],[14,270.284],[15,270.743],[16,270.284],[17,270.739],[18,270.936],[19,271.153],[20,271.72],[21,271.701],[22,270.538],[23,271.343],[24,270.918],[25,270.47],[26,269.091],[27,271.143],[28,270.782],[29,270.49],[30,271.478],[31,271.762],[32,270.795],[33,270.947],[34,270.442],[35,271.523],[36,271.758],[37,270.162],[38,270.462],[39,271.793],[40,271.611],[41,271.155],[42,270.453],[43,269.737],[44,271.519],[45,271.096],[46,270.582],[47,271.49],[48,270.245],[49,271.149]]]
+
+data for .6 only 
+[[[0,273.303],[1,271.672],[2,272.673],[3,272.284],[4,270.447],[5,270.235],[6,270.447],[7,270.25],[8,271.334],[9,270.524],[10,270.605],[11,271.094],[12,269.514],[13,271.382],[14,270.842],[15,271.177],[16,269.435],[17,271.439],[18,271.181],[19,270.559],[20,269.901],[21,268.999],[22,270.681],[23,271.246],[24,270.034],[25,269.679],[26,269.747],[27,270.02],[28,270.337],[29,270.988],[30,268.619],[31,270.875],[32,269.7],[33,271.307],[34,269.678],[35,270.746],[36,270.951],[37,270.392],[38,271.12],[39,270.754],[40,269.852],[41,270.903],[42,270.749],[43,269.99],[44,270.268],[45,270.537],[46,271.066],[47,270.9],[48,271.138],[49,269.894]]]
+
+NOT the same... what's a goin on? 
+
+ahhh, all three are the same... muck.
+-- hadn't updated an index, all were at 0. eejit.
+
+[[[0,273.795],[1,273.562],[2,272.581],[3,271.882],[4,271.414],[5,272.315],[6,271.97],[7,270.795],[8,270.733],[9,271.662],[10,270.479],[11,271.575],[12,271.786],[13,271.834],[14,270.284],[15,270.743],[16,270.284],[17,270.739],[18,270.936],[19,271.153],[20,271.72],[21,271.701],[22,270.538],[23,271.343],[24,270.918],[25,270.47],[26,269.091],[27,271.143],[28,270.782],[29,270.49],[30,271.478],[31,271.762],[32,270.795],[33,270.947],[34,270.442],[35,271.523],[36,271.758],[37,270.162],[38,270.462],[39,271.793],[40,271.611],[41,271.155],[42,270.453],[43,269.737],[44,271.519],[45,271.096],[46,270.582],[47,271.49],[48,270.245],[49,271.149]],[[0,273.688],[1,270.175],[2,272.986],[3,269.272],[4,270.74],[5,271.639],[6,272.148],[7,271.923],[8,271.212],[9,271.212],[10,271.666],[11,271.289],[12,270.472],[13,270.472],[14,270.398],[15,270.472],[16,270.269],[17,270.055],[18,270.281],[19,269.113],[20,270.298],[21,271.011],[22,271.097],[23,270.602],[24,271.51],[25,271.365],[26,270.587],[27,271.807],[28,270.58],[29,271.519],[30,269.526],[31,269.548],[32,271.747],[33,271.372],[34,270.842],[35,270.753],[36,269.513],[37,270.735],[38,269.851],[39,270.992],[40,270.314],[41,270.403],[42,270.403],[43,269.964],[44,270.838],[45,270.915],[46,270.636],[47,269.129],[48,270.307],[49,270.065]],[[0,273.303],[1,271.672],[2,272.673],[3,272.284],[4,270.447],[5,270.235],[6,270.447],[7,270.25],[8,271.334],[9,270.524],[10,270.605],[11,271.094],[12,269.514],[13,271.382],[14,270.842],[15,271.177],[16,269.435],[17,271.439],[18,271.181],[19,270.559],[20,269.901],[21,268.999],[22,270.681],[23,271.246],[24,270.034],[25,269.679],[26,269.747],[27,270.02],[28,270.337],[29,270.988],[30,268.619],[31,270.875],[32,269.7],[33,271.307],[34,269.678],[35,270.746],[36,270.951],[37,270.392],[38,271.12],[39,270.754],[40,269.852],[41,270.903],[42,270.749],[43,269.99],[44,270.268],[45,270.537],[46,271.066],[47,270.9],[48,271.138],[49,269.894]]]
+
+note that the ordering is REVERSED: 0.6 data at the END.
+
+put new graph in paper... should switch the ordering, to match the previous one.

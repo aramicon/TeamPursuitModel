@@ -5,12 +5,45 @@ let selected_id ="";
 let selected_seq_name = "";
 let selected_seq_results = {};
 
-$(document).ready(function() {
-  getSequences();
-  getSettingNames();
-  d3.select("#deleteSelectedResults").on('click',deleteSelectedResults);
+let checkbox_toggle_state = true;
+
+const searchSequences = () => {
+    let searchTerm = $("#searchSequencesTerm").val().trim();
+    console.log("search sequences tags/notes with term " + searchTerm);
+    if(searchTerm.length > 0){
+    let serverURL = 'http://127.0.0.1:3003/searchSequences/' + searchTerm;
+    $("#sequences_info_label").html("Attempting to connect to <a href='"+serverURL+"'>server to read sequences</a>");
+    fetch(serverURL,{method : 'get'}).then((response)=>{
+      console.log(response);
+      return response.json();
+      if (!response.ok) {
+            throw Error(response.statusText);
+      }
+    }).then((data)=>{
+      draw_table(data);
+      $("#sequences_info_label").text(data.length + " sequences found.");
+    }).catch((error) => {
+      console.log("Error loading sequences from server");
+      $("#sequences_info_label").text("ERROR CONNECTING TO SERVER " + error)
+      console.log(error)
 });
 
+}
+else{
+  getSequences(); //getem all
+}
+}
+
+  const selectAll = () => {
+    console.log("select all sequences shown");
+    let cbs = document.getElementsByTagName('input');
+    for(let i=0; i < cbs.length; i++) {
+      if(cbs[i].type == 'checkbox') {
+        cbs[i].checked = checkbox_toggle_state;
+      }
+    }
+    checkbox_toggle_state = !checkbox_toggle_state;
+  }
 
 const getSequences = () => {
     let serverURL = 'http://127.0.0.1:3003/getSequences/';
@@ -38,9 +71,9 @@ const getSequences = () => {
     console.log(data)
     if (data.length > 0){
       let tableHTML = "<table class='table table-striped table-bordered table-dark '>";
-      tableHTML+="<thead class='thead-dark'><tr><th scope='col'>Select</th><th scope='col'>ID (click to load)</th><th scope='col'>Sequence Description</th><th scope='col'>Settings ID</th><th scope='col'>Settings Title</th><th scope='col'>Date</th></tr></thead>"
+      tableHTML+="<thead class='thead-light'><tr><th scope='col'>Select</th><th scope='col'>ID (click to load)</th><th scope='col'>Sequence Name</th><th scope='col'>Tags</th><th scope='col'>GA Settings ID</th><th scope='col'>Notes</th><th scope='col'>Date</th></tr></thead>"
       for(i=0;i<data.length;i++){
-          tableHTML += "<tr><th scope='row'><div class='form-check'><input class='form-check-input resultsCheckbox' type='checkbox' id='results_checkbox_" + i + "' name='results_checkbox' value='" + data[i]._id + "'></div></th><th scope='row'><button type='button' class='btn btn-dark' onclick = 'load_results(\""+ data[i]._id+"\")'>"+ data[i]._id+"</button></th><td>" + data[i].sequence_name + "</td><td>" + data[i].settings_id + "</td><td>" + data[i].notes + "</td><td>"+ data[i].date_updated + "</td></tr>";
+          tableHTML += "<tr><th scope='row'><div class='form-check'><input class='form-check-input resultsCheckbox' type='checkbox' id='results_checkbox_" + i + "' name='results_checkbox' value='" + data[i]._id + "'></div></th><th scope='row'><button type='button' class='btn btn-dark' onclick = 'load_results(\""+ data[i]._id+"\")'>"+ data[i]._id+"</button></th><td>" + data[i].sequence_name + "</td><td>" + (data[i].tags?data[i].tags:'') + "</td><td>" + data[i].settings_id + "</td><td>" + data[i].notes + "</td><td>"+ data[i].date_updated + "</td></tr>";
       }
 
       tableHTML += "</table>";
@@ -80,6 +113,8 @@ const getSequences = () => {
 
       $("#sequence_form_notes").val((selected_seq_results.notes?selected_seq_results.notes:''));
 
+      $("#sequence_form_tags").val((selected_seq_results.tags?selected_seq_results.tags:''));
+
       $("#sequence_form_shortTitle").val((selected_seq_name?selected_seq_name:''));
 
       $("#sequence_form_options").val((s_options?s_options:''));
@@ -107,6 +142,7 @@ const getSequences = () => {
 
      let new_sequence_name = $("#sequence_form_shortTitle").val();
      let new_sequence_notes = $("#sequence_form_notes").val();
+     let new_sequence_tags = $("#sequence_form_tags").val();
      let new_sequence_options = "";
      let optionsObject ={};
      try {
@@ -136,6 +172,7 @@ const getSequences = () => {
      let dataToSend = {
            "sequence_name":new_sequence_name,
            "notes":new_sequence_notes,
+           "tags":new_sequence_tags,
            "settings_id":selected_settings_id,
            "sequence_options":optionsObject,
            "date_updated":getDateTime()
@@ -172,6 +209,7 @@ const getSequences = () => {
 
         let new_sequence_name = $("#sequence_form_shortTitle").val();
         let new_sequence_notes = $("#sequence_form_notes").val();
+        let new_sequence_tags = $("#sequence_form_tags").val();
         let new_sequence_options = JSON.parse($("#sequence_form_options").val());
         let selected_settings_id = $('#experiment_names').val();
 
@@ -182,6 +220,7 @@ const getSequences = () => {
         let dataToSend = {
                 "sequence_name":new_sequence_name,
                 "notes":new_sequence_notes,
+                "tags":new_sequence_tags,
                 "settings_id":selected_settings_id,
                 "sequence_options":new_sequence_options,
                 "date_created":getDateTime(),
@@ -319,3 +358,23 @@ const getSequences = () => {
       console.log(error)
   });
   }
+
+
+  $(document).ready(function() {
+    getSequences();
+    getSettingNames();
+    d3.select("#searchSequences").on('click',searchSequences);
+  
+    $( "#searchSequencesTerm" ).keydown(function( event ) {
+      console.log("press");
+    if ( event.which == 13 ) {
+      searchSequences();
+    }
+
+});
+
+    d3.select("#showAll").on('click',getSequences);
+    d3.select("#selectAll").on('click',selectAll);
+
+    d3.select("#deleteSelectedResults").on('click',deleteSelectedResults);
+  });

@@ -1,12 +1,12 @@
-#results_list{
-  max-height: 400px;
+.results_list{
+  max-height: 440px;
   overflow: auto;
   border: 4px solid #cccccc;
   padding: 2px;
 
 }
 
-.range-slider {
+nge-slider {
 
   // Slider
   .input-range {

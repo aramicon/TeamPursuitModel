@@ -4,14 +4,77 @@ let selected_id ="";
 let selected_ga_settings_id = "";
 let selected_settings_name = "";
 let selected_notes = "";
+let selected_tags = "";
 let selected_short_title = "";
 let selected_global_settings = {};
 let selected_race_settings ={};
 let selected_rider_settings = {};
 
+let checkbox_toggle_state = true;
+
 let rider_colours = ['#648FFF','#785EF0','#DC267F','#FE6100','#FFB000'];
 let rider_line_styles = ['1, 0','2, 1','5,3','12,3','18,4'];
 let rider_line_stroke_width = [1,1.5,2,2.5,2.8];
+
+var DecimalPrecision = (function() {
+    if (Math.sign === undefined) {
+        Math.sign = function(x) {
+            return ((x > 0) - (x < 0)) || +x;
+        };
+    }
+    if (Math.trunc === undefined) {
+        Math.trunc = function(v) {
+            return v < 0 ? Math.ceil(v) : Math.floor(v);
+        };
+    }
+    var toPrecision = function(num, significantDigits) {
+        // Return early for ±0, NaN and Infinity.
+        if (!num || !Number.isFinite(num))
+            return num;
+        // Compute the base 10 exponent (signed).
+        var e = Math.floor(Math.log10(Math.abs(num)));
+        var d = significantDigits - 1 - e;
+        var p = Math.pow(10, Math.abs(d));
+        // Round to sf-1 fractional digits of normalized mantissa x.dddd
+        return d > 0 ? Math.round(num * p) / p : Math.round(num / p) * p;
+    };
+    // Eliminate binary floating-point inaccuracies.
+    var stripError = function(num) {
+        if (Number.isInteger(num))
+            return num;
+        return toPrecision(num, 15);
+    };
+    var decimalAdjust = function(type, num, decimalPlaces) {
+        var n = type === 'round' ? Math.abs(num) : num;
+        var p = Math.pow(10, decimalPlaces || 0);
+        var m = stripError(n * p)
+        var r = Math[type](m) / p;
+        return type === 'round' ? Math.sign(num) * r : r;
+    };
+    return {
+        // Decimal round (half away from zero)
+        round: function(num, decimalPlaces) {
+            return decimalAdjust('round', num, decimalPlaces);
+        },
+        // Decimal ceil
+        ceil: function(num, decimalPlaces) {
+            return decimalAdjust('ceil', num, decimalPlaces);
+        },
+        // Decimal floor
+        floor: function(num, decimalPlaces) {
+            return decimalAdjust('floor', num, decimalPlaces);
+        },
+        // Decimal trunc
+        trunc: function(num, decimalPlaces) {
+            return decimalAdjust('trunc', num, decimalPlaces);
+        },
+        // Format using fixed-point notation
+        toFixed: function(num, decimalPlaces) {
+            return decimalAdjust('round', num, decimalPlaces).toFixed(decimalPlaces);
+        }
+    };
+})();
+
 
 const saveGraphAsPng = () => {
 
@@ -689,30 +752,60 @@ const draw_multi_line_graph = (graph_name_opt) =>{
         console.log(" multi-id data");
         console.log(data);
 
+        let is_raw_data = false;
 
+
+        let graph_title ="unknown";
+        let graph_data_1 = {};
+        let graph_data_2 = {};
+        let graph_data_3 = {};
+        let graph_data_4 = {};
+        let graph_data_5 = {};
 
         switch(graph_name) {
-          case "best_in_final_gen_tests":
+          case "best_in_final_gen_tests":{
             is_raw_data = true;
 
-            console.log("Data for best in gen tests");
+
+            console.log("|||||||||||| Data for best in gen tests ||||||||||||");
+            console.log(data);
+
+            //try to parse the data
+            best_in_final_gen_tests_dataset = [];
+            let total_data_object =data;
+
+
+            for(let i = 0; i<total_data_object.length; i++){
+
+              let best_in_final_gen_noise_value = total_data_object[i].best_in_final_gen_noise_value;
+              let best_in_final_gen_tests_results = JSON.parse(total_data_object[i].data_rows);
+
+              //example entry: {"variation":[{"type":"global","property":"noise_1_probability_instruction_misheard","value":1}],"reps":10,"test_result":328.5271}
+              //very arbitrary, need to know exactly where the fields are packed
+              for(let jk = 0; jk < best_in_final_gen_tests_results.length; jk++){
+                let new_row = [];
+                new_row.push(best_in_final_gen_noise_value);
+                new_row.push(best_in_final_gen_tests_results[jk].variation[0].value); //adds noise_1_probability_instruction_misheard problem
+                new_row.push(DecimalPrecision.round(best_in_final_gen_tests_results[jk].test_result,4));
+                best_in_final_gen_tests_dataset.push(new_row);
+              }
+            }
+            console.log("best_in_final_gen_tests_dataset " + JSON.stringify(best_in_final_gen_tests_dataset));
+
+
             //output into textarea
-            $("#data_display").val(JSON.stringify(data));
+            $("#data_display").val(JSON.stringify(best_in_final_gen_tests_dataset));
+            break;
+          }
 
-
-          case "best_fitness_per_generation":
-
+          case "best_fitness_per_generation":{
+          console.log("best_fitness_per_generation graph")
           //titles will be first element: take these OUT
           let short_titles = Array.from(data[0]);
           data = data.splice(1);
           is_raw_data = false;
 
-          let graph_title ="unknown";
-          let graph_data_1 = {};
-          let graph_data_2 = {};
-          let graph_data_3 = {};
-          let graph_data_4 = {};
-          let graph_data_5 = {};
+
 
           //set the data based on the selection
           if (graph_name=="best_fitness_per_generation"){
@@ -722,6 +815,9 @@ const draw_multi_line_graph = (graph_name_opt) =>{
             graph_data_1.y_label = "Race Finish Time (s)";
             graph_data_1.x_scale_from = 0;
             graph_data_1.x_scale_to = data[0].length;
+
+            //add raw data to another object so it can be done in python, too
+            raw_data = [];
             //ned to work out the scale from the data (max)
             var max_all_data = d3.max(data, function(array) {
               return d3.max(array);
@@ -734,45 +830,68 @@ const draw_multi_line_graph = (graph_name_opt) =>{
             // y axis scale from min of data
             graph_data_1.y_scale_from = min_all_data-5;
 
+
             if(data[0]){
               graph_data_1.title = short_titles[0];
               graph_data_1.data = [];
+              raw_data_row = [];
               for (i=0;i<data[0].length;i++){
                 graph_data_1.data.push({x:i, y:data[0][i]});
+                raw_data_row.push([i,data[0][i]]);
               }
+              raw_data.push(raw_data_row);
             }
             if(data[1]){
               graph_data_2.title =short_titles[1];
               graph_data_2.data = [];
-              for (i=1;i<data[1].length;i++){
+              raw_data_row = [];
+              for (i=0;i<data[1].length;i++){
                 graph_data_2.data.push({x:i, y:data[1][i]});
+                raw_data_row.push([i,data[1][i]]);
               }
+                raw_data.push(raw_data_row);
             }
             if(data[2]){
               graph_data_3.title = short_titles[2];
               graph_data_3.data = [];
-              for (i=1;i<data[2].length;i++){
+              raw_data_row = [];
+              for (i=0;i<data[2].length;i++){
                 graph_data_3.data.push({x:i, y:data[2][i]});
+                raw_data_row.push([i,data[2][i]]);
               }
+                raw_data.push(raw_data_row);
             }
             if(data[3]){
               graph_data_4.title = short_titles[3];
               graph_data_4.data = [];
-              for (i=1;i<data[3].length;i++){
+              raw_data_row = [];
+              for (i=0;i<data[3].length;i++){
                 graph_data_4.data.push({x:i, y:data[3][i]});
+                raw_data_row.push([i,data[3][i]]);
               }
+                raw_data.push(raw_data_row);
             }
             if(data[4]){
               graph_data_5.title = short_titles[4];
               graph_data_5.data = [];
-              for (i=1;i<data[4].length;i++){
+              raw_data_row = [];
+              for (i=0;i<data[4].length;i++){
                 graph_data_5.data.push({x:i, y:data[4][i]});
+                raw_data_row.push([i,data[4][i]]);
               }
+                raw_data.push(raw_data_row);
             }
           }
+          break;
+        }
+        default: {
+          console.log("&&&& INVALID MULTI-DATA GRAPH NAME &&&&");
+        }
+      }
           //D3
           // set the dimensions and margins of the graph
-          if(!is_raw_data){
+          if(is_raw_data == false){
+            console.log("ODD:: is_raw_data = false")
 
             let totalWidth = 1000;
             let totalHeight = 450;
@@ -1000,13 +1119,15 @@ const draw_multi_line_graph = (graph_name_opt) =>{
   // .style("font-size", "16px")
   // .style("font-style", "italic")
   // .text(graph_title);
-  break;
+
+  // also put in the raw data if it is there
+  if(raw_data){
+      $("#data_display").val(JSON.stringify(raw_data));
+  }
+
 
 }
 
-default:
-console.log("graph " + graph_name + " not found: nothing drawn");
-}
 }).catch((error) => {
   console.log("Error loading data from server");
   $("#select_graph_info").text("ERROR CONNECTING TO SERVER " + error)
@@ -1119,6 +1240,7 @@ const draw_results = (data) => {
   selected_ga_settings_id = results.ga_settings_id;
   selected_settings_name = results.settings_name;
   selected_notes = results.notes;
+  selected_tags = results.tags;
   selected_short_title = results.short_title;
 
   selected_global_settings = JSON.parse(results.global_settings);
@@ -1146,7 +1268,7 @@ const load_results = (id) =>{
 
     $("#results_info_label").text(data.length + " results found.");
 
-    $("#race_result_message").html("Loaded Results " + id + " | <strong>" + selected_settings_name + "</strong>" + "<ul><li>Run Date: " + selected_ga_results.start_time + "</li><li>Generations: " + selected_ga_results.generations.length + "</li><li>Population: " +  selected_ga_results.generations[0].population_size + "</li></ul><div class='form-group'>    <label for='notes'>Notes</label><textarea class='form-control' id='notes' rows='2'>" + (selected_notes?selected_notes:'') + "</textarea></div><div class='form-group'><label for='shortTitle'>Short Title (shown on graphs)</label><input type='text' class='form-control' id='shortTitle' value = '" + (selected_short_title?selected_short_title:'') +"'></div><button class='btn btn-primary' onClick='updateResults()' >Update</button>" );
+    $("#race_result_message").html("Loaded Results " + id + " | <strong>" + selected_settings_name + "</strong>" + "<ul><li>Run Date: " + selected_ga_results.start_time + "</li><li>Generations: " + selected_ga_results.generations.length + "</li><li>Population: " +  selected_ga_results.generations[0].population_size + "</li></ul><div class='form-group'>    <label for='notes'>Notes</label><textarea class='form-control' id='notes' rows='2'>" + (selected_notes?selected_notes:'') + "</textarea></div><div class='form-group'><label for='shortTitle'>Short Title (shown on graphs)</label><input type='text' class='form-control' id='shortTitle' value = '" + (selected_short_title?selected_short_title:'') +"'></div><div class='form-group'><label for='resultTags'>Tags</label><input type='text' class='form-control' id='resultTags' value = '" + (selected_tags?selected_tags:'') +"'></div><button class='btn btn-primary' onClick='updateResults()' >Update</button>" );
 
   }).catch((error) => {
     console.log("Error loading results from server");
@@ -1160,9 +1282,9 @@ const draw_table = (data) => {
   //draw the table of results
   if (data.length > 0){
     let tableHTML = "<table class='table table-striped table-bordered '>";
-    tableHTML+="<thead class='thead-dark'><tr><th scope='col'>Select</th><th scope='col'>ID (click to load)</th><th scope='col'>Settings Name</th><th scope='col'>S.Title</th><th scope='col'>Notes</th><th scope='col'>Date</th></tr></thead>"
+    tableHTML+="<thead class='thead-dark'><tr><th scope='col'>Select</th><th scope='col'>ID (click to load)</th><th scope='col'>GA Settings Name</th><th scope='col'>Tags</th><th scope='col'>S.Title</th><th scope='col'>Notes</th><th scope='col'>Date</th></tr></thead>"
     for(i=0;i<data.length;i++){
-      tableHTML += "<tr><th scope='row'><div class='form-check'><input class='form-check-input resultsCheckbox' type='checkbox' id='results_checkbox_" + i + "' name='results_checkbox' value='" + data[i]._id + "'></div></th><th scope='row'><button type='button' class='btn btn-light' onclick = 'load_results(\""+ data[i]._id+"\")'>"+ data[i]._id+"</button></th><td>" + data[i].settings_name + "</td><td>" + data[i].short_title + "</td><td>" + data[i].notes + "</td><td>"+ data[i].date_created + "</td></tr>";
+      tableHTML += "<tr><th scope='row'><div class='form-check'><input class='form-check-input resultsCheckbox' type='checkbox' id='results_checkbox_" + i + "' name='results_checkbox' value='" + data[i]._id + "'></div></th><th scope='row'><button type='button' class='btn btn-light' onclick = 'load_results(\""+ data[i]._id+"\")'>"+ data[i]._id+"</button></th><td>" + data[i].settings_name + "</td><td>" + (data[i].tags?data[i].tags:'') + "</td><td>" + (data[i].short_title?data[i].short_title:'') + "</td><td>" + data[i].notes + "</td><td>"+ data[i].date_created + "</td></tr>";
     }
 
     tableHTML += "</table>";
@@ -1193,17 +1315,57 @@ const getResults = () => {
   });
 }
 
+const searchResults = () => {
+  let searchTerm = $("#searchTerm").val().trim();
+  console.log("search results with tag " + searchTerm);
+  if(searchTerm.length > 0){
+  let serverURL = 'http://127.0.0.1:3003/searchResults/' + searchTerm;
+  $("#results_info_label").html("Attempting to connect to <a href='"+serverURL+"'>server to search results</a>");
+  fetch(serverURL,{method : 'get'}).then((response)=>{
+    console.log(response);
+    return response.json();
+    if (!response.ok) {
+      throw Error(response.statusText);
+    }
+  }).then((data)=>{
+    draw_table(data);
+    $("#results_info_label").text(data.length + " results found.");
+  }).catch((error) => {
+    console.log("Error loading search results from server");
+    $("#results_info_label").text("ERROR CONNECTING TO SERVER " + error)
+    console.log(error)
+  });
+}
+else{
+  //no term given so just show em all
+  getResults();
+}
+}
+
+const selectAll = () => {
+  console.log("select all results shown");
+  let cbs = document.getElementsByTagName('input');
+  for(let i=0; i < cbs.length; i++) {
+    if(cbs[i].type == 'checkbox') {
+      cbs[i].checked = checkbox_toggle_state;
+    }
+  }
+  checkbox_toggle_state = !checkbox_toggle_state;
+}
+
 const updateResults = () => {
   //save the short_title and notes to the db
   let short_title = $("#shortTitle").val();
   let notes = $("#notes").val();
+  let tags = $("#resultTags").val();
 
   let serverURL = 'http://127.0.0.1:3003/update_results/'+selected_id;
   $("#race_result_col").html("Attempting to connect to <a href='"+serverURL+"'>server</a>");
 
   let dataToSend = {
     "short_title":short_title,
-    "notes":notes
+    "notes":notes,
+    "tags":tags
   };
   let jsonToSendS = JSON.stringify(dataToSend);
 
@@ -1231,6 +1393,15 @@ $(document).ready(function() {
   d3.select("#saveGraphAsPng").on('click',saveGraphAsPng);
   d3.select("#clearCanvas").on('click',clearCanvas);
   d3.select("#deleteSelectedResults").on('click',deleteSelectedResults);
+  d3.select("#searchResults").on('click',searchResults);
+  //also allow search via enter key click
+    $("#searchTerm").on("keydown", function (e) {
+      if (e.keyCode === 13) {  //checks whether the pressed key is "Enter"
+          searchResults();
+      }
+  });
+  d3.select("#showAll").on('click',getResults);
+  d3.select("#selectAll").on('click',selectAll);
   getResults();
 
 });

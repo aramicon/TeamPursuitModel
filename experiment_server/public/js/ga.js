@@ -478,13 +478,14 @@ const  saveResults = () => {
   let current_settings_rider = $("#rider_settings").val();
   let current_settings_option = $("#experiment_names").val();
   let notes = "";
-
+  let tags = "";
 
   if ($("#save_results_notes").val()){
     notes = $("#save_results_notes").val();
-
   }
-
+  if ($("#save_results_tags").val()){
+    tags = $("#save_results_tags").val();
+  }
 
   if (ga_results.start_time && current_settings_global.length > 0 && current_settings_race.length > 0 && current_settings_rider.length > 0 && current_settings_option.length > 0){
 
@@ -496,6 +497,7 @@ const  saveResults = () => {
       "rider_settings":current_settings_rider,
       "name":$("#new_settings_name").val(),
       "notes": notes,
+      "tags": tags,
       "date_created": getDateTime()
     };
     let jsonToSendS = JSON.stringify(dataToSend);
@@ -892,6 +894,7 @@ const check_for_sequences = () => {
         let seq_settings_id = seq_details.settings_id
         let seq_name = seq_details.sequence_name;
         let seq_notes = seq_details.notes;
+        let seq_tags = seq_details.tags;
         console.log("**Check active sequence " + seq_id);
         let found_experiment_to_run = 0;
 
@@ -1116,7 +1119,7 @@ const check_for_sequences = () => {
                         console.log("<><><><><><> BEST IN FINAL GEN TESTS  <><><><><><>");
                         console.log(JSON.stringify(seq_details.sequence_options.best_in_final_gen_tests));
                         //set the global settings property to this objects
-                        
+
                         let global_settings_object_parse = JSON.parse(global_settings_object);
                         global_settings_object_parse['best_in_final_gen_tests'] = [];
                         global_settings_object_parse['best_in_final_gen_tests'] = seq_details.sequence_options.best_in_final_gen_tests;
@@ -1140,7 +1143,7 @@ const check_for_sequences = () => {
                   element.value = seq_settings_id;
 
                   $("#save_results_notes").val("Experiment interval " + selected_iteration + "/" + total_iterations + " sequence " + seq_id + " " + seq_name + " " + seq_notes + "||" + sequence_variations_info);
-
+                  $("#save_results_tags").val(seq_tags);
                   //run the ga, try to send the rest of the code as a callback
                   //need to set variables to be able to update/save after running the GAS (asynchronous as heck)
                   sequence_selected_seq_id = seq_id;

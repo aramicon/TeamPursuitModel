@@ -8,6 +8,8 @@ const collectionSettings = "experiment_settings";
 const collectionResults = "experiment_results";
 const collectionSequences = "experiment_sequences";
 
+var ObjectId = require('mongodb').ObjectID;
+
 const cors = require('cors');
 const corsOptions = {
   "origin": "*",
@@ -28,6 +30,7 @@ const schemaResults = Joi.object().keys({
   ga_settings_id:Joi.string().required(),
   name:Joi.string().required(),
   notes:Joi.string().allow(""),
+  tags:Joi.string().allow(""),
   global_settings:Joi.object().required(),
   race_settings:Joi.object().required(),
   rider_settings:Joi.array().required(),
@@ -37,6 +40,7 @@ const schemaResults = Joi.object().keys({
 const schemaSequence = Joi.object().keys({
   sequence_name:Joi.string().required(),
   notes:Joi.string().required(),
+  tags:Joi.string().allow(""),
   settings_id:Joi.string().required(),
   sequence_options: Joi.object().required(),
   date_created: Joi.string().required(),
@@ -199,6 +203,7 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
           race_settings : userInput.race_settings,
           rider_settings : userInput.rider_settings,
           notes : userInput.notes,
+          tags : userInput.tags,
           date_created: userInput.date_created};
 
           db.getDB().collection(collectionResults).insertOne(newExperimentResults,(err,result)=>{
@@ -259,7 +264,7 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
     /******RESUlTS**********/
 
     app.get('/getResults',cors(corsOptions), (req,res)=>{
-      db.getDB().collection(collectionResults).find({},{projection:{settings_name : 1, date_created: 1, short_title:1, notes:1}}).sort({_id:-1}).toArray((err,documents)=>{
+      db.getDB().collection(collectionResults).find({},{projection:{settings_name : 1, date_created: 1, short_title:1, notes:1, tags:1}}).sort({_id:-1}).toArray((err,documents)=>{
         if(err){
           console.log("error getting collection of result names:  err " + err);
         }
@@ -268,6 +273,43 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
           res.json(documents);
         }
       });
+    });
+
+    app.get('/searchResults/:searchTerm',cors(corsOptions), (req,res)=>{
+      const searchTerm = req.params.searchTerm;
+      console.log("Search results with tags " + searchTerm);
+
+
+      // search text indexes, or is it an index named text, for the string
+      // only search for the id if it loks valid
+      let validId = false;
+      if (ObjectId.isValid(searchTerm) && (String(new ObjectId(searchTerm)) === searchTerm)){
+        validId = true;
+      }
+      if(validId){
+        db.getDB().collection(collectionResults).find({ $or: [{ "_id" : ObjectId(searchTerm)}, {$text: { $search: "\""+ searchTerm +"\"" }}]},{projection:{settings_name : 1, date_created: 1, short_title:1, notes:1, tags:1}}).sort({_id:-1}).toArray((err,documents)=>{
+          if(err){
+            console.log("error searching collection of results with id and tags/notes:  err " + err);
+          }
+          else{
+            console.log("searching list of search results on id/tags/notes");
+            res.json(documents);
+          }
+        });
+      }
+      else{
+        //search tags and notes only
+        db.getDB().collection(collectionResults).find({$text: { $search: "\""+ searchTerm +"\"" }},{projection:{settings_name : 1, date_created: 1, short_title:1, notes:1, tags:1}}).sort({_id:-1}).toArray((err,documents)=>{
+          if(err){
+            console.log("error searching collection of results with tags/notes:  err " + err);
+          }
+          else{
+            console.log("searching list of search results on tags/notes");
+            res.json(documents);
+          }
+        });
+      }
+
     });
 
 
@@ -301,21 +343,31 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
           //console.log(documents);
           console.log(documents.length + " docs");
           let return_data = [];
+
           //aim is to get the test data, currently fixed to noise data, not very dynamic
 
           for(let i = 0; i < documents.length; i++){
-            let return_data_entry = [];
+            let return_data_element = {};
+            return_data_element.best_in_final_gen_noise_value = 0;
+            return_data_element.data_rows = [];
+
+            let ga_settings_c = JSON.parse(documents[i].global_settings);
+            //this is very specific and arbitrary and a new graph or more general solution would be needed for any extensions
+            return_data_element.best_in_final_gen_noise_value = ga_settings_c.noise_1_probability_instruction_misheard;
+
+
             //results are actually a string so need to convert back
             let ga_results = JSON.parse(documents[i].ga_results);
             console.log("*****> ga_results");
             console.log(ga_results);
 
             let best_in_final_gen_test_results = ga_results["generations"][ga_results["generations"].length-1]["best_in_gen_tests_results"];
-        
+
             console.log("****> best_in_final_gen_test_results");
             console.log(best_in_final_gen_test_results);
 
-            return_data.push(best_in_final_gen_test_results);
+            return_data_element.data_rows.push(best_in_final_gen_test_results);
+            return_data.push(return_data_element);
           }
 
           res.json(return_data);
@@ -400,7 +452,7 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
       const results_id = req.params.id;
       const result_settings = req.body;
       console.log("updating result ", results_id);
-      db.getDB().collection(collectionResults).findOneAndUpdate({_id : db.getPrimaryKey(results_id)},{$set : {short_title : result_settings.short_title,notes : result_settings.notes}},{returnOriginal : false},(err,result)=>{
+      db.getDB().collection(collectionResults).findOneAndUpdate({_id : db.getPrimaryKey(results_id)},{$set : {short_title : result_settings.short_title,notes : result_settings.notes,tags : result_settings.tags}},{returnOriginal : false},(err,result)=>{
         if(err){
           console.log("error when updating err = " + err);
         }
@@ -412,7 +464,7 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
 
     /******SEQUENCES**********/
     app.get('/getSequences',cors(corsOptions), (req,res)=>{
-      db.getDB().collection(collectionSequences).find({},{projection:{sequence_name : 1, settings_id:1, date_updated: 1, notes:1}}).sort({_id:-1}).toArray((err,documents)=>{
+      db.getDB().collection(collectionSequences).find({},{projection:{sequence_name : 1, tags : 1, settings_id:1, date_updated: 1, notes:1}}).sort({_id:-1}).toArray((err,documents)=>{
         if(err){
           console.log("error getting collection of sequences:  err " + err);
         }
@@ -421,6 +473,46 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
           res.json(documents);
         }
       });
+    });
+
+    app.get('/searchSequences/:searchTerm',cors(corsOptions), (req,res)=>{
+
+      const searchTerm = req.params.searchTerm;
+      console.log("Search sequences (tags/notes) with term " + searchTerm);
+
+      // search text indexes, or is it an index named text, for the string
+      // only search for the id if it loks valid
+      let validId = false;
+      if (ObjectId.isValid(searchTerm) && (String(new ObjectId(searchTerm)) === searchTerm)){
+        validId = true;
+      }
+
+      if(validId){
+        // search text indexes, or is it an index named text, for the string.. may also be serchign via the id but only if it is in the valid format
+        db.getDB().collection(collectionSequences).find({ $or: [{ "_id" : ObjectId(searchTerm)}, {$text: { $search: "\""+ searchTerm +"\"" }}]},{projection:{sequence_name : 1, tags : 1, settings_id:1, date_updated: 1, notes:1}}).sort({_id:-1}).toArray((err,documents)=>{
+          if(err){
+            console.log("error searching sequences:  err " + err);
+          }
+          else{
+            console.log("searching sequences on id/tags/notes");
+            res.json(documents);
+          }
+        });
+      }
+      else{
+        // search text indexes, or is it an index named text, for the strin
+        db.getDB().collection(collectionSequences).find({ $text: { $search: "\""+ searchTerm +"\"" } },{projection:{sequence_name : 1, tags : 1, settings_id:1, date_updated: 1, notes:1}}).sort({_id:-1}).toArray((err,documents)=>{
+          if(err){
+            console.log("error searching sequences:  err " + err);
+          }
+          else{
+            console.log("searching sequences on tags/notes");
+            res.json(documents);
+          }
+        });
+      }
+
+
     });
 
     app.get('/getSequence/:id',cors(corsOptions), (req,res)=>{
@@ -443,7 +535,7 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
       console.log("updating sequence ", sequence_id);
       console.log(sequence_settings);
 
-      db.getDB().collection(collectionSequences).findOneAndUpdate({_id : db.getPrimaryKey(sequence_id)},{$set : {sequence_name : sequence_settings.sequence_name,notes : sequence_settings.notes, settings_id : sequence_settings.settings_id, sequence_options : sequence_settings.sequence_options, date_updated : sequence_settings.date_updated}},{returnOriginal : false},(err,result)=>{
+      db.getDB().collection(collectionSequences).findOneAndUpdate({_id : db.getPrimaryKey(sequence_id)},{$set : {sequence_name : sequence_settings.sequence_name,notes : sequence_settings.notes,tags : sequence_settings.tags, settings_id : sequence_settings.settings_id, sequence_options : sequence_settings.sequence_options, date_updated : sequence_settings.date_updated}},{returnOriginal : false},(err,result)=>{
         if(err){
           console.log("error when updating sequence err = " + err);
         }
@@ -467,6 +559,7 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
         else{
           let newSettings = {sequence_name : userInput.sequence_name,
             notes : userInput.notes,
+            tags : userInput.tags,
             settings_id : userInput.settings_id,
             sequence_options : userInput.sequence_options,
             date_created : userInput.date_created,
