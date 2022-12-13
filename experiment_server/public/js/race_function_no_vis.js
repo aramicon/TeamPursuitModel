@@ -338,6 +338,8 @@ function run_robustness_check(settings_r, race_r, riders_r){
     race_r.race_instructions_r = [...load_race_properties.instructions];
     race_r.start_order = [...load_race_properties.start_order];
     settings_r.run_type = "robustness_check";
+
+
     let race_results = run_race(settings_r,race_r,riders_r);
     load_race_properties.time_taken = race_results.time_taken;
     population_stats.push(load_race_properties.time_taken);
@@ -447,9 +449,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   ga_results.start_time = new Date();
   ga_results.generations = [];
 
-
-
-
   //warn user if the population_size is not an even square
   //dk2020: commenting this out as it is relevant only for the original perfect squares populaiton generation
   // if(!Number.isInteger(Math.sqrt(population_size))){
@@ -500,6 +499,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
   max_performance_failure_percentage = 0;
   max_fatigue_rise = 0;
   max_endurance_fatigue_level = 0;
+
+  best_race_time_found_thus_far = -1; //-1 as a default to ignore (1st gen)
+
   for(let g=0;g<number_of_generations;g++){
 
     if (g==(number_of_generations-1)){
@@ -532,6 +534,28 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let best_race_performance_failures = {};
     let worst_race_performance_failures = {};
 
+    //new structs to store generation instructions info, if asked for
+    let generation_instructions_info = {effort:{},drop:{}};
+
+
+
+    let log_generation_instructions_info = false;
+    if(settings_r.log_generation_instructions_info){
+      if (settings_r.log_generation_instructions_info.includes(g)){
+        //should log the data for this generation
+        log_generation_instructions_info = true;
+        // console.log("[[[[[[[[ Log log_generation_instructions_info ]]]]]]]]");
+        //     //set up the generation_instructions_info structs with empty values
+        //     for(let i = 0;i<settings_r.ga_max_timestep;i++){
+        //       generation_instructions_info.effort[i] = [];
+        //
+        //
+        //     }
+        //
+        //     console.log(JSON.stringify(generation_instructions_info));
+
+      }
+    }
 
 
     //print % progress every segment
@@ -540,6 +564,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       one_segment_count++;
     }
 
+
+    //d22: we want to send the best race time of the last gen to each race?
 
     for(let i = 0;i<population.length;i++){
       //reset any race properties
@@ -552,6 +578,48 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let load_race_properties = population[i];
       race_r.race_instructions_r = [...load_race_properties.instructions];
       race_r.start_order = [...load_race_properties.start_order];
+
+      if(log_generation_instructions_info){
+        //add data to the structure for saving instruciton info
+        //will need to go through each instruciton for each citizen
+        for (let ii = 0; ii < race_r.race_instructions_r.length; ii++){
+          //debugger
+          let timestep_ii =  parseInt(race_r.race_instructions_r[ii][0]);
+          //split the actual instruction
+            let inst = race_r.race_instructions_r[ii][1].split("=");
+            if (inst.length=2){
+              if(inst[0]=="effort"){
+                let effort_value = parseFloat(inst[1]);
+                //add to dict
+                //create the object if it does not exist (sparser dict)
+                if(!generation_instructions_info.effort[timestep_ii]){
+                  generation_instructions_info.effort[timestep_ii] = [];
+                }
+                generation_instructions_info.effort[timestep_ii].push(effort_value);
+
+              }
+	            else if(inst[0]=="drop"){
+                let drop_value  = parseInt(inst[1]);
+                //seems that the drop value can be bigger than the team size, shite :-( )
+                if (drop_value > (settings_r.ga_team_size-1)){
+                  drop_value = settings_r.ga_team_size-1;
+                }
+                // ah wait, we have to  map drop 1 to array element 0 and so on, so subtract 1
+                drop_value--;
+                if(!generation_instructions_info.drop[timestep_ii]){
+                  //need ar array of team_size-1 for each generation, all set to 0
+                  let team_size_array = [];
+                  for (let ts = 0; ts< settings_r.ga_team_size - 1; ts++){
+                    team_size_array.push(0);
+                  }
+                  generation_instructions_info.drop[timestep_ii] = team_size_array; //may have a shallow/deep copy issue?
+                }
+                generation_instructions_info.drop[timestep_ii][drop_value]++;
+              }
+            }
+        }
+
+      }
 
       // let race_tracker_id = JSON.stringify(  race_r.start_order) +  (JSON.stringify(  race_r.race_instructions_r));
       // race_tracker_id = race_tracker_id.replace(/\W/g, ''); //remove any non-aplhanumeric values
@@ -567,7 +635,39 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       let race_r_copy = (JSON.stringify(race_r));
       let riders_r_copy = (JSON.stringify(riders_r));
 
-      let race_results = run_race(settings_r,race_r,riders_r);
+
+      //donalK22: average the results if needed (to handle effects of noise)
+      let number_of_races_to_average = 1;
+      if (settings_r.number_of_races_to_average){
+        number_of_races_to_average = settings_r.number_of_races_to_average;
+      }
+
+      let race_results = {};
+      let total_time_taken = 0;
+      let average_time_taken = 0;
+
+      if (number_of_races_to_average > 1){
+        //run them all and average the finish time
+        // note that the other aspects of the results will have to come from the final race?
+        total_finish_time = 0;
+        //console.log("====== Average Multiple Race Times ======");
+        for(let a_i = 0; a_i < number_of_races_to_average; a_i++){
+          //dk22: pressure noise, send best_race_time_found_thus_far
+          settings_r.best_race_time_found_thus_far = best_race_time_found_thus_far;
+          race_results = run_race(settings_r,race_r,riders_r);
+          //console.log("====== Race " + a_i + " " + race_results.time_taken + " ======");
+          total_time_taken += race_results.time_taken;
+
+        }
+        average_time_taken = (total_time_taken/number_of_races_to_average);
+          //console.log("====== average_time_taken " + average_time_taken + " ======");
+      }
+      else{
+        settings_r.best_race_time_found_thus_far = best_race_time_found_thus_far;
+        race_results = run_race(settings_r,race_r,riders_r);
+        average_time_taken = race_results.time_taken;
+      }
+
 
       //now check if the exact race was already run and if so if the time is different. if it is log information.
 
@@ -595,14 +695,17 @@ function run_track_race_ga(settings_r, race_r, riders_r){
       //let's check the 3 arguments to see if anything is changing as the ga loops through the population
 
 
-      load_race_properties.time_taken = race_results.time_taken;
+      //load_race_properties.time_taken = race_results.time_taken;
+      load_race_properties.time_taken = average_time_taken;
       stats_total_time += load_race_properties.time_taken;
       stats_total_number_of_instructions += load_race_properties.instructions.length;
-      race_fitness_all.push(race_results.time_taken); //add all times to an arroar to be able to analyse laterz
+      race_fitness_all.push(average_time_taken); //add all times to an arroar to be able to analyse laterz
 
       //update best race if a new best is found
-        //console.log("race run, id " + population[i].variant_id + "_" + population[i].id_generation + "_" + population[i].id_type + "_" + population[i].id_mutant_counter + " " +population[i].time_taken + " seconds | start_order " +  population[i].start_order);
+      //console.log("race run, id " + population[i].variant_id + "_" + population[i].id_generation + "_" + population[i].id_type + "_" + population[i].id_mutant_counter + " " +population[i].time_taken + " seconds | start_order " +  population[i].start_order);
 
+      //are population[i] and  load_race_properties the same actual object?
+      // yup yup, seems thus
       if(population[i].time_taken < final_best_race_properties.time_taken){
         final_best_race_properties_index = i;
         final_best_race_properties = population[i];
@@ -612,6 +715,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
         best_race_instruction_noise_alterations = race_results.instruction_noise_alterations;
         best_race_performance_failures = race_results.performance_failures;
+
+        best_race_time_found_thus_far = final_best_race_properties.time_taken;
 
         // let's now log the settings for this best race for the LAST generation
         if (global_log_message ){
@@ -637,6 +742,11 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
       //console.log("race " + i + " time taken " + load_race_properties.time_taken + " instructions " + JSON.stringify(race_r.race_instructions_r));
     }
+
+      if(log_generation_instructions_info){
+        console.log("[[[[[[[[ Log log_generation_instructions_info after updates ]]]]]]]]");
+        console.log(JSON.stringify(generation_instructions_info));
+      }
 
     if (global_log_message && g == (number_of_generations-1) ){
       console.log("***BEST RACE GENERATION " + g + " LOG START***");
@@ -704,10 +814,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     generation_results.best_race_performance_failures = best_race_performance_failures;
     generation_results.worst_race_performance_failures = worst_race_performance_failures;
 
+
     //before looking at next generation can work out the robustness check of the current BEST strategy, IF required
     if(settings_r.ga_run_robustness_check==1){
-
-
 
       race_r.drop_instruction = 0;
       race_r.live_instructions = [];
@@ -727,6 +836,13 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
       console.log("Run robustness check generation " + g + robustness_check_results.message);
     }
+
+    //log the log_generation_instructions_info if requested
+    if(log_generation_instructions_info){
+      generation_results.generation_instructions_info = generation_instructions_info;
+    }
+
+
 
     // create a new population based on the fitness
 
@@ -1392,6 +1508,66 @@ var DecimalPrecision = (function() {
 })();
 
 
+// cup22 choke_under_pressure function to derive a probability
+function calculate_linear_space_value(value_list, probability_variables){
+  // value list contains sets of 4, each set representing a paramter in the expression, which is built using a loop
+  //v1 - multiplier
+  //v2 - value
+  //v3 - exponent
+  //v4 - max value
+  // probability_variables is just a list of straightforward probabilities (0-1)
+  //return a 0-1 value
+  let sum_components = 0;
+  let sum_multipliers = 0;
+  let result = -1;
+  let continue_check = true;
+  let probability_modifier_total = 1;
+  if(value_list.length % 4 != 0){
+    console.log("!!! error in calculate_linear_space_value !!!");
+    continue_check = false;
+  }
+  //check that the values are all numberic
+  for(let i = 0; i<value_list.length;i++ ){
+    if(isNaN(value_list[i])){
+      console.log("!!! error in calculate_linear_space_value NON NUMBER " + value_list[i] + " IN  value_list[ " + i + "] !!!");
+      continue_check = false;
+      break;
+    }
+  }
+  for(let i = 0; i<probability_variables.length;i++ ){
+    if(isNaN(probability_variables[i])){
+      console.log("!!! error in calculate_linear_space_value NON NUMBER " + probability_variables[i] + " IN  probability_variables[ " + i + "] !!!");
+      continue_check = false;
+      break;
+    }
+    else if(probability_variables[i] < 0 || probability_variables[i] > 1){
+      console.log("!!! error in calculate_linear_space_value INVALID VALUE " + probability_variables[i] + " IN  probability_variables[ " + i + "] !!!");
+      continue_check = false;
+      break;
+    }
+  }
+
+if(continue_check){
+   sum_components = 0;
+   sum_multipliers = 0;
+
+  for(let i = 0; i<value_list.length;i+=4 ){
+    sum_components += value_list[i]*(Math.pow(value_list[i+1],value_list[i+2])/(Math.pow(value_list[i+3],value_list[i+2])));
+    sum_multipliers += value_list[i];
+  }
+
+  sum_components = (sum_components/sum_multipliers);
+
+  for(let i = 0; i<probability_variables.length;i++ ){
+    probability_modifier_total *= probability_variables[i];
+  }
+  result = sum_components * probability_modifier_total;
+
+}
+return result;
+
+
+}
 function setEffort(settings_r, race_r,riders_r, effort){ //actually update the effort level
   let leadingRider = race_r.riders_r[race_r.current_order[0]];
   leadingRider.output_level = effort;
@@ -1465,6 +1641,17 @@ function run_race(settings_r,race_r,riders_r){
   settings_r.race_bend_distance = Math.PI * settings_r.track_bend_radius;
   race_r.instructions = [];
   race_r.instructions_t = [];
+
+  //dk22: if this is not the first generation, print the best last gen finish timeout
+  let enable_pressure_noise = 0;
+  if(settings_r.enable_pressure_noise){
+    enable_pressure_noise = settings_r.enable_pressure_noise;
+  }
+  if(enable_pressure_noise){
+    if(settings_r.best_race_time_found_thus_far){
+      //console.log("((((((((( Best Race Time Last Generation " + settings_r.best_race_time_found_thus_far + ")))))))))");
+    }
+}
 
   //dk2020 oct. adding new array to store noise/failure alterations. will make this an object/dict for easy retrieval.
   race_r.instruction_noise_alterations = {};
@@ -1817,6 +2004,54 @@ function run_race(settings_r,race_r,riders_r){
         if(race_rider.endurance_fatigue_level >= failure_level){
           race_rider.output_level = (settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction);
         }
+
+        //dk22: if presssure noise is enabled work out if it happens
+        if (enable_pressure_noise){
+          if(!(race_rider.under_pressure)){ //rider is not currently under pressure failure
+          let pressure_of_fast_race_factor = 0;
+          //get the distance travelled
+          let speed_this_race_thus_far = (race_rider.distance_covered/race_r.race_clock);
+          let min_pressure_of_fast_race_factor = 1;
+          let speed_of_best_race_found_thus_far = (race_r.distance/best_race_time_found_thus_far);
+          if(settings_r.min_pressure_of_fast_race_factor){
+            min_pressure_of_fast_race_factor = settings_r.min_pressure_of_fast_race_factor;
+          }
+          let max_pressure_of_fast_race_factor = 3;
+          let pressure_of_fast_race_factor_level = 0;
+          if(settings_r.max_pressure_of_fast_race_factor){
+            max_pressure_of_fast_race_factor = settings_r.max_pressure_of_fast_race_factor;
+          }
+          let pressure_probability_per_timestep = 0;
+          if(race_rider.pressure_probability_per_timestep){
+            pressure_probability_per_timestep = race_rider.pressure_probability_per_timestep;
+          }
+          if(best_race_time_found_thus_far < 0){
+            pressure_of_fast_race_factor = 1;
+          }
+          else{
+            pressure_of_fast_race_factor_level = (((Math.pow(speed_this_race_thus_far,2)/Math.pow(speed_of_best_race_found_thus_far,2)) + (Math.pow(race_r.race_clock,2)/Math.pow(best_race_time_found_thus_far,2)))/2);
+            pressure_of_fast_race_factor = min_pressure_of_fast_race_factor + ((max_pressure_of_fast_race_factor-min_pressure_of_fast_race_factor)*pressure_of_fast_race_factor_level);
+          }
+          let pressure_prob = (pressure_probability_per_timestep * pressure_of_fast_race_factor);
+
+          let p232 = Math.random();
+          if (p232 < pressure_prob){
+            console.log("((((((((((((  pressure calculation p232 " + p232 + "  ))))))))))))");
+            console.log(" pressure_of_fast_race_factor_level " + pressure_of_fast_race_factor_level + " pressure_prob " + pressure_prob + " pressure_of_fast_race_factor" + pressure_of_fast_race_factor + " pressure_probability_per_timestep " + pressure_probability_per_timestep + " max_pressure_of_fast_race_factor " + max_pressure_of_fast_race_factor + " min_pressure_of_fast_race_factor " + min_pressure_of_fast_race_factor + " speed_of_best_race_found_thus_far " + speed_of_best_race_found_thus_far + " speed_this_race_thus_far " + speed_this_race_thus_far + "race_r.race_clock " + race_r.race_clock + " race_rider.distance_covered" + race_rider.distance_covered  );
+            //apply the pressure_failure_amount
+            if (race_rider.pressure_failure_amount){
+              console.log("OLD threshold_power " + race_rider.threshold_power + " max_power " + race_rider.max_power);
+              race_rider.threshold_power = race_rider.threshold_power - (race_rider.threshold_power*race_rider.pressure_failure_amount);
+              race_rider.max_power = race_rider.max_power - (race_rider.max_power*race_rider.pressure_failure_amount);
+              race_rider.under_pressure = 1;
+              console.log("UPDATED threshold_power " + race_rider.threshold_power + " max_power " + race_rider.max_power);
+
+            }
+          }
+        }
+
+        }
+
         //set the power level based on the effort instruction
 
         race_rider.current_power_effort = mapEffortToPower(settings_r.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power );
@@ -1851,6 +2086,16 @@ function run_race(settings_r,race_r,riders_r){
 
             }
         }
+
+        //DonalK22 also check for choke-under-pressure noise
+        if (settings_r.hasOwnProperty('choke_under_pressure_switch')){
+          if (settings_r.choke_under_pressure_switch == 1){
+
+            console.log("|******** cup22 choke-under-pressure is ON (leader)********|");
+
+          }
+        }
+
 
 
         //compare power required to previous power and look at how it can increase or decrease
@@ -2090,6 +2335,16 @@ function run_race(settings_r,race_r,riders_r){
             }
         }
 
+        //DonalK22 also check for choke-under-pressure noise
+        if (settings_r.hasOwnProperty('choke_under_pressure_switch')){
+          if (settings_r.choke_under_pressure_switch == 1){
+
+            console.log("|******** choke-under-pressure is ON (chaser)********|");
+
+          }
+        }
+
+
         //to stop radical slowing down/speeding up, need to reduce it as the target rider's velocity is approched
         let damping = 1;
         if (powerv > target_power){//slowing down
@@ -2165,8 +2420,6 @@ function run_race(settings_r,race_r,riders_r){
         if((race_r.contiguous_group_size == i) && ((rider_to_follow.distance_covered-rider_to_follow.start_offset) - (race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= settings_r.contiguous_group_drop_distance)){
           race_r.contiguous_group_size++;
         }
-
-
         race_rider.power_out = powerv;
 
         //can now save this power

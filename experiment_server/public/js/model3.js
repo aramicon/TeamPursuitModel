@@ -469,6 +469,8 @@ function moveRace(){
       //round power output to 2 decimal places
       powerv = Math.round((powerv)*100)/100;
 
+      console.log("***:: " + race.race_clock + " race_rider.accumulated_fatigue " +  race_rider.accumulated_fatigue + " settings.accumulated_fatigue_maximum " + settings.accumulated_fatigue_maximum + " accumulated_effect " + accumulated_effect + " failure_level " + failure_level + " race_rider.endurance_fatigue_level " + race_rider.endurance_fatigue_level + " race_rider.output_level " + race_rider.output_level + " race_rider.current_power_effort " + race_rider.current_power_effort + " power_adjustment " + power_adjustment + " powerv " + powerv + "   ::***");
+
 
       //check the lookup table
       if (use_lookup_velocity)
@@ -508,7 +510,7 @@ function moveRace(){
     }
 
     if(powerv < 0){
-      console.log("crap! powerv 2 = " + powerv);
+      console.log("oh crap! powerv 2 = " + powerv);
       debugger;
     }
       race_rider.power_out = powerv;
@@ -1353,6 +1355,7 @@ function draw_line_graph(graph_name_opt){
       let graph_data_2 = {};
       let graph_data_3 = {};
       let graph_data_4 = {};
+      let raw_data = [];
 
       //set the data based on the selection
       if (graph_name=="power_graph"){
@@ -1385,7 +1388,6 @@ function draw_line_graph(graph_name_opt){
 
         graph_data_1.y_scale_from = 0;
         graph_data_1.y_scale_to = max_p;
-
         graph_data_1.data = [];
         for (let i=0;i<rider_power_data[0].length;i++){
           graph_data_1.data.push({x:i, y:rider_power_data[0][i]});
@@ -1412,6 +1414,15 @@ function draw_line_graph(graph_name_opt){
           graph_data_4.data.push({x:i, y:rider_power_data[3][i]});
         }
       }
+
+      //add data to a raw data output arrayFilters
+      raw_data.push(graph_data_1.data);
+      raw_data.push(graph_data_1.data);
+      raw_data.push(graph_data_1.data);
+      raw_data.push(graph_data_1.data);
+
+      //display the raw data
+      $('#data_display').val(JSON.stringify(raw_data));
 
       //D3
       // set the dimensions and margins of the graph

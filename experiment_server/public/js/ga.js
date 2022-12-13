@@ -160,7 +160,7 @@ function run_ga(callback_func){
           }).catch((error) => {
             console.log("@sequences_mode: Error updating sequence after running experiment (on experiment server)");
             $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
-            console.log(error)
+            console.log(error);
           });
           //reset globals, should these be outside the fetches?
           sequence_selected_seq_id = 0;
@@ -205,7 +205,7 @@ function run_ga(callback_func){
     catch(err) {
       $("#race_result").html("Error trying to run GA: " + err.message);
       $("#cogs").css({"visibility":"hidden"})
-      console.log(err.message)
+      console.log(err);
     }
   }
 
@@ -402,7 +402,7 @@ const updateExperimentSettings = () => {
     }).catch((error) => {
       console.log("Error updating settings on experiment server");
       $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
-      console.log(error)
+      console.log(error);
     });
   }
   else{
@@ -458,7 +458,7 @@ const addNewExperimentSettings = () => {
     }).catch((error) => {
       console.log("Error updating settings on experiment server");
       $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
-      console.log(error)
+      console.log(error);
     });
 
   }
@@ -524,7 +524,7 @@ const  saveResults = () => {
     }).catch((error) => {
       console.log("Error savinf results on experiment server");
       $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
-      console.log(error)
+      console.log(error);
     });
 
   }
@@ -1160,7 +1160,7 @@ const check_for_sequences = () => {
               }).catch((error) => {
                 console.log("Error updating settings on experiment server");
                 $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
-                console.log(error)
+                console.log(error);
               });
 
             }
@@ -1318,7 +1318,7 @@ const getExperimentNames = () => {
   }).catch((error) => {
     console.log("Error loading settings from experiment server");
     $("#database_connection_label").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
-    console.log(error)
+    console.log(error);
   });
 }
 //try to load settings from the experiment server

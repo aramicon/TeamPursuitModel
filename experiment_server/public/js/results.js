@@ -12,6 +12,8 @@ let selected_rider_settings = {};
 
 let checkbox_toggle_state = true;
 
+let raw_data = [];
+
 let rider_colours = ['#648FFF','#785EF0','#DC267F','#FE6100','#FFB000'];
 let rider_line_styles = ['1, 0','2, 1','5,3','12,3','18,4'];
 let rider_line_stroke_width = [1,1.5,2,2.5,2.8];
@@ -97,7 +99,7 @@ const draw_power_graph = (generation) => {
 }
 const show_power_data = (generation) => {
   //put the pwer data directly into the data display textarea
-  let raw_data = JSON.stringify(selected_ga_results.generations[generation].best_race_rider_power);
+  raw_data = JSON.stringify(selected_ga_results.generations[generation].best_race_rider_power);
 
   //also display it in a vertical format with a line per generation
   let data_vertical = "";
@@ -245,6 +247,8 @@ const draw_line_graph = (graph_name_opt) =>{
 
       }
       else if (graph_name=="instructions_change_per_generation"){
+        raw_data = []; //donalK22, output data so it can be used in Python graphing code
+
         graph_title = "Changes in Instructions over Generations";
         graph_data_1 = {};
         graph_data_1.title = "Avg. Total";
@@ -259,31 +263,55 @@ const draw_line_graph = (graph_name_opt) =>{
         graph_data_1.y_scale_from = 0;
         graph_data_1.y_scale_to = d3.max(selected_ga_results.generations, function(d) { return +d.stats_average_number_of_instructions; });
 
+        let raw_data_stats_average_number_of_instructions = [];
         graph_data_1.data = [];
         for (i=0;i<selected_ga_results.generations.length;i++){
           graph_data_1.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].stats_average_number_of_instructions});
+          if(selected_ga_results.generations[i].stats_average_number_of_instructions){
+            raw_data_stats_average_number_of_instructions.push([selected_ga_results.generations[i].generation_id, selected_ga_results.generations[i].stats_average_number_of_instructions]);
+          }
         }
+        raw_data.push(raw_data_stats_average_number_of_instructions);
 
+        let raw_data__average_new_instructions_added = [];
         graph_data_2 = {};
+        //selected_ga_results.generations[i].stats_average_number_of_instructions
         graph_data_2.title = "Avg Added";
         graph_data_2.data = [];
         for (i=0;i<selected_ga_results.generations.length;i++){
-          graph_data_2.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].number_of_instructions_added_total/selected_ga_results.generations[i].population_size});
+          let average_added = selected_ga_results.generations[i].number_of_instructions_added_total/selected_ga_results.generations[i].population_size;
+          graph_data_2.data.push({x:selected_ga_results.generations[i].generation_id, y:average_added});
+          if(average_added){
+            raw_data__average_new_instructions_added.push([selected_ga_results.generations[i].generation_id, average_added]);
+          }
         }
+        raw_data.push(raw_data__average_new_instructions_added);
 
+        let raw_data_average_instructions_removed = [];
         graph_data_3 = {};
         graph_data_3.title = "Avg Removed";
         graph_data_3.data = [];
         for (i=0;i<selected_ga_results.generations.length;i++){
-          graph_data_3.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].number_of_instructions_removed_total/selected_ga_results.generations[i].population_size});
+          let average_removed = selected_ga_results.generations[i].number_of_instructions_removed_total/selected_ga_results.generations[i].population_size;
+          graph_data_3.data.push({x:selected_ga_results.generations[i].generation_id, y:average_removed});
+          if(average_removed){
+            raw_data_average_instructions_removed.push([selected_ga_results.generations[i].generation_id, average_removed]);
+          }
         }
+        raw_data.push(raw_data_average_instructions_removed);
 
+        let raw_data_average_drop_instructions = [];
         graph_data_4 = {};
         graph_data_4.title = "Avg Drop";
         graph_data_4.data = [];
         for (i=0;i<selected_ga_results.generations.length;i++){
-          graph_data_4.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].number_of_drop_instructions_total/selected_ga_results.generations[i].population_size});
+          let average_drop_instructions = selected_ga_results.generations[i].number_of_drop_instructions_total/selected_ga_results.generations[i].population_size;
+          graph_data_4.data.push({x:selected_ga_results.generations[i].generation_id, y:average_drop_instructions});
+          if(average_drop_instructions){
+            raw_data_average_drop_instructions.push([selected_ga_results.generations[i].generation_id, average_drop_instructions]);
         }
+        }
+        raw_data.push(raw_data_average_drop_instructions);
 
 
       }
@@ -438,6 +466,11 @@ const draw_line_graph = (graph_name_opt) =>{
         for (i=0;i<finish_times.length;i++){
           graph_data_1.data.push({x:i, y:finish_times[i]});
         }
+      }
+
+      //spit out the raw data if it exists
+      if(raw_data){
+        $("#data_display").val(JSON.stringify(raw_data));
       }
 
       //D3
@@ -707,6 +740,33 @@ if (!jQuery.isEmptyObject(graph_data_5)){
 
 break;
 
+case "generation_instructions_info":
+  console.log("[][][][] generation_instructions_info [][][][]");
+  //need to loop through the generations and if we find entries with generation_instructions_info, we stuff that into the raw database
+  let raw_data_string = "";
+
+  for (i=0;i<selected_ga_results.generations.length;i++){
+
+    if (selected_ga_results.generations[i].generation_instructions_info){
+      if (selected_ga_results.generations[i].generation_instructions_info.effort){
+        raw_data_string += "# Generation " + i + " EFFORT\n";
+        raw_data_string += JSON.stringify(selected_ga_results.generations[i].generation_instructions_info.effort);
+        raw_data_string += "\n";
+      }
+      if (selected_ga_results.generations[i].generation_instructions_info.drop){
+        raw_data_string += "# Generation " + i + " DROP\n";
+        raw_data_string += JSON.stringify(selected_ga_results.generations[i].generation_instructions_info.drop);
+        raw_data_string += "\n"
+        }
+    }
+    if(raw_data_string){
+     $("#data_display").val(raw_data_string);
+ }
+
+}
+
+
+  break;
 default:
 console.log("graph " + graph_name + " not found: nothing drawn");
 }
