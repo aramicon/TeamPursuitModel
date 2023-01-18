@@ -1310,4 +1310,20 @@ Dec 12th
 
 -- built a function called calculate_linear_space_value(). Need to test it then..... use it to work out a prob, then actually build the main failure behaviour. oh. dear. need to test the crap out of it.
 
+-- dec 13
 
+-- need to test the function i created yesterday.
+-- also n eed to commit to git
+-- really need to relearn git. so much going on. 
+
+-- create some test examples
+-- let value_list = [1,5,1,10,1,5,1,10,1,10,1,10]
+-- let probability_variables = [0.6]
+
+-- getting the % improvement over the global best time as a property here
+-- can be negative, and in most cases WILL be negative; what will that do?
+-- let value_list = [1,-0.01,2,1]
+
+-- Jan 16th
+-- finish choking under pressure noise!
+-- calculate_linear_space_value(value_list, probability_variables)

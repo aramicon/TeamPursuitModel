@@ -1272,5 +1272,54 @@ BUT the strategy can't be as simple as just DO X at time Y. This is actualluy th
 -- Where was i with the choking-under-pressure?
 
 -- need to build a performance-pressure mechanism. then add a race pressure and a rider property and a switch to turn this whole thing on
--- 1: add a new general setting ""choke-under-pressure-switch": 1,
+-- 1: add a new general setting "choke_under_pressure_switch": 1,
 -- get it to notice this and log a message (no real work yet)
+
+-- Dec 6. That person. A technical manual. He write poetry in his code comments. She is sleeping. 
+-- general setting is seen. Now need to need to develop a formula (in Excel?) for a function that will return the amount of failure.
+-- this kind of failure compounds, right? Or, it's like a switch, hard to turn off once it starts? Not a step by step thing? Maybe that's a problem with all of the noise I've implemented?
+
+Dec 12th
+
+-- maybe if the rider fails you just lower its ability by a percentage? like, both max and threshold?
+
+-- how to work out the pressure of a race? average speed, closeness to end, 
+-- or estimate the expected finish time and that + the % of time left to get there, e.g. 200 seconds, 0.5 remaining. Current PB: 201s
+
+-- so I need current_timestep, current_best_time, current_distance. needs to be tolerant of crudity. 
+
+-- assumption: if a rider chokes it will remain in that state until the end of the event/race, then reset for the next one.
+
+-- should be possbile to configure it so that a rider ALWAYS chokes, i.e. by maxxing out the values, or NEVER chokes, by minning them 
+
+-- if there is NO current_best time, choking should be impossibile; pressure shouldn't exist? or should it just be there but minimal?
+
+-- first attempt: rider_cup_prob * race_cup_pressure * (% of race done) * (speed > best speed)
+
+-- will give 0 for all cases where speed < best speed (dumb). but this has to be dumb. a basic constraint. should i have the rider's intensity baked in? 
+
+-- need to make it polynomial? hmmmm. i hasn't a clue. but need to get this paper done somehow...
+
+-- maybe replicate the approach i used with performance noise... actually wasn't that kinda the same? there, we modelled the idea of intensity, here it is pressure... but intensity is one dimension of pressure?? 
+
+-- mebbie at least build the function and the switch idea, then can tweak that... can set an upper and lower boundary and derive an expression that increases from one to the other
+
+(cup_race_pressure^cup_race_pressure_exp) / (max_cup_race_pressure^cup_race_pressure_exp)
+
+-- maybe to think it through make a function that takes a set of properties as a list 
+
+-- built a function called calculate_linear_space_value(). Need to test it then..... use it to work out a prob, then actually build the main failure behaviour. oh. dear. need to test the crap out of it.
+
+-- dec 13
+
+-- need to test the function i created yesterday.
+-- also n eed to commit to git
+-- really need to relearn git. so much going on. 
+
+-- create some test examples
+-- let value_list = [1,5,1,10,1,5,1,10,1,10,1,10]
+-- let probability_variables = [0.6]
+
+-- getting the % improvement over the global best time as a property here
+-- can be negative, and in most cases WILL be negative; what will that do?
+-- let value_list = [1,-0.01,2,1]
