@@ -1327,3 +1327,115 @@ Dec 12th
 -- Jan 16th
 -- finish choking under pressure noise!
 -- calculate_linear_space_value(value_list, probability_variables)
+
+-- jan 18th
+-- can i stay at the calculate_linear_space_value()?
+-- factors to indicate race pressure:
+- likely to set new best time (more likely as end approaches)
+ - 
+- rider susceptibility
+- race importance
+
+-- Jan 23
+-- add a property to the riders 
+		"choke_under_pressure_tendency": 10 (MAX 10 MIN 0)
+-- only run the calc if the rider has choke_under_pressure_tendency
+		
+		
+-- need a rider property that marks it as being in a 'choke_under_pressure' state. a switch.
+
+"choke_under_pressure_state": 0
+
+-- when this state is on/1, they will have a reduced ability by some % for the remainder of the race
+
+-- maybe add a global setting for this, too
+
+-- ok, the dummie version seems to roll, can get it to cause a rider to underperform, though maxxed out so all of them fail at once
+
+-- need to propogate this to the standalone race version, but can't be random so needs to be replayable as another form or stored noise... le oops, muchos work, but must be done :-( I guess i just need to send a timestep and the new power figures?
+
+even a low probability seems to trigger the effect, maybe because it is considered at every timestep
+-- also, why does it log so few times for the GA? le oops, it looks like it is NOT reset for every race?
+
+
+-- ok, reset it in every race, but now it is fierce slow to run because of all the console.log()... and the probs are way too high... hmmmm
+
+-- Jan 24
+
+-- the global_log_message_now variable is odd, seems to always be true? shoudl it not be first set to false. looks like i am building a giant string?
+
+-- let's stop all the logging and add some kind of race progress dimension (make failure more likely at the end).
+
+-- current_distance/total_distance would be a start?
+
+-- how would i record the best_time somewhere for a generation? first generation would be -1 or something
+
+generation_best_time = -1
+
+-- Jan 27
+
+-- stop the global_log_message_now stuff, don't think i needs this.
+-- test the choke_under_pressure state 
+-- logs a ton of messages and crashes after
+-- aw, snap, something went wrong. Error code: STATUS_BREAKPOINT
+-- what kind fo scale are we looking at? count and display the amount of logs made with count_of_choke_under_pressure_loggings
+
+-- weird, look at the race_clock value. race_rider.distance_covered race_r.race_clock 39.54005910041431 14602
+-- weirrrd the race_clock is at race_rider.distance_covered race_r.race_clock 0.4298849730945816 2026194 when it all goes to pot.
+-- is it failing at the same point every time?
+-- race_rider.distance_covered / race_r.race_clock 1.8089585953555964 / 3128262
+-- nope, but similar 
+-- perhaps a race is just going on for ever? it is only ++'d once at the end so looks like this must be the case
+-- ah yeah see how the power is sooooo low updating max power from 0.07617734804586639 to 0.06855961324127975
+-- the switch to not fail twice is not workign then
+
+-- oooh. it looks like the power changes are passed from race to race and NEVER reset, so they accumulate: they need to be reset for each race, maybe at the end?
+
+let load_rider.original_threshold_power = load_rider.threshold_power;
+    let load_rider.original_max_power = load_rider.max_power;
+
+-- to reset, have to go through each rider again when the race finishes?
+	for(let i = 0;i<race_r.start_order.length;i++){
+		load_rider.threshold_power = load_rider.original_threshold_power;
+		load_ride
+		r.max_power = load_rider.original_max_power;
+	}
+
+-- mundee 30/01 
+
+-- the setup now seeeems to wurk but how do i measure it? i  need to generate data, to visualise the rate and effect of this odd kind of noise? then to extend the idea and match it with the 'research' into choking.
+
+-- tuesday 31, last of Jan 
+
+-- to record and replay the new choke under ressure noise I will need to create a new type, store it somewhere, display it... implementation should be pretty easy? just sthe same kind of switch?
+if choke_under_pressure[timestep], then update the threshold and max power values? store them in a dict for easy access?
+
+-- added race_r.instruction_noise_choke_under_pressure = {}
+-- also add 
+generation_results.best_race_instruction_noise_choke_under_pressure
+
+-- note, looks like we are not saving the WORST of the noise instructions? only have best_race_instruction_noise_alterations
+-- the noise is now being returned but there is no rider identifier... need to provide the rider num, maybe make it a simple array with pairs of elements? [rider,amount]. unlikely that two riders will fail in the same timestep but ya never knows
+
+-- new format now seems to save. no sign of any one with multiples. next i need to link this to the play-race link and get ti to send the noise to the standalone race.
+
+-- realllllly need to focus on better definign the function and finding a way to display the effects and putting them into the paper (2) and moving the fook on to the next thing!
+
+Feb 01
+-- get the new choke data to appear in the results tab
+-- also add the data to the url that launches the standalone race player page
+
+
+-- results do seem to appear. new url for the race is
+http://127.0.0.1:3003/tpgame.html?source=results&results_id=63daa6348942ce38e00ebac6&startorder=0,3,2,1&instructions=%5B%5B241,%22effort=9.92%22%5D,%5B252,%22drop=1%22%5D,%5B265,%22drop=2%22%5D,%5B277,%22drop=3%22%5D,%5B333,%22effort=4.9399999999999995%22%5D%5D&noise_alterations=%7B%22265%22:%7B%22original_instruction%22:%5B265,%22drop=2%22%5D,%22altered_instruction%22:%5B270,%22drop=2%22%5D,%22type%22:%22random_delay%22%7D%7D&performance_failures=%7B%7D&instruction_noise_choke_under_pressure=%7B%227%22:%5B2,0.1%5D,%2214%22:%5B3,0.1%5D,%2298%22:%5B1,0.1%5D%7D
+
+-- now get this to run in the actual race... should be able to get the exact same finish time as the GA race.
+
+instruction_noise_choke_under_pressure_from_url
+-- trouble with tabs in the game page, and the clocking of em 
+-- changed the css of the tab column shtuff 
+
+-- ook, so we have this now
+{"7":[2,0.1],"14":[3,0.1],"98":[1,0.1]} displaying the textarea. need to load this into the race properties
+-- race.instruction_noise_choke_under_pressure_r
+loaded instruction_noise_choke_under_pressure_from_url from URL: "{\"7\":[2,0.1],\"14\":[3,0.1],\"98\":[1,0.1]}"

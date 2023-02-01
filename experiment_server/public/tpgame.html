@@ -51,11 +51,11 @@
       </div>
 
       <div class="row">
-        <div class="col">
+        <div class="col-5">
               <div id = "database_connection_label" class="alert alert-primary">Template settings loaded.</div>
                 <div id = "race_info" class="alert alert-success">Run a race</div>
         </div>
-        <div class="col">
+        <div class="col-2">
           <div class="race_info">
             <div id="accordion">
               <div class="card">
@@ -86,7 +86,7 @@
           </div>
         </div>
       </div>
-      <div class="col">
+      <div class="col-5">
         <div class="form-group">
 
           <ul class="nav nav-tabs" id="myTab" role="tablist">
@@ -98,6 +98,9 @@
             </li>
             <li class="nav-item">
               <a class="nav-link" id="performance_failures-tab" data-toggle="tab" href="#performance_failures_tab" role="tab" aria-controls="performance_failures_tab" aria-selected="false">Failures</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" id="instruction_noise_choke_under_pressure-tab" data-toggle="tab" href="#instruction_noise_choke_under_pressure_tab" role="tab" aria-controls="instruction_noise_choke_under_pressure_tab" aria-selected="false">C.U.P.</a>
             </li>
           </ul>
           <div class="tab-content" id="myTabContent">
@@ -113,6 +116,10 @@
             <label for="performance_failures_textarea">Performance Failures:</label>
             <textarea class="form-control" rows="5" id="performance_failures_textarea"></textarea>
           </div>
+          <div class="tab-pane fade" id="instruction_noise_choke_under_pressure_tab" role="tabpanel" aria-labelledby="instruction_noise_choke_under_pressure-tab">
+          <label for="instruction_noise_choke_under_pressure_textarea">Performance Failures:</label>
+          <textarea class="form-control" rows="5" id="instruction_noise_choke_under_pressure_textarea"></textarea>
+        </div>
           </div>
 
         </div>

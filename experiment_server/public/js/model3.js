@@ -447,6 +447,8 @@ function moveRace(){
         target_power = target_power - (target_power * failure_p);
       }
 
+
+
       //compare power required to previous power and look at how it can increase or decrease
       if (powerv > target_power){ //slowing down
         if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
@@ -469,7 +471,7 @@ function moveRace(){
       //round power output to 2 decimal places
       powerv = Math.round((powerv)*100)/100;
 
-      console.log("***:: " + race.race_clock + " race_rider.accumulated_fatigue " +  race_rider.accumulated_fatigue + " settings.accumulated_fatigue_maximum " + settings.accumulated_fatigue_maximum + " accumulated_effect " + accumulated_effect + " failure_level " + failure_level + " race_rider.endurance_fatigue_level " + race_rider.endurance_fatigue_level + " race_rider.output_level " + race_rider.output_level + " race_rider.current_power_effort " + race_rider.current_power_effort + " power_adjustment " + power_adjustment + " powerv " + powerv + "   ::***");
+      //console.log("***:: " + race.race_clock + " race_rider.accumulated_fatigue " +  race_rider.accumulated_fatigue + " settings.accumulated_fatigue_maximum " + settings.accumulated_fatigue_maximum + " accumulated_effect " + accumulated_effect + " failure_level " + failure_level + " race_rider.endurance_fatigue_level " + race_rider.endurance_fatigue_level + " race_rider.output_level " + race_rider.output_level + " race_rider.current_power_effort " + race_rider.current_power_effort + " power_adjustment " + power_adjustment + " powerv " + powerv + "   ::***");
 
 
       //check the lookup table
@@ -540,6 +542,25 @@ function moveRace(){
           let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings.fatigue_power_rate);
         race_rider.endurance_fatigue_level += fatigue_rise;
         race_rider.accumulated_fatigue += fatigue_rise;
+      }
+
+      //dk23 check for choke_under_pressure failure
+      //note this will apply in the  next step
+      if (race.instruction_noise_choke_under_pressure_r[race.race_clock]){
+        //is this the correct rider?
+        let rider = -1;
+        let changes = race.instruction_noise_choke_under_pressure_r[race.race_clock];
+        for(let cup = 0; cup < changes.length;cup+=2){
+          if (changes[cup+1]){
+            if (changes[cup] == race.current_order[i]){ //this is the rider to target
+
+              console.log(" >*>*>*>*>*>*>*>*> Choke Under Pressure Noise failure lead rider " + race.current_order[i] + " : race_rider.threshold_power changed from " + race_rider.threshold_power + " to " + (race_rider.threshold_power * changes[cup+1]) + " race_rider.max_power changed from " +race_rider.max_power + " to " + (race_rider.max_power * changes[cup+1]));
+              race_rider.threshold_power -= (race_rider.threshold_power * changes[cup+1]);
+              race_rider.max_power -= (race_rider.max_power * changes[cup+1]);
+            }
+          }
+        }
+        target_power = target_power - (target_power * failure_p);
       }
 
     }
@@ -735,6 +756,26 @@ function moveRace(){
         race_rider.endurance_fatigue_level += fatigue_rise
         race_rider.accumulated_fatigue += fatigue_rise;
       }
+
+      //dk23 check for choke_under_pressure failure
+      //note this will apply in the  next step
+      if (race.instruction_noise_choke_under_pressure_r[race.race_clock]){
+        //is this the correct rider?
+        let rider = -1;
+        let changes = race.instruction_noise_choke_under_pressure_r[race.race_clock];
+        for(let cup = 0; cup < changes.length;cup+=2){
+          if (changes[cup+1]){
+            if (changes[cup] == race.current_order[i]){ //this is the rider to target
+
+              console.log(" >*>*>*>*>*>*>*>*> Choke Under Pressure Noise failure chasing rider " + race.current_order[i] + " : race_rider.threshold_power changed from " + race_rider.threshold_power + " to " + (race_rider.threshold_power * changes[cup+1]) + " race_rider.max_power changed from " + race_rider.max_power + " to " + (race_rider.max_power * changes[cup+1]));
+              race_rider.threshold_power -= (race_rider.threshold_power * changes[cup+1]);
+              race_rider.max_power -= (race_rider.max_power * changes[cup+1]);
+            }
+          }
+        }
+        target_power = target_power - (target_power * failure_p);
+      }
+
     }
 
     race_rider.distance_this_step = race_rider.velocity; //asssumes we are travelling for 1 second: this is the total distance to be travelled on the track
@@ -1118,6 +1159,17 @@ function load_race(){
     console.log("loaded performance failures from textarea: " + JSON.stringify(race.performance_failures_r) );
   }
 
+  //load choke under pressure failures from textarea
+  race.instruction_noise_choke_under_pressure_r = {};
+  let instruction_noise_choke_under_pressure_t = {};
+  let instruction_noise_choke_under_pressure_string = $('#instruction_noise_choke_under_pressure_textarea').val();
+  if(instruction_noise_choke_under_pressure_string.length > 3){
+      instruction_noise_choke_under_pressure_t = JSON.parse(performance_failures_string);
+  }
+  if (!(Object.keys(instruction_noise_choke_under_pressure_t).length === 0 && instruction_noise_choke_under_pressure_t.constructor === Object)){ //i.e. if it is a non-empty object
+    race.instruction_noise_choke_under_pressure_r = instruction_noise_choke_under_pressure_t;
+    console.log("loaded choke under pressure failures/noise from textarea: " + JSON.stringify(race.instruction_noise_choke_under_pressure_r) );
+  }
   race.riders = riders;
 
   addRiderDisplay();
@@ -1145,6 +1197,8 @@ $(document).ready(function() {
   $("#show_power_data").on("click",show_power_data);
   $("#saveGraphAsPng").on('click',saveGraphAsPng);
   $("#clearCanvas").on('click',clearCanvas);
+
+  console.log("load details from URL");
 
   load_details_from_url();
 
@@ -1229,6 +1283,8 @@ function load_details_from_url(){
           let instructions_from_url = url.searchParams.get("instructions");
           let instruction_noise_alterations_from_url = url.searchParams.get('noise_alterations');
           let performance_failures_from_url = url.searchParams.get('performance_failures');
+          //dk23 choke_under_pressure new noise type
+          let instruction_noise_choke_under_pressure_from_url = url.searchParams.get('instruction_noise_choke_under_pressure');
 
           if(start_order_from_url.length > 0){
             console.log("loaded start_order from URL: " + start_order_from_url);
@@ -1247,6 +1303,11 @@ function load_details_from_url(){
           if(!(Object.keys(performance_failures_from_url).length === 0 && performance_failures_from_url.constructor === Object)){
             console.log("loaded performance_failures from URL: " + JSON.stringify(performance_failures_from_url));
             $("#performance_failures_textarea").val(performance_failures_from_url);
+          }
+
+          if(!(Object.keys(instruction_noise_choke_under_pressure_from_url).length === 0 && instruction_noise_choke_under_pressure_from_url.constructor === Object)){
+            console.log("loaded instruction_noise_choke_under_pressure_from_url from URL: " + JSON.stringify(instruction_noise_choke_under_pressure_from_url));
+            $("#instruction_noise_choke_under_pressure_textarea").val(instruction_noise_choke_under_pressure_from_url);
           }
 
           //need to make sure the race is loaded AFTER we get the settings
@@ -1292,6 +1353,9 @@ function load_details_from_url(){
           let instructions_from_url = url.searchParams.get("instructions");
           let instruction_noise_alterations_from_url = url.searchParams.get('noise_alterations');
           let performance_failures_from_url = url.searchParams.get('performance_failures');
+          //dk23 choke_under_pressure new noise type
+          let instruction_noise_choke_under_pressure_from_url = url.searchParams.get('instruction_noise_choke_under_pressure');
+
 
           if(start_order_from_url.length > 0){
             console.log("loaded start_order from URL: " + start_order_from_url);
@@ -1308,6 +1372,10 @@ function load_details_from_url(){
           if(!(Object.keys(performance_failures_from_url).length === 0 && performance_failures_from_url.constructor === Object)){
             console.log("loaded performance_failures from URL: " + JSON.stringify(performance_failures_from_url));
             $("#performance_failures_textarea").val(performance_failures_from_url);
+          }
+          if(!(Object.keys(instruction_noise_choke_under_pressure_from_url).length === 0 && instruction_noise_choke_under_pressure_from_url.constructor === Object)){
+            console.log("loaded instruction_noise_choke_under_pressure_from_url from URL: " + JSON.stringify(instruction_noise_choke_under_pressure_from_url));
+            $("#instruction_noise_choke_under_pressure_textarea").val(instruction_noise_choke_under_pressure_from_url);
           }
 
           //need to make sure the race is loaded AFTER we get the settings

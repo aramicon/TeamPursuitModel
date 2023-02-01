@@ -9,9 +9,13 @@ let global_race_tracker = "";
 let global_riders_tracker = "";
 let global_log_message = "";
 let global_log_message_final = "";
-let global_log_message_now = true;
+let global_log_message_now = false;
+let GLOBAL_LOG_MESSAGE_LIMIT = 200000
+let generation_best_time = -1;
 
 let use_lookup_velocity = false;
+
+let count_of_choke_under_pressure_loggings = 0;
 
 // ** var to check the max performance failure
 let max_performance_failure_percentage = 0;
@@ -534,9 +538,14 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let best_race_performance_failures = {};
     let worst_race_performance_failures = {};
 
+    let best_race_instruction_noise_choke_under_pressure = {};
+    let worst_race_instruction_noise_choke_under_pressure = {};
+
     //new structs to store generation instructions info, if asked for
     let generation_instructions_info = {effort:{},drop:{}};
 
+    //dk23 reset the generation_best_time
+    generation_best_time = -1;
 
 
     let log_generation_instructions_info = false;
@@ -715,6 +724,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
         best_race_instruction_noise_alterations = race_results.instruction_noise_alterations;
         best_race_performance_failures = race_results.performance_failures;
+        best_race_instruction_noise_choke_under_pressure = race_results.instruction_noise_choke_under_pressure;
 
         best_race_time_found_thus_far = final_best_race_properties.time_taken;
 
@@ -737,6 +747,8 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
         worst_race_instruction_noise_alterations = race_results.instruction_noise_alterations;
         worst_race_performance_failures = race_results.performance_failures;
+
+        worst_race_instruction_noise_choke_under_pressure = race_results.instruction_noise_choke_under_pressure;
       }
 
 
@@ -814,6 +826,9 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     generation_results.best_race_performance_failures = best_race_performance_failures;
     generation_results.worst_race_performance_failures = worst_race_performance_failures;
 
+    //dk23
+    generation_results.best_race_instruction_noise_choke_under_pressure = best_race_instruction_noise_choke_under_pressure;
+    generation_results.worst_race_instruction_noise_choke_under_pressure = worst_race_instruction_noise_choke_under_pressure;
 
     //before looking at next generation can work out the robustness check of the current BEST strategy, IF required
     if(settings_r.ga_run_robustness_check==1){
@@ -1642,6 +1657,8 @@ function run_race(settings_r,race_r,riders_r){
   race_r.instructions = [];
   race_r.instructions_t = [];
 
+
+
   //dk22: if this is not the first generation, print the best last gen finish timeout
   let enable_pressure_noise = 0;
   if(settings_r.enable_pressure_noise){
@@ -1657,6 +1674,8 @@ function run_race(settings_r,race_r,riders_r){
   race_r.instruction_noise_alterations = {};
   race_r.performance_failures = {};
   race_r.instruction_noise_delays = {};
+  //donalk23 choke_under_pressure, need to store these alterations to power, too
+  race_r.instruction_noise_choke_under_pressure = {}
 
   //prepare to record the power output for each rider at each timestep
   rider_power = [];  //added 2020May26 to start trackign rider power output
@@ -1707,6 +1726,13 @@ function run_race(settings_r,race_r,riders_r){
 
     //dk2021 new rider property to add info to the log message
     load_rider.step_info = "";
+
+    //dk23: choke_under_pressure reset the cup state to 0
+    load_rider.choke_under_pressure_state = 0;
+
+    //dk23 choke_under_pressure: need to reset the threshold and max power if they are affected during a race
+    load_rider.original_threshold_power = load_rider.threshold_power;
+    load_rider.original_max_power = load_rider.max_power;
 
     if (i==0){
       load_rider.current_aim = "lead";
@@ -2087,12 +2113,70 @@ function run_race(settings_r,race_r,riders_r){
             }
         }
 
-        //DonalK22 also check for choke-under-pressure noise
+        //DonalK22 also check for choke-under-pressure noise LEAD
+      //  debugger
         if (settings_r.hasOwnProperty('choke_under_pressure_switch')){
-          if (settings_r.choke_under_pressure_switch == 1){
+          if (settings_r.choke_under_pressure_switch == 1){ // 1 is ON, 0 is OFF
+            //rides need the property to reflect their 'tendency' to fail in this way
+            //also this should never be appled to a rider twice to once enabled the application should then be ignored
+            if(race_rider.hasOwnProperty("choke_under_pressure_state")){
+              if(race_rider.choke_under_pressure_state == 0){ // 0 = not set, so can check
+                rider_choke_under_pressure_tendency = 0;
+                if (race_rider.hasOwnProperty('choke_under_pressure_tendency')){
+                  rider_choke_under_pressure_tendency = race_rider.choke_under_pressure_tendency;
+                }
+                //dumb version, choke purely based on the rider's "temperment"
+                //maybe update the rider's characteristice to have an effect on their next turn
+                //otherwise will need to move this up the chain of happenings
+                // [multiplier, value, exponent, max value]
 
-            console.log("|******** cup22 choke-under-pressure is ON (leader)********|");
+                let prob_choke_under_pressure = 0;
+                let choke_under_pressure_value_list = [1, rider_choke_under_pressure_tendency,1,10]; //guessing the values here really
+                let choke_under_pressure_probability_variables = [];
 
+                // want to make failure more likely if the race is near the end and only possible if the current average is better than the best time average
+                let best_time_speed = (race_r.distance/generation_best_time);
+                let current_speed = (race_rider.distance_covered/race_r.race_clock);
+                let speed_higher_than_best = ((current_speed > best_time_speed)?1:0);
+                //the idea here is that IF the race looks like it will be a new PB and we are approachign the end, choking becomes way more likely!
+                let end_race_better_time_factor = speed_higher_than_best*(race_rider.distance_covered/race_r.distance);
+                choke_under_pressure_probability_variables.push(end_race_better_time_factor);
+                // if the rider is going to fail then reduce their capacities
+
+                prob_choke_under_pressure = calculate_linear_space_value(choke_under_pressure_value_list,choke_under_pressure_probability_variables);
+
+                let cup_r = Math.random()
+                if (cup_r < prob_choke_under_pressure){
+                  let choke_under_pressure_amount = 0;
+
+                  if (settings_r.hasOwnProperty('choke_under_pressure_amount_percentage')){
+                    choke_under_pressure_amount = settings_r.choke_under_pressure_amount_percentage;
+                  }
+                  count_of_choke_under_pressure_loggings++;
+                  console.log("************ CHOKE UNDER PRESSURE HAPPENING (lead rider)! [[ " + count_of_choke_under_pressure_loggings + "]]************" );
+                  console.log("race_rider.velocity " + race_rider.velocity);
+                  console.log("prob_choke_under_pressure " + prob_choke_under_pressure + " cup_r " + cup_r);
+                  console.log("rider_choke_under_pressure_tendency " + rider_choke_under_pressure_tendency);
+                  console.log("end_race_better_time_factor " + end_race_better_time_factor);
+                  console.log("race_rider.distance_covered / race_r.race_clock " + race_rider.distance_covered + " / " + race_r.race_clock);
+                  console.log("updating threshold power from " + race_rider.threshold_power + " to " + (race_rider.threshold_power - (race_rider.threshold_power*choke_under_pressure_amount)));
+                  console.log("updating max power from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power*choke_under_pressure_amount)));
+                  race_rider.threshold_power -= (race_rider.threshold_power*choke_under_pressure_amount);
+                  race_rider.max_power -= (race_rider.max_power*choke_under_pressure_amount);
+                  race_rider.choke_under_pressure_state = 1; //shouldn't be checked again for the remainder of the race
+                  //store to be replayed/observed in results
+                  if (race_r.instruction_noise_choke_under_pressure.hasOwnProperty(race_r.race_clock)){
+                    race_r.instruction_noise_choke_under_pressure[race_r.race_clock].push(race_r.current_order[i]);
+                    race_r.instruction_noise_choke_under_pressure[race_r.race_clock].push(choke_under_pressure_amount);
+
+                  }
+                  else{
+                    race_r.instruction_noise_choke_under_pressure[race_r.race_clock] = [race_r.current_order[i],choke_under_pressure_amount];
+                  }
+
+                }
+              }
+            }
           }
         }
 
@@ -2335,12 +2419,68 @@ function run_race(settings_r,race_r,riders_r){
             }
         }
 
-        //DonalK22 also check for choke-under-pressure noise
+        //DonalK22 also check for choke-under-pressure noise (chaser)
         if (settings_r.hasOwnProperty('choke_under_pressure_switch')){
           if (settings_r.choke_under_pressure_switch == 1){
+            //rides need the property to reflect their 'tendency' to fail in this way
+            //also this should never be appled to a rider twice to once enabled the application should then be ignored
+            if(race_rider.hasOwnProperty("choke_under_pressure_state")){
+              if(race_rider.choke_under_pressure_state == 0){
+                rider_choke_under_pressure_tendency = 0;
+                if (race_rider.hasOwnProperty('choke_under_pressure_tendency')){
+                  rider_choke_under_pressure_tendency = race_rider.choke_under_pressure_tendency;
+                }
+                //dumb version, choke purely based on the rider's "temperment"
+                //maybe update the rider's characteristice to have an effect on their next turn
+                //otherwise will need to move this up the chain of happenings
+                // [multiplier, value, exponent, max value]
 
-            console.log("|******** choke-under-pressure is ON (chaser)********|");
+                let prob_choke_under_pressure = 0;
+                let choke_under_pressure_value_list = [1, rider_choke_under_pressure_tendency,1,10]; //guessing the values here really
+                let choke_under_pressure_probability_variables = [];
 
+                // want to make failure more likely if the race is near the end and only possible if the current average is better than the best time average
+                let best_time_speed = (race_r.distance/generation_best_time);
+                let current_speed = (race_rider.distance_covered/race_r.race_clock);
+                let speed_higher_than_best = ((current_speed > best_time_speed)?1:0);
+                //the idea here is that IF the race looks like it will be a new PB and we are approachign the end, choking becomes way more likely!
+                let end_race_better_time_factor = speed_higher_than_best*(race_rider.distance_covered/race_r.distance);
+                choke_under_pressure_probability_variables.push(end_race_better_time_factor);
+                // if the rider is going to fail then reduce their capacities
+
+
+                prob_choke_under_pressure = calculate_linear_space_value(choke_under_pressure_value_list,choke_under_pressure_probability_variables);
+                // if the rider is going to fail then reduce their capacities
+                let cup_r = Math.random();
+                if (cup_r < prob_choke_under_pressure){
+                  let choke_under_pressure_amount = 0;
+
+                  if (settings_r.hasOwnProperty('choke_under_pressure_amount_percentage')){
+                    choke_under_pressure_amount = settings_r.choke_under_pressure_amount_percentage;
+                  }
+                  console.log("************ CHOKE UNDER PRESSURE HAPPENING (chase rider)! [[ " + count_of_choke_under_pressure_loggings + "]]************" );
+                  console.log("race_rider.velocity " + race_rider.velocity);
+                  console.log("prob_choke_under_pressure " + prob_choke_under_pressure + " cup_r " + cup_r);
+                  console.log("rider_choke_under_pressure_tendency " + rider_choke_under_pressure_tendency);
+                  console.log("end_race_better_time_factor " + end_race_better_time_factor);
+                  console.log("race_rider.distance_covered / race_r.race_clock " + race_rider.distance_covered + " / " + race_r.race_clock);
+                  console.log("updating threshold power from " + race_rider.threshold_power + " to " + (race_rider.threshold_power - (race_rider.threshold_power*choke_under_pressure_amount)));
+                  console.log("updating max power from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power*choke_under_pressure_amount)));
+                  race_rider.threshold_power -= (race_rider.threshold_power*choke_under_pressure_amount);
+                  race_rider.max_power -= (race_rider.max_power*choke_under_pressure_amount);
+                  race_rider.choke_under_pressure_state = 1; //shouldn't be checked again for the remainder of the race
+
+                  if (race_r.instruction_noise_choke_under_pressure.hasOwnProperty(race_r.race_clock)){
+                    race_r.instruction_noise_choke_under_pressure[race_r.race_clock].push(race_r.current_order[i]);
+                    race_r.instruction_noise_choke_under_pressure[race_r.race_clock].push(choke_under_pressure_amount);
+
+                  }
+                  else{
+                    race_r.instruction_noise_choke_under_pressure[race_r.race_clock] = [race_r.current_order[i],choke_under_pressure_amount];
+                  }
+                }
+              }
+            }
           }
         }
 
@@ -2471,7 +2611,6 @@ function run_race(settings_r,race_r,riders_r){
           }
         }
       }
-
       race_rider.distance_covered+=race_rider.velocity;
     }
     // After all riders have moved
@@ -2513,7 +2652,17 @@ function run_race(settings_r,race_r,riders_r){
         console.log(logMessage);
       }
       else if (global_log_message_now){
-        global_log_message += logMessage;
+        //dk23 note this can sometimes throw an error "caught RangeError: Invalid string length"
+        // so i might arbitrarily limit the length of the stringify
+        if (global_log_message.length < GLOBAL_LOG_MESSAGE_LIMIT){
+
+          global_log_message += logMessage;
+        }
+        else{
+          //debugger
+          console.log(">>>>>>>>>>> very long string being created in global_log_message <<<<<<<<<<");
+        }
+
       }
 
     //work out the distance covered by the second last rider
@@ -2585,7 +2734,19 @@ function run_race(settings_r,race_r,riders_r){
     }
 
   }
+
+  //update the generation best time if needs be
+  if (finish_time < generation_best_time){
+    generation_best_time = finish_time;
+  }
+
+  //dk23 choke_under_pressure: reset the rider power (doesn't actually check to see if they failed)
+  for(let i = 0;i<race_r.start_order.length;i++){
+    let load_rider = riders_r[race_r.start_order[i]];
+		load_rider.threshold_power = load_rider.original_threshold_power;
+		load_rider.max_power = load_rider.original_max_power;
+	}
   //return the final finish time (seconds)
 
-  return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep, instruction_noise_alterations: race_r.instruction_noise_alterations, performance_failures:race_r.performance_failures};
+  return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep, instruction_noise_alterations: race_r.instruction_noise_alterations, performance_failures:race_r.performance_failures, instruction_noise_choke_under_pressure:race_r.instruction_noise_choke_under_pressure};
 }
