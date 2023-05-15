@@ -1439,3 +1439,377 @@ instruction_noise_choke_under_pressure_from_url
 {"7":[2,0.1],"14":[3,0.1],"98":[1,0.1]} displaying the textarea. need to load this into the race properties
 -- race.instruction_noise_choke_under_pressure_r
 loaded instruction_noise_choke_under_pressure_from_url from URL: "{\"7\":[2,0.1],\"14\":[3,0.1],\"98\":[1,0.1]}"
+
+-- feb 2
+
+--  need to get the game to run... should be straightforward to debug, then i need to big picture and get the rest of it fitting together
+-- getting there but the changes are wrong (400 t0 40 for a 0.2 failure)
+
+-- oh no waits, am just printing the wrong thing
+
+-- feb 3
+-- it now logs the failures but i have to actually examine them 
+-- 1: if I remove the failures does the time change?
+
+-- with noise of {"20":[3,0.1],"57":[2,0.1],"74":[1,0.1]}: 275.254 seconds
+-- without noise: 274.273 seconds
+
+-- i should adjust the speed slider to defail to a faster option: i am always updating it 
+-- done, updated to 7 rather than 5
+-- this changed nothing, finally looked at the model3.js code and adjusted
+let step_speed = 120; to
+let step_speed = 60;
+-- now it goes fast enough
+
+--  make the cup ridiculous 
+{"20":[3,0.5],"57":[2,0.5],"74":[1,0.5]} : 499.13 seconds
+
+-- make every rider fail {"20":[0,0.5],"21":[1,0.5],"22":[2,0.5],"23":[3,0.5]} : 359.394 seconds
+
+-- feb 4
+
+-- check that the speed is the same as the GA . GA 275.254, game 275.254. so the re-enactment might be ok ok?
+
+-- test that the GA matches the race sim with a new all-weak check. GA 296.78  game 296.78 same same 
+
+-- hmmm, seems that failure is very likely even if the rider setting is low, e.g. "choke_under_pressure_tendency": 0.1,  though they fail towards the end? Does the new-PB thing not kick in?
+
+-- mundee 6th feb
+-- nada 
+
+-- thursday 9th 
+-- need to work on the paper and see if i can improve the cup stuff. 
+-- if i add cup does it dramtically affect the kinds of strategy that are discovered? how do i even measure that? 
+
+-- there should be a ton of zero values? log it and see (run a small population with steady cup rates)
+-- hmmmm, gettting lots of LOW cvalues but no zeros...  a float/number thing going on 
+
+-- fridaya 10th
+
+-- who does the count of zero prob events stop increasing towards the end of the run?
+-- is it correctly showing the best speed of all time? seems to only add zero events on the first timestep of each race? 
+-- ah geex, generation_bect_time never gets away form -1, should be set HIGH, not low- make if an enormous number
+
+-- can use the built in INFINITY constant.
+-- seems the largest number in JavaScript may be Math.pow(10, 1000)
+
+BUT 
+const maxNumber = Math.pow(10, 308); // Max positive number
+const maxNumber2 = Math.pow(10, 1000);
+
+if (maxNumber < maxNumber2) {
+  console.log('smaller');
+}
+
+will print smaller but if const maxNumber = Math.pow(10, 309); it prints nada
+
+let generation_best_time = Infinity; -- new initialisaton, instead of -1
+
+-- cup count drops wayyyy down, to 36
+-- if i set all riders to have "choke_under_pressure_tendency": 0.9, we get 58 instances 
+-- can get up to 60s (for this pop)... what happens if I really punish the rider, knock off half their power?
+
+-- take out the console logs and run for a bigger pop/gens
+
+-- for no real reason other than it looked odd, I changed 
+"ga_max_timestep": 450, to 
+"ga_max_timestep": 600
+this will slowwww things down though
+
+-- now i'm getting tonnns of error in calculate_linear_space_value INVALID VALUE 1.2619735020709655 IN  probability_variables[ 0]
+
+-- why does it do this soooo many ties?
+80158 * "race_function_no_vis.js:2687 >>>>>>>>>>> very long string being created in global_log_message <<<<<<<<<<"
+
+ah, ok 
+if (g==(number_of_generations-1)){
+      global_log_message_now = true;
+    }
+
+explains why it happens near the end, though weirdly the results seemed to come back before the loggings. 
+-- it tries to capture each step of the last races... but this can be a huge string, though it does seem guinine, i.e. it really is that lng, over 200,000 characters. maybe double the allowed length and see what happens?
+
+-- the best time is very slow with this high cup affect... final race best after 50 gens is 304.447
+
+-- maybe log the longest length that is found?
+
+-- 14th feb, tuesday.
+
+none 
+
+-- 16th feb, thursday 
+-- need to finish this mechanism, then build a hot-headed one, then finish the paper 2, then emakl Colm? by next Friday?
+
+-- how to interpret the choking?
+
+-- gradually increase cup effect and measure the best and average final gen race time (50 gens)?
+
+-- compare the  times of cup for 3 or 4 different levels ?
+
+-- longest  global_log_message.length 342586. do i need this mechanism at all? can i profile the code and speed it up?
+
+-- 17th feb, friday 
+-- create a sequence that has 4 weak with rising tendancies to choke 
+
+{"iterations":21,"active":1,"variations":[{"iterations":[11,10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":0,"property":"choke_under_pressure_tendency","values":[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]},{"iterations":[11,10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":1,"property":"choke_under_pressure_tendency","values":[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]},{"iterations":[11,10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":2,"property":"choke_under_pressure_tendency","values":[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]},{"iterations":[11,10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":3,"property":"choke_under_pressure_tendency","values":[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]}]}
+
+- 23rd thursday 
+
+-- 08 March. 
+-- seems to be no cup in final gen races even when the rider level is set to 1? is this legit? how would i know?
+
+-- maybe at least get the Worst gen race ones showing? they must have noise?
+-- got it to show and ran one, seems to be legit, very slow races.
+-- got it to show and ran one, seems to be legit, very slow races.
+
+
+-- May 01 23. a last hurrah. at least let's learn enough to be a knower of something.
+
+-- need to finish the short paper, then work on the noise paper, get the literature review done, meet Colm
+
+-- start by reading a new paper 
+
+https://link.springer.com/article/10.1007/s11042-020-10139-6
+
+
+-- maybe i can change the mutation rate as generations pass? I have it as a fixed rate
+"Epistasis is a phenomenon in genetics in which the effect of a gene mutation is dependent on the presence or absence of mutations in one or more other genes, respectively termed modifier genes. In other words, the effect of the mutation is dependent on the genetic background in which it appears.[2] Epistatic mutations therefore have different effects on their own than when they occur together. Originally, the term epistasis specifically meant that the effect of a gene variant is masked by that of a different gene" https://en.wikipedia.org/wiki/Epistasis
+
+bolzman selection technique
+
+need to understand monte carlo again, i.e., get back into stats. yikes.
+
+The travelling salesperson problem seems to be a common standard to use for comparing GA stuffs
+
+don't understand PMX crossover
+Cycle Crossover, Partially Mapped 
+ok, I think i do now, from here https://www.rubicite.com/Tutorials/GeneticAlgorithms/CrossoverOperators/PMXCrossoverOperator.aspx
+
+-- what are the kinds then of crossover?
+Single point Easy to implement, two segments. remember we are creating two childers each time
+
+Two and K-point : like the first but with more segments
+
+Reduced Surrogate 
+
+"Reduced Surrogate Crossover minimizes the unwanted crossover operations in case of the parents having same genes." You make a list of the points where the parents differ and choose one of these randomly to do 1-point crossover: if the parents are identical there is no crossover? If parents are different in every position the point could be anywhere. 
+
+if you have
+P1: 1010101
+P2: 1001101
+
+you will have 2 possible points, 2 and 3. you pick one randomly and generate deux kiddos.
+
+CROSSOVER OPERATORS IN GENETIC ALGORITHMS: A REVIEW
+https://ictactjournals.in/paper/IJSC_V6_I1_paper_4_pp_1083_1092.pdf
+
+
+Uniform "typically, each bit is chosen from either parent with equal probability" "in this, we essentially flip a coin for each chromosome to decide whether or not it’ll be included in the off-spring. We can also bias the coin to one parent, to have more genetic material in the child from that parent."
+ https://en.wikipedia.org/wiki/Crossover_(genetic_algorithm)
+ 
+Precedence Preservative (PPX)
+
+"developed for vehicle routing problems by Blanton and Wainwright (1993) and for scheduling problems by Bierwirth et al. (1996)"
+
+so this is again based on a specific kind of problem- there is a set of non-repeating values, each solution/parent is an ordering, and we are searching for the best ordering.
+
+https://www.uobabylon.edu.iq/eprints/paper_2_2712_124.pdf
+
+
+Order Crossover (OX)  "It transfers information about the relative order from the second parent to the offspring"
+Cycle Crossover : randomly choose first bit, then look at the corresponding bit in the other parent, find this value in the first, copy to that position in the child, then repeat. example on https://www.ncbi.nlm.nih.gov/pmc/articles/PMC5676484/#:~:text=The%20cycle%20crossover%20(CX)%20operator,from%20one%20of%20the%20parents.
+
+note that both parents contain different orderings of the same values, so how would you do this where all the values differ? Maybe this style works only for things like the TP problem, where the numbers might be the locations?
+
+
+Partially Mapped (PMX). This is the one where you pick a swathe, then you look for the values in the corresponding swath that are NOT already copied and find positions for them, then fill the rest up with what is in parent 2. 
+
+crossover for the travelling salesperson problem... can i make this in Python? This is crossover for permutations? The genomes are sets.
+
+https://www.researchgate.net/publication/226665831_Genetic_Algorithms_for_the_Travelling_Salesman_Problem_A_Review_of_Representations_and_Operators#pf12
+
+
+-- how about this? 
+Genetic algorithms, noise, and the sizing of populations
+http://repository.ias.ac.in/82725/
+
+
+I could build a javascript interface that lets you choose a crossover type from those above and apply them to a problem like TP, or run them all and have them be compared to each other: this can be part of the LIT review? also I could demo this? I need to build something? could also include a totally random version. do a live demo? could do some kind of graphing of the operations involved, an estimate of the Big O?
+
+how would be measure the covergance of a population?
+
+Hamming cliff: happens when 2 numbers that are actually close in value have big hamming distances when represented as binary, so this can be a problem if using binary genotypes.
+hamming distance: go through identical length strings character by character and count where the characters differ.
+	hamming distance between ABCD and ABCD is 0. between ACCD and ABCD is 1, between DCBA and ABCD is 4.
+
+
+simulated binary crossover (SBX). tries to simulate properties of binary crossover but for real values. seems complex and only more academic sources, e.g. https://content.wolfram.com/uploads/sites/13/2018/02/09-2-2.pdf
+
+"The performance of SBX is not satisfactory in two-variable blocked function." what is this two-variable blocked function?
+
+Laplacian distribution.
+
+abscissa = x value of x,y coordinate-pair point
+
+pareto front: the set of all pareto efficient solutions, which are solutions with the " situation where no action or allocation is available that makes one individual better off without making another worse of" https://en.wikipedia.org/wiki/Pareto_efficiency
+
+"Genetic drift, also known as allelic drift or the Wright effect,[1] is the change in the frequency of an existing gene variant (allele) in a population due to random chance." https://en.wikipedia.org/wiki/Genetic_drift "In the middle of the 20th century, vigorous debates occurred over the relative importance of natural selection versus neutral processes, including genetic drift. Ronald Fisher, who explained natural selection using Mendelian genetics,[4] held the view that genetic drift plays at most a minor role in evolution, and this remained the dominant view for several decades."#
+
+parallelism
+- master-slave
+- course-grained (make sub-populations that can be worked on in parallel)
+- fine-grained (map each node to a lattice grid, not sure how this works tbh, didn't find a good source)
+
+Memetic algorithm
+
+"a "discontinuous phase shift" where the model suddenly acquires substantial abilities not seen in smaller models. These are known as "emergent abilities", and have been the subject of substantial study." https://en.wikipedia.org/wiki/Large_language_model
+
+"intensification and diversification" key idea
+
+" fuzzy logic uses degrees of truth as a mathematical model of vagueness, while probability is a mathematical model of ignorance" https://en.wikipedia.org/wiki/Fuzzy_logic
+
+np- hard (nondeterministic polynomial time) "at least as hard as the hardest problems in NP".
+
+Take the subset-sum problem (SSP). You have a set and you want to see if there is some subset that sums to a given amount, T. E.g. subset {1,2,3,4,-5} and T=-4, which has an answer. SSP is a special kind of knapsack problem.
+
+Saturday 6th 
+
+-- finish choke under pressure and figure out how to represent it/visualise results 
+-- add an over-eagerness kind of noise and do the same
+-- find any other noise in EC papers
+-- go back over as much optimisation and EC material, at least know what i am talking about 
+-- email Colm and try to meet him- finish the short paper
+-- finish the noise paper
+-- spend at least a week writing a lit review, like really writing it, maybe something can come from that?
+
+
+-- there's a modelling seciton in this conferecne https://simultech.scitevents.org/ but it clashes with the wedding in Poland?
+
+-- ok there's on sports, more realistic, try that one... https://icsports.scitevents.org/ Regular Paper Submission: June 2, 2023
+
+-- Sunday 07th
+
+-- do an hour at least. tick it off. do something else after. 
+
+GeneticAlgorithmsTournamentSelectionAndTheEffectsOfNoise
+
+Use Evernote to create a new notebook or something to try and organize things for references etc
+
+Longer term, the approach of this study may be applied to better understand the delaying effects of function noise in other selection schemes or to approximate the convergence delays that result from inherently noisy operators such as selection, crossover, and mutation.
+
+-- MOnday 8th may 
+-- need to learn those greek letters (again)
+
+
+-- Tuesday 
+-- made it to the library late and reading a little now
+-- DeJong_AnalysisOfTheBehaviorOfAClassOfGeneticAdaptiveSystems
+
+-- how about I add a new tab to the GUI, to allow me to demo test GA problems, and very quickly see some stats about convergence and success?
+
+-- maybe use the eval() method and actually store the JS code in mongo, so it can very easily run.
+
+-- first one could be the onemax problem, them I could implement a bunch of the DeJong ones. This could be a fe minutes of the presentation?
+
+
+-- Wednesday. finish that chapter of the black book then re-assess.
+
+-- need to code code code. so so far away from a presentation and have a week or so. 
+
+-- wrote up some vague shit on the disc board and made a summer sign for the door
+
+-- Thursday. 
+-- do an hour on the test suite idea. 
+-- make two text areas, put a function in one and eval it and print the output in another
+
+-- can now enter a function like function( a, b ){  return a * b } and it displays the output, but i have to hardcode in arguments.
+-- what i want to define is a fitness function... arguments may vary.
+-- but first case we want to solve onemax i.e. with a binary imp
+-- one binary argument, a sring of bits e.g. "100001110" and sum the ones.
+-- the following seeeems to work...
+
+
+function(x){  
+	let c = 0;
+	for(let i = 0; i< x.length; i++)
+	{
+		if(x[i] == '1'){
+			c++;
+		}
+	} 
+	return c;
+} 
+
+-- now make a collection in the db so we can save these fitness functions. call it test_suite_functions. what would one look like?
+
+-- 
+{name: "onemax",function:"codecodecode"}
+-- might need to extend this later with things like arguments? but best to make something, anything, that might work.
+-- save this as a dummy document and first bring back the list.
+-- added a new function getTestSuiteFunctionNames. need to add an endpoint for this.
+
+-- need endpoints similar to getExperimentSettingNames and getExperimentSettingFromID
+-- rename to getTestSuiteFunctionNames and getTestSuiteFunctionFromID 
+
+-- now it has a list and i can click on an entry and code is loaded. need to be able to save and add new ones
+
+$("#button_update_settings").on("click", updateExperimentSettings);
+
+
+-- add a new updateTestSuiteFunction function 
+
+-- make a copy of update_race_settings as update_test_suite_function
+
+-- ok, the update  now works, need to add a new one
+
+-- Friday 12th at home. sunny. needs to keep at it.
+
+--  add the ability to delete a test function?
+
+-- deletes now but throws an error too, reference to getSequences in Node?
+
+-- works but now there's an issue when i select "-- select--" as the option. neesd to NOT load if the ID is zero. and empty the text areas?
+
+-- huh, i think the same problem is in the GA page. let's fix this. 
+-- better. cogs spinning thing spins even if nothing is selected. keep fixing shit.
+
+-- seems to wurk, but only getting started :-( 
+
+-- the funciton needs to be run by a GA.
+
+-- create random population
+-- measure fitness 
+-- select new population 
+-- apply mutation/crossover 
+
+-- need some global settings. what's the minimum?
+-- populaton size 
+-- number of generations 
+-- mutation_rate 
+
+let's stuff the settings in with function code in the smae collection. 
+
+-- mundee 15th 05 
+
+-- add settings to the test_suite collection documents 
+
+-- format for settings 
+{
+	"population_size": 100,
+	"generations":10,
+	"mutation_rate":0.01
+}
+-- get the update to run first
+-- had it already working really, now get it to add as new
+-- add doesn't add settings
+
+-- ok, settings are now returned. create a new population, hard code in the binary format?
+-- i guess we just need to know the number of bits? make everything a string for now?
+{
+	"population_size": 100,
+	"generations":10,
+	"mutation_rate":0.01,
+	"format":"binary"
+	"bits": 4
+}
+-- read the settings and create the popualtion.

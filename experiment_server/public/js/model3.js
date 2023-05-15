@@ -20,7 +20,7 @@ let c = {};
 let ctx = {};
 let race_state = 'stop';
 
-let step_speed = 120;
+let step_speed = 60;
 
 let rider_power_data = []; //record power outpur of each rider to generate graph
 
@@ -546,21 +546,23 @@ function moveRace(){
 
       //dk23 check for choke_under_pressure failure
       //note this will apply in the  next step
+
       if (race.instruction_noise_choke_under_pressure_r[race.race_clock]){
         //is this the correct rider?
+
         let rider = -1;
         let changes = race.instruction_noise_choke_under_pressure_r[race.race_clock];
         for(let cup = 0; cup < changes.length;cup+=2){
           if (changes[cup+1]){
             if (changes[cup] == race.current_order[i]){ //this is the rider to target
 
-              console.log(" >*>*>*>*>*>*>*>*> Choke Under Pressure Noise failure lead rider " + race.current_order[i] + " : race_rider.threshold_power changed from " + race_rider.threshold_power + " to " + (race_rider.threshold_power * changes[cup+1]) + " race_rider.max_power changed from " +race_rider.max_power + " to " + (race_rider.max_power * changes[cup+1]));
+              console.log(" >*>*>*>*>*>*>*>*> Choke Under Pressure Noise failure lead rider " + race.current_order[i] + " : race_rider.threshold_power changed from " + race_rider.threshold_power + " to " + (race_rider.threshold_power-(race_rider.threshold_power * changes[cup+1])) + " race_rider.max_power changed from " +race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power * changes[cup+1])));
               race_rider.threshold_power -= (race_rider.threshold_power * changes[cup+1]);
               race_rider.max_power -= (race_rider.max_power * changes[cup+1]);
             }
           }
         }
-        target_power = target_power - (target_power * failure_p);
+        //target_power = target_power - (target_power * failure_p);
       }
 
     }
@@ -767,13 +769,13 @@ function moveRace(){
           if (changes[cup+1]){
             if (changes[cup] == race.current_order[i]){ //this is the rider to target
 
-              console.log(" >*>*>*>*>*>*>*>*> Choke Under Pressure Noise failure chasing rider " + race.current_order[i] + " : race_rider.threshold_power changed from " + race_rider.threshold_power + " to " + (race_rider.threshold_power * changes[cup+1]) + " race_rider.max_power changed from " + race_rider.max_power + " to " + (race_rider.max_power * changes[cup+1]));
+              console.log(" >*>*>*>*>*>*>*>*> Choke Under Pressure Noise failure chasing rider " + race.current_order[i] + " : race_rider.threshold_power changed from " + race_rider.threshold_power + " to " + (race_rider.threshold_power-(race_rider.threshold_power * changes[cup+1])) + " race_rider.max_power changed from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power * changes[cup+1])));
               race_rider.threshold_power -= (race_rider.threshold_power * changes[cup+1]);
               race_rider.max_power -= (race_rider.max_power * changes[cup+1]);
             }
           }
         }
-        target_power = target_power - (target_power * failure_p);
+        //target_power = target_power - (target_power * failure_p);
       }
 
     }
@@ -1164,7 +1166,7 @@ function load_race(){
   let instruction_noise_choke_under_pressure_t = {};
   let instruction_noise_choke_under_pressure_string = $('#instruction_noise_choke_under_pressure_textarea').val();
   if(instruction_noise_choke_under_pressure_string.length > 3){
-      instruction_noise_choke_under_pressure_t = JSON.parse(performance_failures_string);
+      instruction_noise_choke_under_pressure_t = JSON.parse(instruction_noise_choke_under_pressure_string);
   }
   if (!(Object.keys(instruction_noise_choke_under_pressure_t).length === 0 && instruction_noise_choke_under_pressure_t.constructor === Object)){ //i.e. if it is a non-empty object
     race.instruction_noise_choke_under_pressure_r = instruction_noise_choke_under_pressure_t;

@@ -167,55 +167,58 @@ function run_ga(callback_func){
           sequence_selected_iteration = 0;
         }
       }
-
-
     }
-
     try {
-      let current_settings_global = JSON.parse($("#global_settings").val());
-      let current_settings_race = JSON.parse($("#race_settings").val());
-      let current_settings_rider = JSON.parse($("#rider_settings").val());
-      let current_settings_option = $("#experiment_names").val();
-
-      if (current_settings_option != 0){
-        //we are loading settings
-        if (current_settings_global.length == 0 || current_settings_race.length == 0 || current_settings_rider == 0){
-          alert("Settings have not been loaded correctly")
-        }
-        else{
-          console.log("load settings from experiment")
-          chosen_global_settings = current_settings_global;
-          chosen_global_settings._id = $("#settings_id").text();
-          chosen_race_settings = current_settings_race;
-          chosen_rider_settings = current_settings_rider;
-        }
-
-        console.log("****Rider settings before GA is run****");
-        console.log(JSON.stringify(current_settings_rider));
-
-
-        gaWorker.postMessage(["run_ga",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
-        start_time =  new Date().getTime();
-        console.log('GA Message posted to worker');
+      //do nada if no settings are shown
+      if($("#global_settings").val().length < 25){ //assuming that the instructions will be longer than 24 chars
+        alert("No experiment selected");
+        $("#cogs").css({"visibility":"hidden"})
       }
       else{
-        console.log("Worker cannot be created, maybe not supported by this browser?");
+        let current_settings_global = JSON.parse($("#global_settings").val());
+        let current_settings_race = JSON.parse($("#race_settings").val());
+        let current_settings_rider = JSON.parse($("#rider_settings").val());
+        let current_settings_option = $("#experiment_names").val();
+
+        if (current_settings_option != 0){
+          //we are loading settings
+          if (current_settings_global.length == 0 || current_settings_race.length == 0 || current_settings_rider == 0){
+            alert("Settings have not been loaded correctly")
+          }
+          else{
+            console.log("load settings from experiment")
+            chosen_global_settings = current_settings_global;
+            chosen_global_settings._id = $("#settings_id").text();
+            chosen_race_settings = current_settings_race;
+            chosen_rider_settings = current_settings_rider;
+          }
+
+          console.log("****Rider settings before GA is run****");
+          console.log(JSON.stringify(current_settings_rider));
+
+          gaWorker.postMessage(["run_ga",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
+          start_time =  new Date().getTime();
+          console.log('GA Message posted to worker');
+        }
+        else{
+          console.log("Worker cannot be created, maybe not supported by this browser?");
+        }
+      }
+      }
+      catch(err) {
+        $("#race_result").html("Error trying to run GA: " + err.message);
+        $("#cogs").css({"visibility":"hidden"})
+        console.log(err);
       }
     }
-    catch(err) {
-      $("#race_result").html("Error trying to run GA: " + err.message);
-      $("#cogs").css({"visibility":"hidden"})
-      console.log(err);
-    }
-  }
 
-  //if a callback funciton was sent, run it
-  if(callback_func){
-    //dk_2021 was sending a click event, need to run only if it is a function
-    if (typeof callback_func === 'function') {
-      console.log("## RUN CALLBACK FUNCTION ##");
-      callback_func();
-  }
+    //if a callback funciton was sent, run it
+    if(callback_func){
+      //dk_2021 was sending a click event, need to run only if it is a function
+      if (typeof callback_func === 'function') {
+        console.log("## RUN CALLBACK FUNCTION ##");
+        callback_func();
+    }
   }
 }
 
@@ -1139,7 +1142,7 @@ const check_for_sequences = () => {
 
                   //need to select the settings value in the dropdown box
                   //weird mix of UI and other stuff here, yikes
-                  let element = document.getElementById("experiment_names");
+                  let element = document.getElementById("experiment_names"); //is this actually used?
                   element.value = seq_settings_id;
 
                   $("#save_results_notes").val("Experiment interval " + selected_iteration + "/" + total_iterations + " sequence " + seq_id + " " + seq_name + " " + seq_notes + "||" + sequence_variations_info);
@@ -1148,12 +1151,8 @@ const check_for_sequences = () => {
                   //need to set variables to be able to update/save after running the GAS (asynchronous as heck)
                   sequence_selected_seq_id = seq_id;
                   sequence_selected_iteration = selected_iteration;
-
-
-
                   run_ga();
                   //note the GA uses web workers, and when this returns you need to triger it to save results automatically and update the sequence info
-
 
                 });
 
@@ -1268,6 +1267,8 @@ $(document).ready(function() {
 
   const populateNamesDropdown = (data) => {
     const namesDropDown = $("#experiment_names");
+    namesDropDown.empty();
+    namesDropDown.append($('<option>', {value : 0}).text("-- SELECT --"));
     data.forEach((experiment_names) => {
       namesDropDown.append($('<option>', {value : experiment_names._id}).text(experiment_names.name));
     });
@@ -1276,6 +1277,16 @@ $(document).ready(function() {
       let optionSelected = $(this).find("option:selected");
       let valueSelected  = optionSelected.val();
 
+      //ignore if the id is 0
+      if (valueSelected == 0){
+        $("#global_settings").val("");
+        $("#race_settings").val("");
+        $("#rider_settings").val("");
+        $("#database_connection_label").html("No experiemnt selected");
+        $("#new_settings_name").val("");
+        selected_settings_id = 0; //global id value
+      }
+      else{
       //make a call to get the settings
       fetch('http://127.0.0.1:3003/getExperimentSettingFromID/' + valueSelected,{method : 'get'}).then((response)=>{
         return response.json()
@@ -1293,6 +1304,7 @@ $(document).ready(function() {
         //populateNamesDropdown(data);
       });
     }
+  }
 
     // alert(valueSelected);
   );
@@ -1323,11 +1335,7 @@ const getExperimentNames = () => {
 }
 //try to load settings from the experiment server
 getExperimentNames();
-
 //set or get a client id
-setClientID()
-
-
-
+setClientID();
 }
 );

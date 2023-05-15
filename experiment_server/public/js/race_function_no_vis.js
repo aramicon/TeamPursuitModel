@@ -10,8 +10,9 @@ let global_riders_tracker = "";
 let global_log_message = "";
 let global_log_message_final = "";
 let global_log_message_now = false;
-let GLOBAL_LOG_MESSAGE_LIMIT = 200000
-let generation_best_time = -1;
+let GLOBAL_LOG_MESSAGE_LIMIT = 400000;
+let longest_LOG_MESSAGE_found = 0;
+let generation_best_time = Infinity;
 
 let use_lookup_velocity = false;
 
@@ -24,6 +25,8 @@ let max_endurance_fatigue_level = 0;
 //let max_endurance_fatigue_level_instructions = []; //save these to be able to re-run odd results
 //let max_endurance_fatigue_level_start_order = [];
 
+//temp counter to see if we get a lot of zero cals for cup
+let zero_cup_count = 0;
 onmessage = function(e) {
   console.log('Message received from main script ');
   let messageType = (e.data[0]);
@@ -545,7 +548,7 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let generation_instructions_info = {effort:{},drop:{}};
 
     //dk23 reset the generation_best_time
-    generation_best_time = -1;
+    generation_best_time = Infinity;
 
 
     let log_generation_instructions_info = false;
@@ -1544,19 +1547,19 @@ function calculate_linear_space_value(value_list, probability_variables){
   //check that the values are all numberic
   for(let i = 0; i<value_list.length;i++ ){
     if(isNaN(value_list[i])){
-      console.log("!!! error in calculate_linear_space_value NON NUMBER " + value_list[i] + " IN  value_list[ " + i + "] !!!");
+      console.log("!!! error in calculate_linear_space_value NON NUMBER " + value_list[i] + " IN  value_list[" + i + "] !!!");
       continue_check = false;
       break;
     }
   }
   for(let i = 0; i<probability_variables.length;i++ ){
     if(isNaN(probability_variables[i])){
-      console.log("!!! error in calculate_linear_space_value NON NUMBER " + probability_variables[i] + " IN  probability_variables[ " + i + "] !!!");
+      console.log("!!! error in calculate_linear_space_value NON NUMBER " + probability_variables[i] + " IN  probability_variables[" + i + "] !!!");
       continue_check = false;
       break;
     }
     else if(probability_variables[i] < 0 || probability_variables[i] > 1){
-      console.log("!!! error in calculate_linear_space_value INVALID VALUE " + probability_variables[i] + " IN  probability_variables[ " + i + "] !!!");
+      console.log("!!! error in calculate_linear_space_value INVALID VALUE " + probability_variables[i] + " IN  probability_variables[" + i + "] !!!");
       continue_check = false;
       break;
     }
@@ -2140,10 +2143,22 @@ function run_race(settings_r,race_r,riders_r){
                 let speed_higher_than_best = ((current_speed > best_time_speed)?1:0);
                 //the idea here is that IF the race looks like it will be a new PB and we are approachign the end, choking becomes way more likely!
                 let end_race_better_time_factor = speed_higher_than_best*(race_rider.distance_covered/race_r.distance);
+                // note that ridersd CAN go beyond the race distance, i.e. if one slow one is way behind, soooo need to limit it to a max of 1
+                if(end_race_better_time_factor > 1){
+                  end_race_better_time_factor = 1;
+                }
                 choke_under_pressure_probability_variables.push(end_race_better_time_factor);
                 // if the rider is going to fail then reduce their capacities
 
                 prob_choke_under_pressure = calculate_linear_space_value(choke_under_pressure_value_list,choke_under_pressure_probability_variables);
+
+
+                if (speed_higher_than_best == 0){
+                  zero_cup_count++;
+                }
+
+
+                //console.log("** choke under pressure prob " + prob_choke_under_pressure + " " + zero_cup_count + " cup count " + count_of_choke_under_pressure_loggings);
 
                 let cup_r = Math.random()
                 if (cup_r < prob_choke_under_pressure){
@@ -2153,14 +2168,14 @@ function run_race(settings_r,race_r,riders_r){
                     choke_under_pressure_amount = settings_r.choke_under_pressure_amount_percentage;
                   }
                   count_of_choke_under_pressure_loggings++;
-                  console.log("************ CHOKE UNDER PRESSURE HAPPENING (lead rider)! [[ " + count_of_choke_under_pressure_loggings + "]]************" );
-                  console.log("race_rider.velocity " + race_rider.velocity);
-                  console.log("prob_choke_under_pressure " + prob_choke_under_pressure + " cup_r " + cup_r);
-                  console.log("rider_choke_under_pressure_tendency " + rider_choke_under_pressure_tendency);
-                  console.log("end_race_better_time_factor " + end_race_better_time_factor);
-                  console.log("race_rider.distance_covered / race_r.race_clock " + race_rider.distance_covered + " / " + race_r.race_clock);
-                  console.log("updating threshold power from " + race_rider.threshold_power + " to " + (race_rider.threshold_power - (race_rider.threshold_power*choke_under_pressure_amount)));
-                  console.log("updating max power from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power*choke_under_pressure_amount)));
+                  // console.log("************ CHOKE UNDER PRESSURE HAPPENING (lead rider)! [[ " + count_of_choke_under_pressure_loggings + "]]************" );
+                  // console.log("race_rider.velocity " + race_rider.velocity);
+                  // console.log("prob_choke_under_pressure " + prob_choke_under_pressure + " cup_r " + cup_r);
+                  // console.log("rider_choke_under_pressure_tendency " + rider_choke_under_pressure_tendency);
+                  // console.log("end_race_better_time_factor " + end_race_better_time_factor);
+                  // console.log("race_rider.distance_covered / race_r.race_clock " + race_rider.distance_covered + " / " + race_r.race_clock);
+                  // console.log("updating threshold power from " + race_rider.threshold_power + " to " + (race_rider.threshold_power - (race_rider.threshold_power*choke_under_pressure_amount)));
+                  // console.log("updating max power from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power*choke_under_pressure_amount)));
                   race_rider.threshold_power -= (race_rider.threshold_power*choke_under_pressure_amount);
                   race_rider.max_power -= (race_rider.max_power*choke_under_pressure_amount);
                   race_rider.choke_under_pressure_state = 1; //shouldn't be checked again for the remainder of the race
@@ -2445,11 +2460,21 @@ function run_race(settings_r,race_r,riders_r){
                 let speed_higher_than_best = ((current_speed > best_time_speed)?1:0);
                 //the idea here is that IF the race looks like it will be a new PB and we are approachign the end, choking becomes way more likely!
                 let end_race_better_time_factor = speed_higher_than_best*(race_rider.distance_covered/race_r.distance);
+                if(end_race_better_time_factor > 1){ //riders could go beyond the distance of the race while others finish
+                  end_race_better_time_factor = 1;
+                }
                 choke_under_pressure_probability_variables.push(end_race_better_time_factor);
                 // if the rider is going to fail then reduce their capacities
 
 
                 prob_choke_under_pressure = calculate_linear_space_value(choke_under_pressure_value_list,choke_under_pressure_probability_variables);
+                if (speed_higher_than_best == 0){
+                  zero_cup_count++;
+                }
+
+
+                //console.log("** choke under pressure prob " + prob_choke_under_pressure + " " + zero_cup_count + " cup count " + count_of_choke_under_pressure_loggings);
+
                 // if the rider is going to fail then reduce their capacities
                 let cup_r = Math.random();
                 if (cup_r < prob_choke_under_pressure){
@@ -2458,14 +2483,14 @@ function run_race(settings_r,race_r,riders_r){
                   if (settings_r.hasOwnProperty('choke_under_pressure_amount_percentage')){
                     choke_under_pressure_amount = settings_r.choke_under_pressure_amount_percentage;
                   }
-                  console.log("************ CHOKE UNDER PRESSURE HAPPENING (chase rider)! [[ " + count_of_choke_under_pressure_loggings + "]]************" );
-                  console.log("race_rider.velocity " + race_rider.velocity);
-                  console.log("prob_choke_under_pressure " + prob_choke_under_pressure + " cup_r " + cup_r);
-                  console.log("rider_choke_under_pressure_tendency " + rider_choke_under_pressure_tendency);
-                  console.log("end_race_better_time_factor " + end_race_better_time_factor);
-                  console.log("race_rider.distance_covered / race_r.race_clock " + race_rider.distance_covered + " / " + race_r.race_clock);
-                  console.log("updating threshold power from " + race_rider.threshold_power + " to " + (race_rider.threshold_power - (race_rider.threshold_power*choke_under_pressure_amount)));
-                  console.log("updating max power from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power*choke_under_pressure_amount)));
+                  //console.log("************ CHOKE UNDER PRESSURE HAPPENING (chase rider)! [[ " + count_of_choke_under_pressure_loggings + "]]************" );
+                  //console.log("race_rider.velocity " + race_rider.velocity);
+                  //console.log("prob_choke_under_pressure " + prob_choke_under_pressure + " cup_r " + cup_r);
+                  //console.log("rider_choke_under_pressure_tendency " + rider_choke_under_pressure_tendency);
+                  //console.log("end_race_better_time_factor " + end_race_better_time_factor);
+                  //console.log("race_rider.distance_covered / race_r.race_clock " + race_rider.distance_covered + " / " + race_r.race_clock);
+                  //console.log("updating threshold power from " + race_rider.threshold_power + " to " + (race_rider.threshold_power - (race_rider.threshold_power*choke_under_pressure_amount)));
+                  //console.log("updating max power from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power*choke_under_pressure_amount)));
                   race_rider.threshold_power -= (race_rider.threshold_power*choke_under_pressure_amount);
                   race_rider.max_power -= (race_rider.max_power*choke_under_pressure_amount);
                   race_rider.choke_under_pressure_state = 1; //shouldn't be checked again for the remainder of the race
@@ -2654,6 +2679,11 @@ function run_race(settings_r,race_r,riders_r){
       else if (global_log_message_now){
         //dk23 note this can sometimes throw an error "caught RangeError: Invalid string length"
         // so i might arbitrarily limit the length of the stringify
+
+        if (global_log_message.length > longest_LOG_MESSAGE_found){
+          longest_LOG_MESSAGE_found = global_log_message.length;
+          console.log("====== longest_LOG_MESSAGE_found " + longest_LOG_MESSAGE_found);
+        }
         if (global_log_message.length < GLOBAL_LOG_MESSAGE_LIMIT){
 
           global_log_message += logMessage;
@@ -2747,6 +2777,7 @@ function run_race(settings_r,race_r,riders_r){
 		load_rider.max_power = load_rider.original_max_power;
 	}
   //return the final finish time (seconds)
+
 
   return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep, instruction_noise_alterations: race_r.instruction_noise_alterations, performance_failures:race_r.performance_failures, instruction_noise_choke_under_pressure:race_r.instruction_noise_choke_under_pressure};
 }

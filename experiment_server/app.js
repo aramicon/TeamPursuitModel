@@ -7,6 +7,7 @@ const app = express();
 const collectionSettings = "experiment_settings";
 const collectionResults = "experiment_results";
 const collectionSequences = "experiment_sequences";
+const collectionTestSuite = "test_suite_functions";
 
 var ObjectId = require('mongodb').ObjectID;
 
@@ -45,9 +46,13 @@ const schemaSequence = Joi.object().keys({
   sequence_options: Joi.object().required(),
   date_created: Joi.string().required(),
   date_updated: Joi.string().required()
-}
+});
 
-)
+const schemaTestSuiteFunction = Joi.object().keys({
+  name:Joi.string().required(),
+  function:Joi.string().required(),
+  ga_settings:Joi.string().optional()
+});
 
 const getDateTime = (format) => {
   let t = new Date();
@@ -86,6 +91,9 @@ app.get('/results',(req,res)=> {
 });
 app.get('/about',(req,res)=> {
   res.sendFile(path.join(__dirname,'public/about.html'));
+});
+app.get('/test_suite',(req,res)=> {
+  res.sendFile(path.join(__dirname,'public/test_suite.html'));
 });
 app.get('/sequence',(req,res)=> {
   res.sendFile(path.join(__dirname,'public/sequence.html'));
@@ -674,3 +682,101 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
         }
       });
     });
+
+    //******* test_suite functions code START ********
+
+    app.get('/getTestSuiteFunctionNames',cors(corsOptions), (req,res)=>{
+      db.getDB().collection(collectionTestSuite).find({},{projection:{name : 1}}).sort({_id:-1}).toArray((err,documents)=>{
+        if(err){
+          console.log("error getting collection of test suite function names err " + err);
+        }
+        else{
+          console.log("getting list of test suite function names");
+          res.json(documents);
+        }
+      });
+    });
+    app.get('/getTestSuiteFunctionFromID/:id',cors(corsOptions), (req,res)=>{
+      const functionID = req.params.id;
+      console.log("Get test suite function ID " + functionID)
+      db.getDB().collection(collectionTestSuite).find({_id : db.getPrimaryKey(functionID)}).toArray((err,documents)=>{
+        if(err){
+          console.log("error getting test suite function using ID " + err);
+        }
+        else{
+          console.log("getting specific test suite function");
+          res.json(documents);
+        }
+      });
+    });
+
+
+    app.options('/update_test_suite_function/:id', cors())
+    app.post('/update_test_suite_function/:id',cors(corsOptions),(req,res)=>{
+      const function_id = req.params.id;
+      const userInput = req.body;
+      console.log("updating existing test suite function  ", function_id);
+
+      db.getDB().collection(collectionTestSuite).findOneAndUpdate({_id : db.getPrimaryKey(function_id)},{$set : {name : userInput.name, function : userInput.function, ga_settings:userInput.ga_settings}},{returnOriginal : false},(err,result)=>{
+        if(err){
+          console.log("error when updating test suite function err = " + err);
+        }
+        else{
+          res.json(result);
+        }
+      });
+    });
+
+    app.options('/new_test_suite_function', cors())
+    app.post("/new_test_suite_function",cors(),(req,res,next) => {
+      const userInput = req.body;
+      console.log("save new test suite function " + userInput);
+      Joi.validate(userInput, schemaTestSuiteFunction, (err,result) =>{
+        if(err){
+          const error = new Error("Invalid Input adding new test suite function");
+          console.log(err);
+          error.status = 400;
+          next(error);
+        }
+        else{
+          let newSettings = {name : userInput.name,
+            function : userInput.function,
+            ga_settings: userInput.ga_settings};
+
+            db.getDB().collection(collectionTestSuite).insertOne(newSettings,(err,result)=>{
+              if(err){
+                const error = new Error("Failed to insert new test suite function");
+                console.log(err);
+                error.status = 400;
+                next(error);
+              }
+              else{
+                res.json({result:result.result, document: result.ops[0],msg:"Successfully inserted new test suite function",err:null});
+              }
+            });
+          }
+        })
+
+      });
+
+      app.options('/deleteTestSuiteFunction/:id', cors())
+      app.post('/deleteTestSuiteFunction/:id',cors(corsOptions),(req,res)=>{
+        const resultID = req.params.id;
+        console.log("delete test suite function with ids " + resultID);
+        let ids = JSON.parse(resultID);
+        let ids_mongo = [];
+        for(let i = 0; i < ids.length;i++){
+          ids_mongo.push(db.getPrimaryKey(ids[i]));
+        }
+        db.getDB().collection(collectionTestSuite).deleteMany({_id : {$in: ids_mongo}},(err,result)=>{
+          if(err){
+            console.log("error when deleting test suite err = " + err);
+          }
+          else{
+              console.log("delete test suite function. ");
+            res.json(result);
+          }
+        });
+      });
+
+  //******* test_suite functions code END ********
