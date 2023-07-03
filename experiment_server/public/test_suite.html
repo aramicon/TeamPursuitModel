@@ -33,10 +33,10 @@
                   <li class="nav-item ">
                     <a class="nav-link" href="results">Results <span class="sr-only">(current)</span></a>
                   </li>
-                  <li class="nav-item ">
+                  <li class="nav-item active">
                     <a class="nav-link" href="test_suite">Test Suite<span class="sr-only">(current)</span></a>
                   </li>
-                  <li class="nav-item active">
+                  <li class="nav-item ">
                     <a class="nav-link" href="about">About <span class="sr-only">(current)</span></a>
                   </li>
                 </ul>
@@ -65,7 +65,7 @@
             </div>
             <div class="form-group">
             <label for="function_code">Fitness Function</label>
-            <textarea class="form-control" id="function_code" rows="10" cols = "30"></textarea>
+            <textarea class="form-control" id="function_code" rows="10" cols = "100"></textarea>
             </div>
             <div class="form-group">
             <label for="ga_settings">GA Settings</label>
@@ -75,10 +75,11 @@
             <button type="button" class="btn btn-success" id = "run_fitness_function">RUN</button>
 
           </div>
+
+        </div>
+          <div class="row">
           <div class="col">
-
               <form>
-
             <button type="button" id="button_update_test_suite_function" class="btn btn-primary mb-2">
               <i class="fas fa-save" style="color:#90ec78;"></i> Update to Db
             </button>
@@ -95,16 +96,40 @@
           </form>
             </p>
             <p>
-                <div class="form-group">
+              <table class="table" id="genResults">
+                <thead class="thead-dark">
+                  <tr>
+                    <th scope="col">Gen #</th>
+                    <th scope="col">Pop.</th>
+                    <th scope="col">Avg. Fitness</th>
+                    <th scope="col">Best Fitness</th>
+                    <th scope="col">Best Geno.</th>
+                    <th scope="col">Mutation %</th>
+                    <th scope="col">Crossover %</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <!-- <tr>
+                    <th scope="row">1</th>
+                    <td>300</td>
+                    <td>1.2</td>
+                    <td>5</td>
+                    <td>1101101</td>
+                    <td>3%</td>
+                    <td>2%</td>
+                  </tr> -->
+                </tbody>
+              </table>
+                <!-- <div class="form-group">
                 <label for="function_output">Function Output</label>
                 <textarea class="form-control" id="function_output" rows="5" cols = "30"></textarea>
-                </div>
+                </div> -->
                 <div id = "results_info_label" class="alert alert-primary">Run a function from a test suite or write your own...</div>
             </p>
 
             <p>
-                Donal Kelly, School of Computer Science, NUI Galway
-                <a href="d.kelly100@nuigalway.ie">d.kelly100@nuigalway.ie</a>
+                Donal Kelly, School of Computer Science, university of Galway
+                <a href="d.kelly100@universityofgalway.ie">d.kelly100@universityofgalway.ie</a>
             </p>
         </div>
 

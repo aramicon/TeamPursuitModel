@@ -1813,3 +1813,171 @@ let's stuff the settings in with function code in the smae collection.
 	"bits": 4
 }
 -- read the settings and create the popualtion.
+
+-- tuesday 16th, need to create the population.
+-- wil have to add selection. how about roulette? need to look up the book for a description again.
+-- could also add a description to the database entry? a text field.
+-- and need to have an accordian to collapse down the settings, or do we scroll down? need a results area.
+
+
+-- ok a verrry basic ga is running, need to not run selection for the last generation
+
+
+-- ok, so it runs butttt it doens't seem to be seachign at all, not impoving. do i need to add crossover and elitism?	
+
+-- add elitism first.
+
+-- replace at random a member of the new population with the best from the previous
+ "elitism": 1 to the settings 
+ 
+ -- elitism helps a LOT, it now finds the ones. 
+ 
+ -- add optinoal crossover with a selectable number of crossover points.
+ 
+  "crossover" : 1,
+  "crossover_type" : "point",
+  "crossover_points" : 1,
+  
+  -- Wednesday 17th 
+  
+  -- get crossover to work (multipoint)
+  
+  -- have to rework a lot, e.g. move mutation outside in a separate section after the parent selection and crossover
+  
+  -- seems to crash, maybe goes into a rogue loop?
+  -- code seems to stop running but page also not responding, what have i done?
+  
+  -- if parents are identical then so will the childers, so  just skip the crosssover and re-add them?
+  
+  -- doesn't seem to pick up on multiple crossover points?
+  
+  -- need better way to show results instead of the textarea? like a div and just add lines with a scroll bar? or a table?
+  
+  -- make  a styled bootstrap table?
+  
+  -- seems to work, hmmmm
+  
+  -- need to empty the table first
+  -- population is growing, 15 instead of 10. warum?
+  
+  -- tHURSDAY 18 mAY 2023. supposed to upload slides today. startr blank ones of these first? how much can i actually get done today?
+  
+  -- actually first add    "crossover_probability": 0.5, so that the test suite is kinda in principle, working.
+  
+  -- also might be good to move the running of the ga into a web worker that sends a message back after each generation? it would look much better?
+  
+  -- need to empty the table of rows... did i not try this yesterday?
+  
+  -- does it mutate the elite? nope, the elite copy happens after the mutation 
+  
+  -- oh jeez, strings are immutable in JS! soooo I can't just say string[1] = "2". it won't throw a wobbly and also won't work.
+  
+  -- tried a deJong formula, but it is way harder than it looked. Crossover is failing, getting an undefind error.
+  
+  -- oh, kp1 and kp2 are -1. again probs because of negative fitness values
+  
+  -- crap, what happens if the fitness results are a mix of - and +?
+  
+  -- have a basic version of tsp working, i think. lots of work. binary genotype translated to a sequence of integers mapped to 'cities' and then to a fitness cost from a matrix of path costs, i.e. a graph.
+  
+  -- need a more complex example?
+  
+ let r = [
+ [1000,1000,7,15,8,16,1000,1000],
+ [1000,1000,1000,22,12,1000,5,25],
+ [12,1000,1000,1000,1000,9,1000,1000],
+ [15,22,1000,1000,1000,1,9,1000],
+ [1000,1000,1000,1000,1000,1000,22,2],
+ [14,1000,1,1000,1000,1000,28,1000],
+ [1000,15,1000,1,31,28,1000,1000],
+ [1000,2,1000,1000,16,1000,1000,1000], 
+ ];
+ 
+ -- needs 8*4 = 32 bits/
+ 
+ -- ok, soooo, ned to implement 
+ 
+ 
+ -- Friday 19th. 
+ 
+-- first, get the PMX to roll 
+
+--  "crossover_type" : "pmx", added to settings. 
+
+-- oh dear, spent a ton of time at pmx but it's not working and is stupidly complex now 
+
+0101,0000,0000,1110,0100,1101,1011,1111
+0101,0000,0000,1110,0100,1101,1011,1111
+c1 = 2, c2 = 6
+child 1 from pmx crossover 0101,0000,0000,1110,0100,1101,1011,1111
+child 2 from pmx crossover 0101,0000,0000,1110,0100,1101,1011,1111
+
+-- children are copies of parents, they are all identical :-( 
+
+-- first maybe add the better initialisation to valid random sequences 
+-- need a shuffle function /* Randomize array in-place using Durstenfeld shuffle algorithm */ from https://stackoverflow.com/questions/2450954/how-to-randomize-shuffle-a-javascript-array
+function shuffleArray(array) {
+    for (var i = array.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var temp = array[i];
+        array[i] = array[j];
+        array[j] = temp;
+    }
+}
+
+-- working on slides now. so so slow. 
+
+-- example of a parent and child evoluton step 
+-- 1011 1101 0001 1001 0000 1010     1000 1001 1101 0011 1000 0011
+
+-- Saturday 20th 
+
+-- finish set of slides (10?) 10 minutes + 5 minutes of questions.
+
+-- do I need to go back reading about RL again? maybe the WIki page? 
+
+-- sample instructions for slide
+
+[[0,"effort=7.34"],[38,"drop=2"],[58,"effort=5.01"],[63,"drop=1"],[67,"effort=5.55"],[136,"drop=1"],[203,"drop=2"],[296,"effort=6.63"],[298,"drop=1"],[303,"drop=1"]]
+
+-- add the word chromosome somewhere?
+
+-- added slide on fatigue mechanism but it is pretty cheap.
+
+Monday 22nd 
+
+-- one hour, let's have a go.
+
+-- add a pic of darwin 
+-- added. mendel too 
+
+[1] Rajashree, J. & Mani, G. S., "Solving 'Antenna Array Thinning Problem' using Genetic Algorithm", 2012
+
+[2] Tucker, A., "The Science of Choking Under Pressure", Smithsonian Magazine, July 2012, available https://www.smithsonianmag.com/science-nature/the-science-of-choking-under-pressure-133896043/
+
+-- try to make a rider choke and view it [[1,"effort=6"],[10,"effort=6"],[21,"effort=6"],[31,"effort=6"],[41,"effort=6"],[51,"effort=6"],[61,"effort=6"],[71,"effort=6"],[81,"effort=6"],[91,"effort=6"],[101,"effort=6"]]
+
+{"50":[0,0.5,1,0.5,2,0.5,3,0.5]}
+
+-- bug running the damn thing, think it keeps adding more and more choke effects when trying to test the fecker 
+
+[[1,"effort=6"],[110,"effort=6"],[121,"effort=6"],[131,"effort=6"],[141,"effort=6"],[151,"effort=6"],[161,"effort=6"],[171,"effort=6"],[181,"effort=6"],[191,"effort=6"],[201,"effort=6"]]
+{"100":[0,0.3,1,0.3,2,0.3,3,0.3]}
+
+-- make a more searchable matrix for the tsp (hard code)
+let cost_matrix =  [
+			 [1000,1000,7,15,8,16,1000,1000],
+			 [1000,1000,1000,22,12,1000,5,25],
+			 [12,1000,1000,1000,1000,9,1000,1000],
+			 [15,22,1000,1000,1000,1,9,1000],
+			 [1000,1000,1000,1000,1000,1000,22,2],
+			 [14,1000,1,1000,1000,1000,28,1000],
+			 [1000,15,1000,1,31,28,1000,1000],
+			 [1000,2,1000,1000,16,1000,1000,1000], 
+			 ];
+			 
+		
+-- grc presentations done, Tuesday morning 9:45, May 23rd. Went ok, felt I hadn't added enough new stuff at all.
+
+-- May 30. Tuesday. Need to submit a 4 page paper and a 500 word abstract to 
+

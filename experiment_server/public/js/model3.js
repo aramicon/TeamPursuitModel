@@ -1435,7 +1435,7 @@ function draw_line_graph(graph_name_opt){
 
         graph_data_1.title = "Rider 1";
 
-        graph_data_1.x_label = "Watts";
+        graph_data_1.x_label = "Timestep";
         graph_data_1.y_label = "Timestep";
 
         graph_data_1.x_scale_from = 0;
