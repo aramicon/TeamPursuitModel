@@ -11,3 +11,172 @@
 -- fix the current page issue whereby it only works on Home/GA/Results, and About
 
 -- commit the recent changes
+
+-- the editor is vim, I need to save the comment to the commit. how do i?
+
+<esc> :wq <enter>
+
+-- can i rename master to main? 
+https://gist.github.com/danieldogeanu/739f88ea5312aaa23180e162e3ae89ab
+
+git branch -m master main
+git push -u origin main
+
+-- change default branch on github 
+
+git branch -u origin/main main
+
+-- delete branch from github
+
+-- maybe don't delete it right away in case something went wrong. make a change, commit and push, check, etc.
+
+-- should do a course on github,
+
+-- meeting OClm
+
+-- work out cosrt of CHina trip. Zhejiang, Sep 27-30
+
+-- will the paper be extended? only 4 pages. Send this again?
+
+picking the strategy, exptected outcome versus risk 
+
+-- balance between risk and expected outcome, e.g. for a season versus a one-shot like a final in Olympics 
+
+-- aspects of strategies, e.g. race to race. 
+
+(risk, performance) matrix. 
+
+-- kdir prague conference, check dedalines 
+-- https://icsports.scitevents.org/
+
+- camera ready copy 
+
+--- meet monday, 2 hours and try come up with a draft of the 2nd paper, on noise/etc. 2pm. 
+
+-- Aug 4th Friday. berlin
+
+-- number_of_races_to_average seems to have disappeared, want to test its effect and get it rolling.
+-- set it to 2 and run a basic test- does it run without crashing?
+
+
+
+-- lots of longest_LOG_MESSAGE_found  entries, need to figure out what they are doing again
+
+-- get it to show how long each generation takes to run, some better idea of progress and speed
+
+-- how to implement mutation to the tsp problem. need to mutate to a valid value, but this will also be in the sequence?
+-- what we are really doing here is a random swap?
+
+-- e.g. 1 2 3 4 5 . mutate 1 to 4. what do we do with the 4?
+
+-- add a setting that for some probability, swaps a location in the bit string with another?
+
+-- added this setting,  "swap_mutation_rate": 0.1,
+
+-- oops. there's already mutation going down. i just need a separate type, a swap type, or just implelment swapping if we are in PMX mode for sequences?
+0110 1010 0100 0000 0010 1000 1110 1100 with one swap (2,7) gives
+0110 1010 1100 0000 0010 1000 1110 0100
+seems to make sense?
+
+seems to work? it's code at least. put it in a pipe and smoke it.
+
+-- saturday august 5th 2023. adlerstadt, Berlin. 
+
+--put the fitness function and GA settings inside an accordian style control 
+
+-- When the update button returns, need to select the correct dropdown option
+
+-- ok, seems to work, should also do this on the other pages... then commit to git
+
+$('#test_suite_function_names').val(set_value);
+
+-- sontag, berlin still, adleshof or kopenick. near the river.
+
+-- do a little on the overeagerness noise.
+
+-- need a few settings. global and rider. 
+
+ global "overeagerness_switch":1,
+ 
+  rider.  "overeagerness_tendency":  0.3
+  
+-- create a verrry simple model first.
+
+-- assume that this noise can happen alongside other kinds of noise.
+
+-- maybe, when translating effort to power, the rider inflates it, i.e. attempts to go harder. a good first effort.
+-- can only effect leader. needs to be linked to the beginning of the race. not tied to an insruction but to the effort each step.
+-- not a switch that changes behaviour for the rest of the race, but also not a turn by turn effect?
+
+-- for the dumbest version though maybe add a fixed percentage of inflation on a turn by turn basis. the output can only increase by so much in any case,
+
+-- how dod i factor in the race time?
+
+-- (% of race remaining/100 +  rider overeagerness tendency /1)/2 
+
+
+-- montag 07 08 23 
+
+
+-- do on ehour on the overeagerness. 
+
+-- trying out some forumlas. how about, a squared fall for the efirst half of the race? i.e. after halfway it is gone? try in excel/google sheet
+
+-- un daft formula 
+=IF(((B4-$J$5)/$J$5>0),(((((B4-$J$5)/$J$5*100)^$J$4)/($J$2^$J$4)) * D4),0)
+-- putting in better names for variables 
+=IF(((race_distance_remaining-race_distance_percentage_where_overeagerness_ends)/race_distance_percentage_where_overeagerness_ends>0),(((((race_distance_remaining-race_distance_percentage_where_overeagerness_ends)/race_distance_percentage_where_overeagerness_ends*100)^distance_exponent)/(maximum_race_distance_remaining^distance_exponent)) * rider_overeagerness_level),0)
+
+-- christ they are long names and i lose my mojo soooo easily.
+
+-- now put in code. there is no 'race pressure' here. just an on/off switch and a rider property.
+
+-- will also need to send the noise to the game? yup. oh dears.
+
+-- what actually happens? the rider adds an amount to their effort? their ability is inflated by a %?
+
+-- where exactly does it go? does it interfere with other noise?
+
+-- could use the function calculate_linear_space_value(value_list, probability_variables)?
+
+  // value list contains sets of 4, each set representing a paramter in the expression, which is built using a loop
+  //v1 - multiplier
+  //v2 - value
+  //v3 - exponent
+  //v4 - max value
+  // probability_variables is just a list of straightforward probabilities (0-1)
+  //return a 0-1 value
+  
+  will need to store the new noise 
+  race_r.instruction_noise_overeagerness = {}
+  
+  -- maybe add a gobal to store how much 
+  
+  "overeagerness_effort_inflation_amount": 0.1,
+  
+  -- now as a first attempt add it after the 
+  -- need a variable to store the point where the overeagerness ends 
+  -- global "overeagerness_race_distance_end_point":0.5, i.e. 50% of the race- make this the default.
+  race_rider.distance_covered and race_r.distance
+  
+  hmmm, here i am using floats like 0.1 instead of the 10% i used in the excel. need to update the excel otherwise the code is very confusing 
+  changed to 
+  
+  (((((B3-$J$5)/($J$2-$J$5))^$J$4)/($J$2^$J$4)) * D3)
+  
+  -- added console logs amd need to store the new noise but first try to run it.
+  
+ -- bug, had left in the carat instead of using Math.pow(). a very yikes one. 
+ 
+ -- now need to look at storing then displaying these pesky noises  
+ 
+ -- similar to choke under pressure right? 
+ race_r.instruction_noise_choke_under_pressure[race_r.race_clock] = [race_r.current_order[i],choke_under_pressure_amount];#
+ -- added
+ race_r.instruction_noise_overeagerness[race_r.race_clock] = overeagerness_effort_inflation_amount;
+ -- check if this is stored in the db?
+ 
+ -- so, we do have best_race_instruction_noise_overeagerness and worst_race_instruction_noise_overeagerness. the next step is to display them?
+            
+  
+  

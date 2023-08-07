@@ -63,14 +63,37 @@
                 <option value = "0">SELECT</option>
               </select>
             </div>
-            <div class="form-group">
-            <label for="function_code">Fitness Function</label>
-            <textarea class="form-control" id="function_code" rows="10" cols = "100"></textarea>
-            </div>
-            <div class="form-group">
-            <label for="ga_settings">GA Settings</label>
-            <textarea class="form-control" id="ga_settings" rows="10" cols = "30"></textarea>
-            </div>
+
+            <div class="accordion" id="accordionExample">
+              <div class="card">
+                <div class="card-header" id="headingOne">
+                  <h2 class="mb-0">
+                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                    <i class="fas fa-running"></i> Fitness Function
+                    </button>
+                  </h2>
+                </div>
+                <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
+                  <div class="card-body">
+                    <textarea class="form-control" id="function_code" rows="10" cols = "100"></textarea>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <div class="card-header" id="headingTwo">
+                  <h2 class="mb-0">
+                    <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                      <i class="fas fa-cog"></i> GA Settings
+                    </button>
+                  </h2>
+                </div>
+                <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+                  <div class="card-body">
+                    <textarea class="form-control" id="ga_settings" rows="10" cols = "30"></textarea>
+                  </div>
+                </div>
+              </div>
+              </div>
 
             <button type="button" class="btn btn-success" id = "run_fitness_function">RUN</button>
 

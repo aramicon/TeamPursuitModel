@@ -8,7 +8,7 @@ let g_population = [];
 let g_generations = [];
 
 
-const populateFunctionNamesDropdown = (data) => {
+const populateFunctionNamesDropdown = (data, set_value) => {
   const functionsDropDown = $("#test_suite_function_names");
     //empty the list
   functionsDropDown.empty();
@@ -22,7 +22,7 @@ const populateFunctionNamesDropdown = (data) => {
     let optionSelected = $("#test_suite_function_names").find("option:selected");
     let valueSelected  = optionSelected.val();
 
-    console.log("slected test suite function " + valueSelected);
+    console.log("selected test suite function " + valueSelected);
 
     //ignore if the id is 0
     if (valueSelected == 0){
@@ -48,11 +48,13 @@ const populateFunctionNamesDropdown = (data) => {
       $("#ga_settings").val(selected_ga_settings);
     });
   }
-}
   // alert(valueSelected);
-);
+});
+if(set_value){
+  $('#test_suite_function_names').val(set_value);
 }
-const getTestSuiteFunctionNames = () => {
+}
+const getTestSuiteFunctionNames = (set_value) => {
 console.log("try to load test suite fitness function list");
 let serverURL = 'http://127.0.0.1:3003/getTestSuiteFunctionNames/';
 $("#database_connection_label").html("Attempting to connect to <a href='"+serverURL+"'>server</a>")
@@ -67,7 +69,7 @@ fetch(serverURL,{method : 'get'}).then((response)=>{
   //console.log('data ' + JSON.stringify(data));
 
   console.log("data.length " + data.length);
-  populateFunctionNamesDropdown(data);
+  populateFunctionNamesDropdown(data, set_value);
   $("#database_connection_label").text(data.length + " functions found.")
 
 }).catch((error) => {
@@ -82,6 +84,7 @@ const updateTestSuiteFunction = () => {
   //only update if there's a selected id
   let optionSelected = $("#test_suite_function_names").find("option:selected");
   let selected_settings_id  = optionSelected.val();
+
   console.log("update test suite function " + selected_settings_id);
 
   if (selected_settings_id.length > 1){
@@ -113,8 +116,10 @@ const updateTestSuiteFunction = () => {
     }).then((data)=>{
       console.log('data ' + JSON.stringify(data));
       //$("#database_connection_label").text("setting updated");
-      getTestSuiteFunctionNames();
+
+      getTestSuiteFunctionNames(selected_settings_id);
       $("#database_connection_label").html("<strong>Updated Test Suite "+data.value.name+"</strong> | _id | <span id = 'settings_id'>"+data.value._id + "</span>");
+
 
     }).catch((error) => {
       console.log("Error updating test suite function on experiment server");
@@ -554,10 +559,8 @@ function run_fitness_function(){
                             }
                         }
                       }
-
                       console.log(" created child 1 from pmx crossover " + childers[0])
                       console.log(" created child 2 from pmx crossover " + childers[1])
-
 
                       for(let pi = 0; pi < valuesInGenotype; pi++){
                         child1bits +=  childers[0][pi];
@@ -610,6 +613,9 @@ function run_fitness_function(){
         }
             population = new_population;
             //apply mutation (if requested)
+
+
+
             for(let i = 0; i < population.length; i++){
               let agent_bits = population[i].genotype;
               let mutation_rate = 0;
@@ -617,7 +623,44 @@ function run_fitness_function(){
                 mutation_rate = ga_settings.mutation_rate;
               }
 
+              //if crossover_type is pmx we need to swap values, not just flip bits, as it is a sequence
+
+              let crossover_type = "point";
               let new_agent_bits = "";
+              if (ga_settings.crossover_type){
+                crossover_type = ga_settings.crossover_type;
+              }
+              if (crossover_type == "pmx"){
+                // go through value segment by value segment and swap some
+                //need the bits per value
+                let pmx_bits_per_value = 4;
+                if(ga_settings.pmx_bits_per_value){
+                  pmx_bits_per_value = parseInt(ga_settings.pmx_bits_per_value);
+                }
+                for (let b = 0; b < agent_bits.length/pmx_bits_per_value; b++){
+                  let mutate_p = Math.random();
+                  if(mutate_p < mutation_rate){
+
+                    //need to get two segments then rebuild the whole string
+                    let current_segment = agent_bits.substring(b*pmx_bits_per_value,(b+1)*pmx_bits_per_value);
+                    //need to find a different place to swap with
+                    let swap_segment_loc = Math.floor(Math.random()*agent_bits.length/pmx_bits_per_value);
+                    while(swap_segment_loc == b){
+                      swap_segment_loc = Math.floor(Math.random()*agent_bits.length/pmx_bits_per_value);
+                    }
+                    let swap_segment = agent_bits.substring(swap_segment_loc*pmx_bits_per_value,(swap_segment_loc+1)*pmx_bits_per_value);
+                    // rebuild the agent_bits string
+                    agent_bits = agent_bits.substring(0,b*pmx_bits_per_value) + swap_segment + agent_bits.substring((b+1)*pmx_bits_per_value);
+                    agent_bits = agent_bits.substring(0,swap_segment_loc*pmx_bits_per_value) + current_segment + agent_bits.substring((swap_segment_loc+1)*pmx_bits_per_value);
+                    mutation_count+=pmx_bits_per_value;
+                    }
+                }
+                new_agent_bits = agent_bits;
+
+              }
+              else{
+
+              //go through bit by bit and flip some
               for (let b = 0; b < agent_bits.length; b++){
                 let mutate_p = Math.random();
                 if(mutate_p < mutation_rate){
@@ -634,17 +677,21 @@ function run_fitness_function(){
                   new_agent_bits += agent_bits[b];
                 }
               }
+            }
               if (new_agent_bits != population[i].genotype){
-                console.log("mutation from " + agent_bits + " to " + new_agent_bits);
+                console.log("mutation from " + population[i].genotype + " to " + new_agent_bits);
               }
               population[i].genotype = new_agent_bits;
             }
-
             //console.log("created a new population size " + population.length);
         }
         else{
           console.log(" unknown selection type " + selection_type + " population not changed.");
         }
+
+        //mutation (run this before the elitism selection as we don't want the BEST of the BEST mutated )
+
+
         //console.log("Generation " + g + " complete ");
         //check for elitism, off by default
         //it will overwrite a random agent in the new population with the fittest agent from the last
@@ -736,7 +783,7 @@ if(ga_settings){
 
           let binary_string = "";
           for(let k = 0; k < seq_int.length; k++){
-            let binary_val = seq_int[k].toString(2); //bianry string but may not be 4 digits
+            let binary_val = seq_int[k].toString(2); //binary string but may not be 4 digits
             if (binary_val.length > 4){
               binary_val = binary_val.substring(binary_val.length-4);
             }
