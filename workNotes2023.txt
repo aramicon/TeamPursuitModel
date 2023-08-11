@@ -178,5 +178,196 @@ $('#test_suite_function_names').val(set_value);
  
  -- so, we do have best_race_instruction_noise_overeagerness and worst_race_instruction_noise_overeagerness. the next step is to display them?
             
+ -- push to git, and check to see if the code is actually getting there.
+ 
+ -- next up would be to work on getting it to 'play'. it is already sending? max out the rider tendency and url looks like 
+ http://127.0.0.1:3003/tpgame.html?source=results&results_id=64d107716a586a08ec4b7a19&startorder=1,2,0,3&instructions=%5B%5B7,%22drop=2%22%5D,%5B14,%22effort=5.6%22%5D,%5B44,%22drop=1%22%5D,%5B57,%22drop=1%22%5D,%5B59,%22drop=3%22%5D,%5B109,%22drop=3%22%5D,%5B121,%22drop=3%22%5D,%5B175,%22drop=3%22%5D,%5B182,%22effort=3.63%22%5D,%5B199,%22effort=8.33%22%5D,%5B211,%22drop=1%22%5D,%5B233,%22effort=5.66%22%5D,%5B275,%22drop=1%22%5D,%5B336,%22drop=3%22%5D,%5B353,%22effort=3.97%22%5D,%5B379,%22drop=1%22%5D,%5B380,%22drop=2%22%5D,%5B391,%22drop=2%22%5D,%5B439,%22drop=1%22%5D,%5B460,%22drop=1%22%5D,%5B470,%22drop=3%22%5D,%5B481,%22drop=1%22%5D,%5B501,%22drop=3%22%5D,%5B517,%22drop=1%22%5D,%5B585,%22drop=2%22%5D%5D&noise_alterations=%7B%7D&performance_failures=%7B%7D&instruction_noise_choke_under_pressure=%7B%7D&instruction_noise_overeagerness=%7B%220%22:0.1,%221%22:0.1,%222%22:0.1,%223%22:0.1,%224%22:0.1,%225%22:0.1,%226%22:0.1,%227%22:0.1,%228%22:0.1,%229%22:0.1,%2210%22:0.1,%2211%22:0.1,%2212%22:0.1,%2213%22:0.1,%2214%22:0.1,%2215%22:0.1,%2216%22:0.1,%2217%22:0.1,%2218%22:0.1,%2219%22:0.1,%2220%22:0.1,%2221%22:0.1,%2222%22:0.1,%2224%22:0.1,%2226%22:0.1,%2227%22:0.1,%2229%22:0.1,%2230%22:0.1,%2231%22:0.1,%2235%22:0.1,%2239%22:0.1,%2240%22:0.1,%2243%22:0.1,%2245%22:0.1,%2247%22:0.1,%2248%22:0.1,%2251%22:0.1,%2256%22:0.1,%2257%22:0.1,%2260%22:0.1,%2262%22:0.1,%2266%22:0.1,%2267%22:0.1,%2268%22:0.1,%2270%22:0.1,%2272%22:0.1,%2276%22:0.1,%2281%22:0.1,%2284%22:0.1,%2289%22:0.1,%2291%22:0.1,%2295%22:0.1,%22112%22:0.1%7D
+ 
+ -- should be ok in current form to implement? need to throw a message out? 
+ 
+ -- where does it go? LEAD rider only, BEFORE we do this 
+ race_rider.current_power_effort = mapEffortToPower(settings_r.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power );
+
+-- need another text area with id instruction_noise_overeagerness_textarea
+
+-- ok the game now has it but is it actually accurate? 304.615 in game versus... 304.615 in ga results. sehr gut.
+
+-- now what? run a stack of gens with high overeagerness and see what strat wins, compare it to one with no such noise?
+
+-- tuesday 8 8 23.
+
+-- run a bigger test of overeagerness and see what strat you get at the end.
+
+here's the best after 50 gens, overeagerness effect 0.1 and tendency 0.1 
+
+[[27,"effort=5.62"],[33,"effort=5.99"],[59,"drop=3"],[63,"effort=6.06"],[67,"drop=1"],[72,"drop=3"],[77,"drop=1"],[91,"drop=3"],[95,"effort=6.05"],[97,"drop=2"],[149,"drop=1"],[152,"drop=3"],[160,"drop=3"],[204,"drop=1"],[241,"drop=3"],[263,"drop=3"],[292,"drop=2"]]
+
+o.e. {"30":0.1,"37":0.1,"45":0.1,"54":0.1,"55":0.1,"88":0.1}
+
+time 292.833 seconds game, 292.833 ga
+
+if i take out the o.e. 298.255 seconds.
+
+so it is slower if i take out the noise.
+
+let's run it with TONS of the noise and see what happens after 50 gens.
+
+after 50 gens with effect 0.2 and tendency 1
+
+[[18,"drop=3"],[35,"drop=3"],[49,"effort=3.75"],[80,"drop=3"],[127,"drop=3"],[140,"effort=6.01"],[194,"drop=2"],[197,"drop=1"],[200,"drop=3"],[251,"drop=2"],[287,"effort=6.38"]]
+
+finish time: 
+
+if i take them out: 304.615 seconds
+
+-- note there are early drop instructions... this noise has no effect on them? and the low effort instructions.
+
+landside 
+
+hipsterati
+
+
+-- wednesday 9 aug 23 
+
+-- let's change the overeagerness to sample a peturbation from a range that is normal around a certain point, e.g. 3% to 12% etc. 
+-- function from stack overflow  at https://stackoverflow.com/questions/25582882/javascript-math-random-normal-distribution-gaussian-bell-curve
+
+
+function randn_bm() {
+  let u = 0, v = 0;
+  while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+  while(v === 0) v = Math.random();
+  let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+  num = num / 10.0 + 0.5; // Translate to 0 -> 1
+  if (num > 1 || num < 0) return randn_bm() // resample between 0 and 1
+  return num
+}
+
+-- this is normal between 0 and 1, so how do i get the range i need?
+
+min + randn_bm()*max
+
+--updated the global settings to include a min and a max 
+  "overeagerness_effort_inflation_min_amount": 0.05,
+  "overeagerness_effort_inflation_max_amount": 0.2,
   
-  
+ -- now get these back and try use the formula. default them to zeros?
+ 
+ -- acshully needs to use (min + ((max-min) * randn_bm())) 
+ 
+ -- save the values into a big array and console log em after the whole experiment runs
+ 
+ -- a truncated array (102,148) entries!
+ 
+ [0.1389631956569545, 0.12076959841111241, 0.12744663026345976, 0.1096414699783611, 0.14740314668986107, 0.1300955160160105, 0.10459781900583348, 0.1283079204461683, 0.12724041926825486, 0.14640479929828543, 0.10958120223894648, 0.11789247684338215, 0.13689080600162792, 0.15455586468603014, 0.1206260382156337, 0.12600953347320876, 0.13620942339260766, 0.13010079872649843, 0.1434165073415798, 0.15292467026684523, 0.10687299764880676, 0.12202806814057267, 0.12844603274581406, 0.0965379761204491, 0.13894315685940825, 0.10815097217893278, 0.1429993233247251, 0.10777939159622733, 0.14267728002581131, 0.11723695817163626, 0.12858010681069934, 0.1483935454426265, 0.0961990675189746, 0.1309892300582356, 0.09841760355535555, 0.09552891066464032, 0.15258678359933842, 0.15259598512652583, 0.11433589250296144, 0.1109704817721773, 0.10792687187853231, 0.11930959896752341, 0.10790301565719679, 0.1414718269014219, 0.1436934937662707, 0.12973876510727309, 0.11717518536373822, 0.13131446835609917, 0.13118039206879006, 0.1183046439817331, 0.13477420468523532, 0.12249097119094553, 0.12697426152577307, 0.1422834481639945, 0.15103143554234874, 0.13754404924209834, 0.10732789390772644, 0.12156525157187222, 0.13360778997235867, 0.12409396200385078, 0.1452589755995593, 0.11968271823461438, 0.1247622700905773, 0.10931751536231228, 0.125473278411408, 0.11999125028770018, 0.12048405351003455, 0.10586004316820019, 0.1319363197906844, 0.11328923162212956, 0.14226107688456416, 0.12404319514845809, 0.1573369075522642, 0.10542358823843866, 0.13834102126203374, 0.12157054675809642, 0.13086390769429906, 0.13375699710910388, 0.1298358335994646, 0.15624865632584228, 0.10834950625858268, 0.13394577622487863, 0.10940233146177494, 0.09144313615701401, 0.1296013044251525, 0.15736700771896428, 0.15656094120895625, 0.13532384483552234, 0.1245449391690526, 0.11788178670420664, 0.13105949605396083, 0.12665013012138002, 0.12202203568869534, 0.09147627677124724, 0.12702578395150632, 0.11540684681299707, 0.1268720750997226, 0.11898113143239979, 0.11793160126211034, 0.10402471385141317]
+ 
+ Can I graph this in Python?
+ 
+ -- to get the whole list i needed to JSON.stringy the output. Now I have a normal looking graph.
+ 
+ -- ooh a joke, draw a person that looks like a normal graph and someone calls them 'normal' looking.
+ 
+ -- thursdee 10th. rerun the longer 50 gens experiment with this new noise. lower the effect and turn off the array appending (too big!)
+ 
+ overeagerness normal dist effect 50 gens, tendency 1
+ 
+ what happens with a LOT of overeagerness?
+ 
+ overeagerness normal dist effect 50 gens, tendency 1, min 10  max 40, 70% into race
+ 
+ --if i put in silly high overeagerness at the very beginning will an instruction emerge that sets a LOW effort early on?
+ 
+ -- hmmmmmmmmmmmmm it looks like the overeagerness is breaking the fatigue effect? 
+ 
+ also "overeagerness_race_distance_end_point":0.1, BUTTTT it seems to happen until way into the race. Have i reversed this effect?
+ 
+ overeagerness_race_distance_end_point really means "percentage_remaining_where_overeagerness_ends"?
+ 
+ can now get the effect to only happen at the very beginning but, still have the fagitgue issues.
+ 
+ -- seems to me that if you are over the max fatigue level you cannot be overeager. let's add this. 
+ 
+ lines at 2480
+   let failure_level = settings_r.fatigue_failure_level*accumulated_effect;
+        if(race_rider.endurance_fatigue_level >= failure_level){
+            current_max_power = (race_rider.threshold_power*((settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction)/10));
+        }
+ nope,line 2037 is what we needs?
+ 
+ -- friday 11th. added lines to NOT act in overeagerness if the lead rider is over the fatigue failure level. how do I test that this is working? Debugger in the IF statement? Let an experiment run with O.E to 50% and see if it changes anything from an earlier test?
+ 
+ replicate this test overeagerness normal dist effect 50 gens, tendency 1, min 10  max 40, 70% into race
+ 
+ instructions with non-fatigue overeagerness 
+ [[20,"effort=8.42"],[33,"effort=5.02"],[45,"effort=9.81"],[56,"effort=5.36"],[64,"drop=3"],[90,"effort=6.14"],[100,"drop=2"],[137,"drop=2"],[143,"drop=2"],[148,"drop=1"],[175,"drop=2"],[188,"drop=1"],[205,"drop=2"],[213,"effort=6.03"],[241,"drop=2"],[262,"drop=3"]]
+ 
+ O.E. {"0":0.23113546834904272,"1":0.22020399947061142,"2":0.255023255125274,"3":0.2457653840000454,"4":0.27762065758519583,"5":0.2896247139229231,"6":0.2250660832071102,"7":0.26728051953419374,"8":0.24952226692219306,"9":0.28585551437233025,"10":0.25031947101185437,"11":0.2142585360067475,"13":0.226100995795413,"16":0.2584207379578224,"19":0.23123416207939088,"29":0.25480276097426735,"31":0.2625270110565614,"33":0.28502611304354486,"34":0.27605194801268107,"40":0.22321293940567732,"43":0.22030506340395664,"46":0.26404352153190647,"49":0.24462940122432747,"59":0.24774047889499795}
+ 
+ 
+ same test before the non-fatigue effect 
+ 
+ [[40,"drop=3"],[67,"effort=9.91"],[81,"effort=6.09"],[82,"drop=3"],[152,"drop=1"],[251,"drop=2"],[289,"effort=8.27"],[294,"drop=2"]]
+ 
+ {"0":0.2024062739138378,"1":0.21639940175485578,"2":0.2797382669717374,"3":0.2695649765494736,"4":0.19329044940212897,"5":0.2431945145276468,"6":0.2911867293266106,"7":0.28214763237096596,"8":0.22863458579633758,"9":0.24002700411091363,"10":0.23981592359750328,"11":0.21418298075465594,"12":0.21503422760081567,"13":0.19804990983397408,"14":0.22479608417094474,"15":0.2574632718083607,"17":0.2293543947386652,"19":0.2700822154347315,"20":0.2479842510028659,"21":0.27648986440053724,"23":0.20183323122979097,"25":0.21467552051212702,"26":0.2713285108698373,"28":0.30247361004006634,"29":0.2176398302056911,"32":0.2684061309748901,"37":0.2553975514675185,"38":0.26472747476116426,"49":0.2783589056482436,"51":0.23389030872933414,"52":0.30063058658795005,"56":0.21883836930806738,"57":0.2924600008943961,"73":0.1615740792580715,"75":0.2719617792127554}
+ 
+ -- maybe i should round the overeagerness to 2 decimals? would need to do this in the game, too
+ 
+ DecimalPrecision.round(normal_distribution_output_inflation_percentage,2) should do it
+ 
+ -- ran it with NO o.e. get 
+ 
+ 289.683 seconds
+ 
+ -- should really get the graph to match the colours and names of the riders to the actual data. 
+ 
+ [[27,"effort=6.14"],[93,"drop=3"],[165,"drop=3"],[186,"effort=6.6"],[193,"drop=1"],[206,"drop=1"],[213,"drop=2"],[225,"drop=3"],[280,"effort=6.9"],[284,"drop=2"]]
+ 
+ -- this result is not that balanced and one rider is dropped at the end? is something else going on?
+ 
+ -- call one rider NOT EAGER and see what happens. get this to appear on the graph
+ 
+ draw_line_graph("power_graph_generation_" + generation);
+ 
+ -- have selected_ga_results from the DB but this doesn't have the TEAM, the riders. It has 
+ 
+ selected_ga_results.generations[0].final_best_race_start_order
+ 
+ -- is the team in the results DB?
+ 
+ -- it is there, parallel to selected_ga_results, rider_settings. could add it to the object being returned?
+ -- ooh, selected_rider_settings seems to already be available. can get 
+ selected_rider_settings[0].name and selected_rider_settings[0].colour  
+ can just do them in order too. should be easy?
+ 
+ -- do names first, colours seem to be stored in ar array called rider_colours[] not sure if the formats are the same.
+ 
+ -- reverse the ordr of the gens returned so that I don't have to scroll to 50 all the time?
+ 
+ --hmm, seemed to only work for rider 4? oddness.
+ -- oh, bug, wasn't changing the var name. 
+ 
+ wurks but not enough space given to the titles/names. 
+ 
+ --ok, seems to wurk, set let legend_average_char_width = 16;
+ 
+ -- ooh, the non-eager rider is sent to the front.
+ 
+-- Can i update the graphing code in the GAME to match the GA?
+
+-- runs in a different way... adds power data as the race actually runs. not getting it from the DB. makes sense. can still update it? 
+
+-- bug, rider_colours[0] is not defined. but i do need to look at this.
+
+-- oh good, I'm just a hard codin' it. 
+
+let rider_colours = ['#648FFF','#785EF0','#DC267F','#FE6100','#FFB000'];
+
+-- also need rider_line_stroke_width[] and rider_line_styles[]
+
+-- BUG, if we drop 2, i.e. not to back, the back rider falls behind and will fatigue when catching up. this can cause it to be dropped. doesn't seem to happen if we drop 1.
+
+-- flip order of results so gen 50 is on top
+
+-- flip in build_results_table()? not in the db end
+
+maybe flip too in the GA end?

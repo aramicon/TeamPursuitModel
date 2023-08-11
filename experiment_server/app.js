@@ -334,7 +334,6 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
       });
     });
 
-
     app.get('/best_in_final_gen_tests/:id',cors(corsOptions), (req,res)=>{
       const resultID = req.params.id;
       console.log("best_in_final_gen_tests with ids " + resultID);

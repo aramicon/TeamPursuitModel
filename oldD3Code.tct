@@ -1,0 +1,128 @@
+//D3 OLD
+      // set the dimensions and margins of the graph
+        let totalWidth = 900;
+        let totalHeight = 440;
+        let legendLeftIndent = 280;
+        let bulletIndent = 20;
+
+          var margin = {top: 30, right: legendLeftIndent, bottom: 30, left: 60},
+              width = totalWidth - margin.left - margin.right,
+              height = totalHeight - margin.top - margin.bottom;
+
+          // append the svg object to the body of the page
+          var svg = d3.select("#graph")
+            .append("svg")
+              .attr("width", width + margin.left + margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+              .attr("transform",
+                    "translate(" + margin.left + "," + margin.top + ")");
+            //  data = selected_ga_results;
+
+              // Add X axis --> it is a date format
+              var x = d3.scaleLinear()
+                .domain([graph_data_1.x_scale_from, graph_data_1.x_scale_to])
+                .range([ 0, width ]);
+              svg.append("g")
+                .attr("transform", "translate(0," + height + ")")
+                .call(d3.axisBottom(x));
+
+              // Add Y axis
+              var y = d3.scaleLinear()
+                .domain([graph_data_1.y_scale_from, graph_data_1.y_scale_to])
+                .range([ height, 0 ]);
+              svg.append("g")
+                .call(d3.axisLeft(y));
+
+              // Add the line 1
+              svg.append("path")
+                .datum(graph_data_1.data)
+                .attr("fill", "none")
+                .attr("stroke", "#0000ff")
+                .attr("stroke-width", 1.5)
+                .attr("d", d3.line()
+                  .x(function(d) { return x(d.x) })
+                  .y(function(d) { return y(d.y) })
+                );
+
+                if (!jQuery.isEmptyObject(graph_data_2)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_2.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#ff0000")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
+
+                if (!jQuery.isEmptyObject(graph_data_3)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_3.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#00ff00")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
+                if (!jQuery.isEmptyObject(graph_data_4)){
+                  //draw second line if data is given
+                  svg.append("path")
+                    .datum(graph_data_4.data)
+                    .attr("fill", "none")
+                    .attr("stroke", "#000000")
+                    .attr("stroke-width", 1.5)
+                    .attr("d", d3.line()
+                      .x(function(d) { return x(d.x) })
+                      .y(function(d) { return y(d.y) })
+                    );
+                }
+
+                  // X and Y labels
+                  svg.append("text")
+                  .attr("class", "x label")
+                  .attr("text-anchor", "end")
+                  .attr("x", width)
+                  .attr("y", height - 6)
+                  .text(graph_data_1.x_label); // e.g. "GA Generation"
+
+                  svg.append("text")
+                  .attr("class", "y label")
+                  .attr("text-anchor", "end")
+                    .attr("x", -220)
+                  .attr("y", 6)
+                  .attr("dy", ".75em")
+                  .attr("transform", "rotate(-90)")
+                  .text(graph_data_1.y_label); // e.g. "Race Finish Time (s)"
+
+                  //Colour Legend
+                  svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",6).attr("r", 6).style("fill", "#0000ff");
+
+                  svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 6).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
+
+                  if (!jQuery.isEmptyObject(graph_data_2)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",40).attr("r", 6).style("fill", "#ff0000");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 40).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
+                  if (!jQuery.isEmptyObject(graph_data_3)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",60).attr("r", 6).style("fill", "#00ff00");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 60).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
+                  if (!jQuery.isEmptyObject(graph_data_4)){
+                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",80).attr("r", 6).style("fill", "#000000");
+                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 80).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
+                  }
+
+                  //add a title
+                  svg.append("text")
+                  .attr("x", (width / 2))
+                  .attr("y", 0 - (margin.top / 2))
+                  .attr("text-anchor", "middle")
+                  .style("font-size", "16px")
+                  .style("font-style", "italic")
+                  .text(graph_title);

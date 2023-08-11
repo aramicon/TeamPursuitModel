@@ -127,7 +127,6 @@ const draw_line_graph = (graph_name_opt) =>{
   //quit if no results have been loaded
   if (selected_settings_name == ""){
     alert("No results data selected/loaded");
-
   }
   else
   {
@@ -150,7 +149,6 @@ const draw_line_graph = (graph_name_opt) =>{
     {
       graph_name = $("#select_graph").val();
     }
-
 
     switch(graph_name) {
       case "instructions_change_per_generation":
@@ -384,13 +382,23 @@ const draw_line_graph = (graph_name_opt) =>{
         graph_data_1 = {};
 
         graph_data_1.title = "Rider 1";
+        //dk23aug try to get the name from the data
+        if(selected_rider_settings){
+          if(selected_rider_settings[0]){
+            if(selected_rider_settings[0].name){
+              graph_data_1.title = selected_rider_settings[0].name;
+            }
+            //and the colour
+            if(selected_rider_settings[0].colour){
+              rider_colours[0] = selected_rider_settings[0].colour;
+            }
+          }
+        }
 
         graph_data_1.x_label = "Time";
         graph_data_1.y_label = "Watts";
-
         graph_data_1.x_scale_from = 0;
-
-        //need to get the max power used by anu rider
+        //need to get the max power used by any rider
         let max_p = 0;
         for(i = 0; i< selected_ga_results.generations[specified_generation].best_race_rider_power.length;i++){
           let max_i = d3.max(selected_ga_results.generations[specified_generation].best_race_rider_power[i]);
@@ -398,7 +406,6 @@ const draw_line_graph = (graph_name_opt) =>{
             max_p = max_i;
           }
         }
-
         if (typeof(selected_ga_results.generations[specified_generation].best_race_rider_power[0]) == "undefined") {
           console.log("Error trying to draw power graph");
           console.log("specified generation " + specified_generation);
@@ -418,6 +425,17 @@ const draw_line_graph = (graph_name_opt) =>{
 
         graph_data_2 = {};
         graph_data_2.title = "Rider 2";
+        //dk23aug try to get the name from the data
+        if(selected_rider_settings){
+          if(selected_rider_settings[1]){
+            if(selected_rider_settings[1].name){
+              graph_data_2.title = selected_rider_settings[1].name;
+            }
+            if(selected_rider_settings[1].colour){
+              rider_colours[1] = selected_rider_settings[1].colour;
+            }
+          }
+        }
         graph_data_2.data = [];
         for (i=0;i<selected_ga_results.generations[specified_generation].best_race_rider_power[1].length;i++){
           graph_data_2.data.push({x:i, y:selected_ga_results.generations[specified_generation].best_race_rider_power[1][i]});
@@ -425,21 +443,39 @@ const draw_line_graph = (graph_name_opt) =>{
 
         graph_data_3 = {};
         graph_data_3.title = "Rider 3";
+        //dk23aug try to get the name from the data
+        if(selected_rider_settings){
+          if(selected_rider_settings[2]){
+            if(selected_rider_settings[2].name){
+              graph_data_3.title = selected_rider_settings[2].name;
+            }
+            if(selected_rider_settings[2].colour){
+              rider_colours[2] = selected_rider_settings[2].colour;
+            }
+          }
+        }
         graph_data_3.data = [];
+
         for (i=0;i<selected_ga_results.generations[specified_generation].best_race_rider_power[2].length;i++){
           graph_data_3.data.push({x:i, y:selected_ga_results.generations[specified_generation].best_race_rider_power[2][i]});
         }
-
-
         graph_data_4 = {};
         graph_data_4.title = "Rider 4";
+        //dk23aug try to get the name from the data
+        if(selected_rider_settings){
+          if(selected_rider_settings[3]){
+            if(selected_rider_settings[3].name){
+              graph_data_4.title = selected_rider_settings[3].name;
+            }
+            if(selected_rider_settings[3].colour){
+              rider_colours[3] = selected_rider_settings[3].colour;
+            }
+          }
+        }
         graph_data_4.data = [];
         for (i=0;i<selected_ga_results.generations[specified_generation].best_race_rider_power[3].length;i++){
           graph_data_4.data.push({x:i, y:selected_ga_results.generations[specified_generation].best_race_rider_power[3][i]});
         }
-
-
-
       }
       else if (graph_name=="finish_times_graph"){
 
@@ -473,7 +509,7 @@ const draw_line_graph = (graph_name_opt) =>{
         $("#data_display").val(JSON.stringify(raw_data));
       }
 
-      //D3
+      // ************** D3 BEGIN **************
       // set the dimensions and margins of the graph
       let totalWidth = `1000`;
       let totalHeight = 450;
@@ -483,10 +519,8 @@ const draw_line_graph = (graph_name_opt) =>{
       var margin = {top: 30, right: legendLeftIndent, bottom: 40, left: 60},
       width = totalWidth - margin.left - margin.right,
       height = totalHeight - margin.top - margin.bottom;
-
       const INNER_WIDTH  = totalWidth - margin.left - margin.right;
       const INNER_HEIGHT = totalHeight - margin.top - margin.bottom;
-
       // append the svg object to the body of the page
       var svg = d3.select("#graph")
       .append("svg")
@@ -496,7 +530,6 @@ const draw_line_graph = (graph_name_opt) =>{
       .attr("transform",
       "translate(" + margin.left + "," + margin.top + ")");
       //  data = selected_ga_results;
-
       // Add X axis --> it is a date format
       console.log("width: " + width);
       var x = d3.scaleLinear()
@@ -505,15 +538,12 @@ const draw_line_graph = (graph_name_opt) =>{
       // svg.append("g")
       // .attr("transform", "translate(0," + height + ")")
       // .call(d3.axisBottom(x));
-
-
       // Add Y axis
       var y = d3.scaleLinear()
       .domain([graph_data_1.y_scale_from, graph_data_1.y_scale_to])
       .range([ height, 0 ]);
       // svg.append("g")
       // .call(d3.axisLeft(y));
-
       // try to add grid lines
       const xAxis     = d3.axisBottom(x).ticks(10);
       const yAxis     = d3.axisLeft(y).ticks(10);
@@ -601,8 +631,7 @@ if (!jQuery.isEmptyObject(graph_data_5)){
   .attr("d", d3.line()
   .x(function(d) { return x(d.x) })
   .y(function(d) { return y(d.y) })
-);
-}
+);}
 
 // X and Y labels
 svg.append("text")
@@ -643,13 +672,12 @@ svg.append("text")
 // }
 
 //try to dynamically sapce out the legend labels using their widths
-let legend_label_offset = 50;
+let legend_label_offset = 100;
 let legend_icon_gap = 12;
 let legend_line_length = 60;
-let legend_average_char_width = 10;
+let legend_average_char_width = 16;
 let legend_gap_length = 10;
 let legend_line_segment_y = -22;
-
 
 svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[0]);
 svg.append("line")//making a line for legend
@@ -737,6 +765,7 @@ if (!jQuery.isEmptyObject(graph_data_5)){
 // .style("font-style", "italic")
 // .text(selected_settings_name + ": " + graph_title);
 
+// ************** D3 END **************
 
 break;
 
@@ -1264,9 +1293,10 @@ const  build_results_table = () =>{
   console.log(ga_results);
   console.log(ga_results.generations);
 
-  for(g=0;g<ga_results.generations.length;g++){
+  //for(g=0;g<ga_results.generations.length;g++){
+  for(g=(ga_results.generations.length-1);g>=0;g--){
 
-    results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\">" + g + "</td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Best Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations) + "</td>" +
+    results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\"><strong>" + g + "</strong></td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Best Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations) + "</td>" +
     "<td onmouseover=\"showColName('Best Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].best_race_performance_failures) + "</td>" +
     "<td onmouseover=\"showColName('Best Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_choke_under_pressure) + "</td>" +
     "<td onmouseover=\"showColName('Best Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_overeagerness) + "</td>" +

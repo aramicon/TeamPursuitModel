@@ -18,6 +18,9 @@ let use_lookup_velocity = false;
 
 let count_of_choke_under_pressure_loggings = 0;
 
+//store the sequence of normal_distribution_output_inflation_percentage values to check them
+//let normal_distribution_output_inflation_percentage_array = [];
+
 // ** var to check the max performance failure
 let max_performance_failure_percentage = 0;
 let max_fatigue_rise = 0;
@@ -103,6 +106,19 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
   //console.log("mapped power " + rider_power + " to effort " + effort_level);
   return effort_level;
 }
+
+//convert a uniform distribution 0-1 random number to a normal one
+//taken from https://stackoverflow.com/questions/25582882/javascript-math-random-normal-distribution-gaussian-bell-curve
+function randn_bm() {
+  let u = 0, v = 0;
+  while(u === 0) u = Math.random(); //Converting [0,1) to (0,1)
+  while(v === 0) v = Math.random();
+  let num = Math.sqrt( -2.0 * Math.log( u ) ) * Math.cos( 2.0 * Math.PI * v );
+  num = num / 10.0 + 0.5; // Translate to 0 -> 1
+  if (num > 1 || num < 0) return randn_bm() // resample between 0 and 1
+  return num
+}
+
 
 // performance failure functoions
 function calculate_rider_performance_failure_probability(effort, effort_max, current_fatigue,current_fatigue_max, accumulated_fatigue,accumulated_fatigue_max, rider_performance_failure_rate,rider_performance_failure_rate_max, performance_failure_probability_exponent,performance_failure_effort_importance_multiplier){
@@ -496,7 +512,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     population.push(new_race);
   }
 
-
   let segment_size = 10; //just to log % of gens done
   let one_segment = Math.floor(number_of_generations/segment_size);
   let one_segment_count = 0;
@@ -529,7 +544,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
     let best_race_rider_power = [];
     let best_race_distance_2nd_last_timestep = 0;
     let best_race_distance_last_timestep = 0;
-
 
     let final_worst_race_properties_index = 0;
     let final_worst_race_properties = population[0];
@@ -571,7 +585,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
       }
     }
-
 
     //print % progress every segment
     if (g % one_segment == 0){
@@ -633,7 +646,6 @@ function run_track_race_ga(settings_r, race_r, riders_r){
               }
             }
         }
-
       }
 
       // let race_tracker_id = JSON.stringify(  race_r.start_order) +  (JSON.stringify(  race_r.race_instructions_r));
@@ -1087,6 +1099,10 @@ function run_track_race_ga(settings_r, race_r, riders_r){
 
   //return table_text_info;
 
+  // dk23aug log the array of normal probs.
+  //console.log("|---------- normal_distribution_output_inflation_percentage_array ----------|");
+  //console.log(JSON.stringify(normal_distribution_output_inflation_percentage_array));
+
   ga_results.end_time = new Date();
   return ga_results;
   // if(settings_r.stats.crossover_instruction_sizes.length > 0){
@@ -1413,8 +1429,6 @@ function crossover(parent1,parent2,settings_r,generation,population_index){
         if (Math.random() >= 0.5){
             random_adjustment =random_adjustment*-1;
         }
-
-
       //console.log("****CROSSOVER LENGTH CALCULATION*****");
       //console.log("smaller parent size " + smaller_length + " larger parent size " + larger_length + " new length random size " + new_instruction_set_size + " random adjustment " + random_adjustment);
       if (new_instruction_set_size + random_adjustment > 1){
@@ -2077,67 +2091,81 @@ function run_race(settings_r,race_r,riders_r){
         }
         }
         //dk2023 overeagerness noise
-        let overeagerness_switch = 0;
-          if (typeof(settings_r.overeagerness_switch) != "undefined"){
-            overeagerness_switch = settings_r.overeagerness_switch;
-          }
-          if (overeagerness_switch==1){
-            //get the rider property and the global amount property
-            let overeagerness_effort_inflation_amount = 0;
-            if (typeof(settings_r.overeagerness_effort_inflation_amount) != "undefined"){
-              overeagerness_effort_inflation_amount = settings_r.overeagerness_effort_inflation_amount;
+        // prevent overeagerness if the rider is recovering from fatigue
+        if(race_rider.endurance_fatigue_level < failure_level){
+          let overeagerness_switch = 0;
+            if (typeof(settings_r.overeagerness_switch) != "undefined"){
+              overeagerness_switch = settings_r.overeagerness_switch;
             }
-            let rider_overeagerness_tendency = 0;
+            if (overeagerness_switch==1){
+              //get the rider property and the global amount property
+              let normal_distribution_output_inflation_percentage = 0;
+              let overeagerness_effort_inflation_min_amount = 0;
+              if (typeof(settings_r.overeagerness_effort_inflation_min_amount) != "undefined"){
+                overeagerness_effort_inflation_min_amount = settings_r.overeagerness_effort_inflation_min_amount;
+              }
+              let overeagerness_effort_inflation_max_amount = 0;
+              if (typeof(settings_r.overeagerness_effort_inflation_max_amount) != "undefined"){
+                overeagerness_effort_inflation_max_amount = settings_r.overeagerness_effort_inflation_max_amount;
+              }
+              let rider_overeagerness_tendency = 0;
 
-            if (typeof(race_rider.overeagerness_tendency) != "undefined"){
-              rider_overeagerness_tendency = race_rider.overeagerness_tendency;
-            }
-
-            //we also need the distance that the overeagerness extends to, e.g. for the first half of the race
-            let overeagerness_race_distance_end_point = 0.5;
-            if (typeof(settings_r.overeagerness_race_distance_end_point) != "undefined"){
-              overeagerness_race_distance_end_point = settings_r.overeagerness_race_distance_end_point;
-            }
-            //also of course, an exponent
-            let overeagerness_exponent = 1;
-            if (typeof(settings_r.overeagerness_exponent) != "undefined"){
-              overeagerness_exponent = settings_r.overeagerness_exponent;
-            }
-            //need the distance remaining and the race distance
-            let race_percentage_remaining = (race_r.distance-race_rider.distance_covered)/race_r.distance;
-            //work out the liklihood of an overeagerness response
-            let probability_of_overeagerness = 0;
-            let maximum_race_remaining = 1;
-            let race_distance_factor = 0;
-            if (race_percentage_remaining > overeagerness_race_distance_end_point){
-              race_distance_factor = ((Math.pow(((race_percentage_remaining-overeagerness_race_distance_end_point)/(maximum_race_remaining-overeagerness_race_distance_end_point)),overeagerness_exponent))/(Math.pow(maximum_race_remaining,overeagerness_exponent)));
-              probability_of_overeagerness = (race_distance_factor * rider_overeagerness_tendency);
-            }
-            //now get a random and do the actual check
-            if (Math.random() < probability_of_overeagerness){
-              //adjust the rider's output level.
-              let original_output_level = race_rider.output_level;
-              race_rider.output_level = race_rider.output_level + (race_rider.output_level*overeagerness_effort_inflation_amount);
-              console.log("^^^ * OVEREAGERNESS DETECTED * ^^^ ");
-              console.log("^^^ probability_of_overeagerness " + probability_of_overeagerness);
-              console.log("^^^ race_percentage_remaining " + race_percentage_remaining + " ^^^");
-              console.log("^^^ overeagerness_race_distance_end_point " + overeagerness_race_distance_end_point + " ^^^");
-              console.log("^^^ maximum_race_remaining " + maximum_race_remaining + " ^^^");
-              console.log("^^^ overeagerness_exponent " + overeagerness_exponent + " ^^^");
-              console.log("^^^ rider_overeagerness_tendency " + rider_overeagerness_tendency + " ^^^");
-              console.log("^^^ original_output_level " + original_output_level + " ^^^");
-              console.log("^^^ race_rider.output_level " + race_rider.output_level + " ^^^");
-              console.log("^^^ race_distance_factor " + race_distance_factor + " ^^^");
-              if(race_rider.output_level > settings_r.maximum_effort_value){
-                race_rider.output_level = settings_r.maximum_effort_value;
-                console.log("^^^ OVEREAGERNESS set output level too high! ^^^");
+              if (typeof(race_rider.overeagerness_tendency) != "undefined"){
+                rider_overeagerness_tendency = race_rider.overeagerness_tendency;
               }
 
-              //also need to LOG this
-              race_r.instruction_noise_overeagerness[race_r.race_clock] = overeagerness_effort_inflation_amount;
-            }
+              //we also need the distance that the overeagerness extends to, e.g. for the first half of the race
+              let overeagerness_race_distance_end_point = 0.5;
+              if (typeof(settings_r.overeagerness_race_distance_end_point) != "undefined"){
+                overeagerness_race_distance_end_point = settings_r.overeagerness_race_distance_end_point;
+              }
+              //also of course, an exponent
+              let overeagerness_exponent = 1;
+              if (typeof(settings_r.overeagerness_exponent) != "undefined"){
+                overeagerness_exponent = settings_r.overeagerness_exponent;
+              }
+              //need the distance remaining and the race distance
+              let race_percentage_remaining = (race_r.distance-race_rider.distance_covered)/race_r.distance;
+              //work out the liklihood of an overeagerness response
+              let probability_of_overeagerness = 0;
+              let maximum_race_remaining = 1;
+              let race_distance_factor = 0;
+              if (race_percentage_remaining > overeagerness_race_distance_end_point){
+                race_distance_factor = ((Math.pow(((race_percentage_remaining-overeagerness_race_distance_end_point)/(maximum_race_remaining-overeagerness_race_distance_end_point)),overeagerness_exponent))/(Math.pow(maximum_race_remaining,overeagerness_exponent)));
+                probability_of_overeagerness = (race_distance_factor * rider_overeagerness_tendency);
+              }
+              //now get a random and do the actual check
+              if (Math.random() < probability_of_overeagerness){
+                //adjust the rider's output level.
+                let original_output_level = race_rider.output_level;
+                normal_distribution_output_inflation_percentage = (overeagerness_effort_inflation_min_amount + (randn_bm()*(overeagerness_effort_inflation_max_amount-overeagerness_effort_inflation_min_amount)));
+                //round it to two places.
+                normal_distribution_output_inflation_percentage = DecimalPrecision.round(normal_distribution_output_inflation_percentage,2)
+                race_rider.output_level = race_rider.output_level + (race_rider.output_level*normal_distribution_output_inflation_percentage);
+                //normal_distribution_output_inflation_percentage_array.push(normal_distribution_output_inflation_percentage);
+                // console.log("^^^ * OVEREAGERNESS DETECTED * ^^^ ");
+                // console.log("^^^ probability_of_overeagerness " + probability_of_overeagerness);
+                // console.log("^^^ race_percentage_remaining " + race_percentage_remaining + " ^^^");
+                // console.log("^^^ overeagerness_race_distance_end_point " + overeagerness_race_distance_end_point + " ^^^");
+                // console.log("^^^ maximum_race_remaining " + maximum_race_remaining + " ^^^");
+                // console.log("^^^ overeagerness_exponent " + overeagerness_exponent + " ^^^");
+                // console.log("^^^ rider_overeagerness_tendency " + rider_overeagerness_tendency + " ^^^");
+                // console.log("^^^ original_output_level " + original_output_level + " ^^^");
+                // console.log("^^^ race_rider.output_level " + race_rider.output_level + " ^^^");
+                // console.log("^^^ race_distance_factor " + race_distance_factor + " ^^^");
+                if(race_rider.output_level > settings_r.maximum_effort_value){
+                  race_rider.output_level = settings_r.maximum_effort_value;
+                  //console.log("^^^ OVEREAGERNESS set output level too high! ^^^");
+                }
+                //also need to LOG this
+                race_r.instruction_noise_overeagerness[race_r.race_clock] = normal_distribution_output_inflation_percentage;
+              }
 
-          }
+            }
+        }
+        else{
+          console.log("Skipped overeagerness as rider is fatgiued.")
+        }
 
         //set the power level based on the effort instruction
 
@@ -2522,7 +2550,6 @@ function run_race(settings_r,race_r,riders_r){
                 }
                 choke_under_pressure_probability_variables.push(end_race_better_time_factor);
                 // if the rider is going to fail then reduce their capacities
-
 
                 prob_choke_under_pressure = calculate_linear_space_value(choke_under_pressure_value_list,choke_under_pressure_probability_variables);
                 if (speed_higher_than_best == 0){

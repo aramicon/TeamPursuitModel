@@ -408,6 +408,7 @@ function moveRace(){
     race_rider.step_info = ""; //dk2021 used to add logging info
 
     if (race_rider.current_aim =="lead"){
+      //LEAD rider. do what yer told!
       //push the pace at the front
       //what's the current effort?
       //consider fatigue
@@ -425,6 +426,22 @@ function moveRace(){
         race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
       }
       //set the power level based on the effort instruction
+
+      //dk23Aug apply overeagerness noise here if it exists
+      let original_output_level = 0;
+        if (race.instruction_noise_overeagerness_r[race.race_clock]){
+          let overeagerness_amount = race.instruction_noise_overeagerness_r[race.race_clock];
+          console.log("^^^ overeagerness to apply, amount " + overeagerness_amount + " ^^^");
+          original_output_level = race_rider.output_level;
+          race_rider.output_level = race_rider.output_level + (race_rider.output_level * overeagerness_amount);
+          //make sure we don't exceed the maximum
+          if(race_rider.output_level > settings.maximum_effort_value){
+            race_rider.output_level = settings.maximum_effort_value;
+            console.log("^^^ OVEREAGERNESS set output level too high! ^^^");
+          }
+          console.log("^^^ output changed from " + original_output_level + " to " + race_rider.output_level);
+          $("#race_info").html("Leader <strong>overeager </strong> "+ original_output_level + " to " + race_rider.output_level);
+        }
 
       race_rider.current_power_effort = mapEffortToPower(settings.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power );
 
@@ -446,8 +463,6 @@ function moveRace(){
         console.log("Performance failure " + pf_id + " of " + failure_p + " reducing power from " + target_power + " to " + (target_power - (target_power * failure_p)));
         target_power = target_power - (target_power * failure_p);
       }
-
-
 
       //compare power required to previous power and look at how it can increase or decrease
       if (powerv > target_power){ //slowing down
@@ -472,7 +487,6 @@ function moveRace(){
       powerv = Math.round((powerv)*100)/100;
 
       //console.log("***:: " + race.race_clock + " race_rider.accumulated_fatigue " +  race_rider.accumulated_fatigue + " settings.accumulated_fatigue_maximum " + settings.accumulated_fatigue_maximum + " accumulated_effect " + accumulated_effect + " failure_level " + failure_level + " race_rider.endurance_fatigue_level " + race_rider.endurance_fatigue_level + " race_rider.output_level " + race_rider.output_level + " race_rider.current_power_effort " + race_rider.current_power_effort + " power_adjustment " + power_adjustment + " powerv " + powerv + "   ::***");
-
 
       //check the lookup table
       if (use_lookup_velocity)
@@ -1172,6 +1186,19 @@ function load_race(){
     race.instruction_noise_choke_under_pressure_r = instruction_noise_choke_under_pressure_t;
     console.log("loaded choke under pressure failures/noise from textarea: " + JSON.stringify(race.instruction_noise_choke_under_pressure_r) );
   }
+
+  //load overeagerness
+  race.instruction_noise_overeagerness_r = {};
+  let instruction_noise_overeagerness_t = {};
+  let instruction_noise_overeagerness_string = $('#instruction_noise_overeagerness_textarea').val();
+  if(instruction_noise_overeagerness_string.length > 3){
+      instruction_noise_overeagerness_t = JSON.parse(instruction_noise_overeagerness_string);
+  }
+  if (!(Object.keys(instruction_noise_overeagerness_t).length === 0 && instruction_noise_overeagerness_t.constructor === Object)){ //i.e. if it is a non-empty object
+    race.instruction_noise_overeagerness_r = instruction_noise_overeagerness_t;
+    console.log("loaded overeagerness failures/noise from textarea: " + JSON.stringify(race.instruction_noise_choke_under_pressure_r) );
+  }
+
   race.riders = riders;
 
   addRiderDisplay();
@@ -1287,6 +1314,7 @@ function load_details_from_url(){
           let performance_failures_from_url = url.searchParams.get('performance_failures');
           //dk23 choke_under_pressure new noise type
           let instruction_noise_choke_under_pressure_from_url = url.searchParams.get('instruction_noise_choke_under_pressure');
+          let instruction_noise_overeagerness_from_url = url.searchParams.get('instruction_noise_overeagerness');
 
           if(start_order_from_url.length > 0){
             console.log("loaded start_order from URL: " + start_order_from_url);
@@ -1311,6 +1339,11 @@ function load_details_from_url(){
             console.log("loaded instruction_noise_choke_under_pressure_from_url from URL: " + JSON.stringify(instruction_noise_choke_under_pressure_from_url));
             $("#instruction_noise_choke_under_pressure_textarea").val(instruction_noise_choke_under_pressure_from_url);
           }
+          if(!(Object.keys(instruction_noise_overeagerness_from_url).length === 0 && instruction_noise_overeagerness_from_url.constructor === Object)){
+            console.log("loaded instruction_noise_overeagerness_from_url from URL: " + JSON.stringify(instruction_noise_overeagerness_from_url));
+            $("#instruction_noise_overeagerness_textarea").val(instruction_noise_overeagerness_from_url);
+          }
+
 
           //need to make sure the race is loaded AFTER we get the settings
           update_race_settings();
@@ -1357,6 +1390,8 @@ function load_details_from_url(){
           let performance_failures_from_url = url.searchParams.get('performance_failures');
           //dk23 choke_under_pressure new noise type
           let instruction_noise_choke_under_pressure_from_url = url.searchParams.get('instruction_noise_choke_under_pressure');
+          //dk23Aug overeagerness as noise
+          let instruction_noise_overeagerness_from_url = url.searchParams.get('instruction_noise_overeagerness');
 
 
           if(start_order_from_url.length > 0){
@@ -1378,6 +1413,10 @@ function load_details_from_url(){
           if(!(Object.keys(instruction_noise_choke_under_pressure_from_url).length === 0 && instruction_noise_choke_under_pressure_from_url.constructor === Object)){
             console.log("loaded instruction_noise_choke_under_pressure_from_url from URL: " + JSON.stringify(instruction_noise_choke_under_pressure_from_url));
             $("#instruction_noise_choke_under_pressure_textarea").val(instruction_noise_choke_under_pressure_from_url);
+          }
+          if(!(Object.keys(instruction_noise_overeagerness_from_url).length === 0 && instruction_noise_overeagerness_from_url.constructor === Object)){
+            console.log("loaded instruction_noise_overeagerness_from_url from URL: " + JSON.stringify(instruction_noise_overeagerness_from_url));
+            $("#instruction_noise_overeagerness_textarea").val(instruction_noise_overeagerness_from_url);
           }
 
           //need to make sure the race is loaded AFTER we get the settings
@@ -1417,6 +1456,11 @@ function draw_line_graph(graph_name_opt){
 
     let graph_name = graph_name_opt;
 
+    let rider_colours = ['#648FFF','#785EF0','#DC267F','#FE6100','#FFB000'];
+    let rider_line_styles = ['1, 0','2, 1','5,3','12,3','18,4'];
+    let rider_line_stroke_width = [1,1.5,2,2.5,2.8];
+
+
     switch(graph_name) {
     case "power_graph":
 
@@ -1425,6 +1469,7 @@ function draw_line_graph(graph_name_opt){
       let graph_data_2 = {};
       let graph_data_3 = {};
       let graph_data_4 = {};
+      let graph_data_5 = {};
       let raw_data = [];
 
       //set the data based on the selection
@@ -1435,6 +1480,17 @@ function draw_line_graph(graph_name_opt){
 
         graph_data_1.title = "Rider 1";
 
+        //dk23aug get the rider title from data
+        if(race.riders){
+          if(race.riders[0]){
+            if(race.riders[0].name){
+              graph_data_1.title = race.riders[0].name;
+            }
+            if(race.riders[0].colour){
+              rider_colours[0] = race.riders[0].colour;
+            }
+          }
+        }
         graph_data_1.x_label = "Timestep";
         graph_data_1.y_label = "Timestep";
 
@@ -1465,6 +1521,16 @@ function draw_line_graph(graph_name_opt){
 
         graph_data_2 = {};
         graph_data_2.title = "Rider 2";
+        if(race.riders){
+          if(race.riders[1]){
+            if(race.riders[1].name){
+              graph_data_2.title = race.riders[1].name;
+            }
+            if(race.riders[1].colour){
+              rider_colours[1] = race.riders[1].colour;
+            }
+          }
+        }
         graph_data_2.data = [];
         for (let i=0;i<rider_power_data[1].length;i++){
           graph_data_2.data.push({x:i, y:rider_power_data[1][i]});
@@ -1472,6 +1538,16 @@ function draw_line_graph(graph_name_opt){
 
         graph_data_3 = {};
         graph_data_3.title = "Rider 3";
+        if(race.riders){
+          if(race.riders[2]){
+            if(race.riders[2].name){
+              graph_data_3.title = race.riders[2].name;
+            }
+            if(race.riders[2].colour){
+              rider_colours[2] = race.riders[2].colour;
+            }
+          }
+        }
         graph_data_3.data = [];
         for (let i=0;i<rider_power_data[2].length;i++){
           graph_data_3.data.push({x:i, y:rider_power_data[2][i]});
@@ -1479,6 +1555,16 @@ function draw_line_graph(graph_name_opt){
 
         graph_data_4 = {};
         graph_data_4.title = "Rider 4";
+        if(race.riders){
+          if(race.riders[3]){
+            if(race.riders[3].name){
+              graph_data_4.title = race.riders[3].name;
+            }
+            if(race.riders[3].colour){
+              rider_colours[3] = race.riders[3].colour;
+            }
+          }
+        }
         graph_data_4.data = [];
         for (let i=0;i<rider_power_data[3].length;i++){
           graph_data_4.data.push({x:i, y:rider_power_data[3][i]});
@@ -1494,134 +1580,265 @@ function draw_line_graph(graph_name_opt){
       //display the raw data
       $('#data_display').val(JSON.stringify(raw_data));
 
-      //D3
+
+      // ************** D3 BEGIN **************
       // set the dimensions and margins of the graph
-        let totalWidth = 900;
-        let totalHeight = 440;
-        let legendLeftIndent = 280;
-        let bulletIndent = 20;
+      let totalWidth = `1000`;
+      let totalHeight = 450;
+      let legendLeftIndent = 20;
+      let bulletIndent = 20;
 
-          var margin = {top: 30, right: legendLeftIndent, bottom: 30, left: 60},
-              width = totalWidth - margin.left - margin.right,
-              height = totalHeight - margin.top - margin.bottom;
+      var margin = {top: 30, right: legendLeftIndent, bottom: 40, left: 60},
+      width = totalWidth - margin.left - margin.right,
+      height = totalHeight - margin.top - margin.bottom;
+      const INNER_WIDTH  = totalWidth - margin.left - margin.right;
+      const INNER_HEIGHT = totalHeight - margin.top - margin.bottom;
+      // append the svg object to the body of the page
+      var svg = d3.select("#graph")
+      .append("svg")
+      .attr("width", width + margin.left + margin.right)
+      .attr("height", height + margin.top + margin.bottom)
+      .append("g")
+      .attr("transform",
+      "translate(" + margin.left + "," + margin.top + ")");
+      //  data = selected_ga_results;
+      // Add X axis --> it is a date format
+      console.log("width: " + width);
+      var x = d3.scaleLinear()
+      .domain([graph_data_1.x_scale_from, graph_data_1.x_scale_to])
+      .range([ 0, width ]);
+      // svg.append("g")
+      // .attr("transform", "translate(0," + height + ")")
+      // .call(d3.axisBottom(x));
+      // Add Y axis
+      var y = d3.scaleLinear()
+      .domain([graph_data_1.y_scale_from, graph_data_1.y_scale_to])
+      .range([ height, 0 ]);
+      // svg.append("g")
+      // .call(d3.axisLeft(y));
+      // try to add grid lines
+      const xAxis     = d3.axisBottom(x).ticks(10);
+      const yAxis     = d3.axisLeft(y).ticks(10);
+      const xAxisGrid = d3.axisBottom(x).tickSize(-INNER_HEIGHT).tickFormat('').ticks(10);
+      const yAxisGrid = d3.axisLeft(y).tickSize(-INNER_WIDTH).tickFormat('').ticks(10);
 
-          // append the svg object to the body of the page
-          var svg = d3.select("#graph")
-            .append("svg")
-              .attr("width", width + margin.left + margin.right)
-              .attr("height", height + margin.top + margin.bottom)
-            .append("g")
-              .attr("transform",
-                    "translate(" + margin.left + "," + margin.top + ")");
-            //  data = selected_ga_results;
+      //add grids
+      // svg.append('g')
+      //   .attr('class', 'x axis-grid')
+      //   .attr('transform', 'translate(0,' + INNER_HEIGHT + ')')
+      //   .call(xAxisGrid);
+      //  svg.append('g')
+      //    .attr('class', 'y axis-grid')
+      //    .call(yAxisGrid);
+      // Create axes.
+      svg.append('g')
+        .attr('class', 'x axis')
+        .attr('transform', 'translate(0,' + INNER_HEIGHT + ')')
+        .call(xAxis);
+      svg.append('g')
+        .attr('class', 'y axis')
+        .call(yAxis);
+        //end add grids
 
-              // Add X axis --> it is a date format
-              var x = d3.scaleLinear()
-                .domain([graph_data_1.x_scale_from, graph_data_1.x_scale_to])
-                .range([ 0, width ]);
-              svg.append("g")
-                .attr("transform", "translate(0," + height + ")")
-                .call(d3.axisBottom(x));
+      // Add the line 1
+      svg.append("path")
+      .datum(graph_data_1.data)
+      .attr("fill", "none")
+      .attr("stroke", rider_colours[0])
+      .attr("stroke-width", rider_line_stroke_width[0])
+      .style("stroke-dasharray", rider_line_styles[0]) //dash for line disambiguation
+      .attr("d", d3.line()
+      .x(function(d) { return x(d.x) })
+      .y(function(d) { return y(d.y) })
+      );
 
-              // Add Y axis
-              var y = d3.scaleLinear()
-                .domain([graph_data_1.y_scale_from, graph_data_1.y_scale_to])
-                .range([ height, 0 ]);
-              svg.append("g")
-                .call(d3.axisLeft(y));
+      if (!jQuery.isEmptyObject(graph_data_2)){
+      //draw second line if data is given
+      svg.append("path")
+      .datum(graph_data_2.data)
+      .attr("fill", "none")
+      .attr("stroke", rider_colours[1])
+      .attr("stroke-width", rider_line_stroke_width[1])
+      .style("stroke-dasharray", rider_line_styles[1])
+      .attr("d", d3.line()
+      .x(function(d) { return x(d.x) })
+      .y(function(d) { return y(d.y) })
+      );
+      }
 
-              // Add the line 1
-              svg.append("path")
-                .datum(graph_data_1.data)
-                .attr("fill", "none")
-                .attr("stroke", "#0000ff")
-                .attr("stroke-width", 1.5)
-                .attr("d", d3.line()
-                  .x(function(d) { return x(d.x) })
-                  .y(function(d) { return y(d.y) })
-                );
+      if (!jQuery.isEmptyObject(graph_data_3)){
+      //draw second line if data is given
+      svg.append("path")
+      .datum(graph_data_3.data)
+      .attr("fill", "none")
+      .attr("stroke", rider_colours[2])
+      .attr("stroke-width", rider_line_stroke_width[2])
+      .style("stroke-dasharray", rider_line_styles[2])
+      .attr("d", d3.line()
+      .x(function(d) { return x(d.x) })
+      .y(function(d) { return y(d.y) })
+      );
+      }
+      if (!jQuery.isEmptyObject(graph_data_4)){
+      //draw second line if data is given
+      svg.append("path")
+      .datum(graph_data_4.data)
+      .attr("fill", "none")
+      .attr("stroke", rider_colours[3])
+      .attr("stroke-width", rider_line_stroke_width[3])
+      .style("stroke-dasharray", rider_line_styles[3])
+      .attr("d", d3.line()
+      .x(function(d) { return x(d.x) })
+      .y(function(d) { return y(d.y) })
+      );
+      }
+      if (!jQuery.isEmptyObject(graph_data_5)){
+      //draw second line if data is given
+      svg.append("path")
+      .datum(graph_data_5.data)
+      .attr("fill", "none")
+      .attr("stroke", rider_colours[4])
+      .attr("stroke-width", rider_line_stroke_width[4])
+      .style("stroke-dasharray", rider_line_styles[4])
+      .attr("d", d3.line()
+      .x(function(d) { return x(d.x) })
+      .y(function(d) { return y(d.y) })
+      );}
 
-                if (!jQuery.isEmptyObject(graph_data_2)){
-                  //draw second line if data is given
-                  svg.append("path")
-                    .datum(graph_data_2.data)
-                    .attr("fill", "none")
-                    .attr("stroke", "#ff0000")
-                    .attr("stroke-width", 1.5)
-                    .attr("d", d3.line()
-                      .x(function(d) { return x(d.x) })
-                      .y(function(d) { return y(d.y) })
-                    );
-                }
+      // X and Y labels
+      svg.append("text")
+      .attr("class", "x label")
+      .attr("text-anchor", "end")
+      .attr("x", width/2)
+      .attr("y", height + 35)
+      .text(graph_data_1.x_label); // e.g. "GA Generation"
 
-                if (!jQuery.isEmptyObject(graph_data_3)){
-                  //draw second line if data is given
-                  svg.append("path")
-                    .datum(graph_data_3.data)
-                    .attr("fill", "none")
-                    .attr("stroke", "#00ff00")
-                    .attr("stroke-width", 1.5)
-                    .attr("d", d3.line()
-                      .x(function(d) { return x(d.x) })
-                      .y(function(d) { return y(d.y) })
-                    );
-                }
-                if (!jQuery.isEmptyObject(graph_data_4)){
-                  //draw second line if data is given
-                  svg.append("path")
-                    .datum(graph_data_4.data)
-                    .attr("fill", "none")
-                    .attr("stroke", "#000000")
-                    .attr("stroke-width", 1.5)
-                    .attr("d", d3.line()
-                      .x(function(d) { return x(d.x) })
-                      .y(function(d) { return y(d.y) })
-                    );
-                }
+      svg.append("text")
+      .attr("class", "y label")
+      .attr("text-anchor", "end")
+      .attr("x", -150)
+      .attr("y", -50)
+      .attr("dy", ".75em")
+      .attr("transform", "rotate(-90)")
+      .text(graph_data_1.y_label); // e.g. "Race Finish Time (s)"
 
-                  // X and Y labels
-                  svg.append("text")
-                  .attr("class", "x label")
-                  .attr("text-anchor", "end")
-                  .attr("x", width)
-                  .attr("y", height - 6)
-                  .text(graph_data_1.x_label); // e.g. "GA Generation"
+      //Colour Legend
+      // svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",6).attr("r", 6).style("fill", "#0000ff");
+      // svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 6).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
+      //
+      // if (!jQuery.isEmptyObject(graph_data_2)){
+      //   svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",40).attr("r", 6).style("fill", "#ff0000");
+      //   svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 40).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
+      // }
+      // if (!jQuery.isEmptyObject(graph_data_3)){
+      //   svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",60).attr("r", 6).style("fill", "#00ff00");
+      //   svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 60).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
+      // }
+      // if (!jQuery.isEmptyObject(graph_data_4)){
+      //   svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",80).attr("r", 6).style("fill", "#000000");
+      //   svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 80).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
+      // }
+      // if (!jQuery.isEmptyObject(graph_data_5)){
+      //   svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",100).attr("r", 6).style("fill", "#00ffff");
+      //   svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 100).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
+      // }
 
-                  svg.append("text")
-                  .attr("class", "y label")
-                  .attr("text-anchor", "end")
-                    .attr("x", -220)
-                  .attr("y", 6)
-                  .attr("dy", ".75em")
-                  .attr("transform", "rotate(-90)")
-                  .text(graph_data_1.y_label); // e.g. "Race Finish Time (s)"
+      //try to dynamically sapce out the legend labels using their widths
+      let legend_label_offset = 100;
+      let legend_icon_gap = 12;
+      let legend_line_length = 60;
+      let legend_average_char_width = 16;
+      let legend_gap_length = 10;
+      let legend_line_segment_y = -22;
 
-                  //Colour Legend
-                  svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",6).attr("r", 6).style("fill", "#0000ff");
+      svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[0]);
+      svg.append("line")//making a line for legend
+      .attr("x1", legend_label_offset)
+      .attr("x2", legend_label_offset+legend_line_length)
+      .attr("y1", legend_line_segment_y)
+      .attr("y2", legend_line_segment_y)
+      .attr("stroke-width", rider_line_stroke_width[0])
+      .style("stroke-dasharray",rider_line_styles[0])//dashed array for line
+      .style("stroke", rider_colours[0]);
 
-                  svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 6).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
 
-                  if (!jQuery.isEmptyObject(graph_data_2)){
-                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",40).attr("r", 6).style("fill", "#ff0000");
-                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 40).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
-                  }
-                  if (!jQuery.isEmptyObject(graph_data_3)){
-                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",60).attr("r", 6).style("fill", "#00ff00");
-                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 60).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
-                  }
-                  if (!jQuery.isEmptyObject(graph_data_4)){
-                      svg.append("circle").attr("cx",totalWidth - legendLeftIndent).attr("cy",80).attr("r", 6).style("fill", "#000000");
-                      svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 80).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
-                  }
+      svg.append("text").attr("x", legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
 
-                  //add a title
-                  svg.append("text")
-                  .attr("x", (width / 2))
-                  .attr("y", 0 - (margin.top / 2))
-                  .attr("text-anchor", "middle")
-                  .style("font-size", "16px")
-                  .style("font-style", "italic")
-                  .text(graph_title);
+      if (!jQuery.isEmptyObject(graph_data_2)){
+      legend_label_offset += (graph_data_1.title.length * legend_average_char_width) + legend_gap_length;
+
+      svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[1]);
+
+      svg.append("line")//making a line for legend
+        .attr("x1", legend_label_offset)
+        .attr("x2", legend_label_offset+legend_line_length)
+        .attr("y1", legend_line_segment_y)
+        .attr("y2", legend_line_segment_y)
+        .attr("stroke-width", rider_line_stroke_width[1])
+        .style("stroke-dasharray",rider_line_styles[1])
+        .style("stroke", rider_colours[1]);
+
+      svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
+      }
+      if (!jQuery.isEmptyObject(graph_data_3)){
+      legend_label_offset += (graph_data_2.title.length * legend_average_char_width) + legend_gap_length;
+
+      svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[2]);
+
+      svg.append("line")//making a line for legend
+        .attr("x1", legend_label_offset)
+        .attr("x2", legend_label_offset+legend_line_length)
+        .attr("y1", legend_line_segment_y)
+        .attr("y2", legend_line_segment_y)
+        .attr("stroke-width", rider_line_stroke_width[2])
+        .style("stroke-dasharray",rider_line_styles[2])
+        .style("stroke", rider_colours[2]);
+
+      svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
+      }
+      if (!jQuery.isEmptyObject(graph_data_4)){
+      legend_label_offset += (graph_data_3.title.length * legend_average_char_width) + legend_gap_length;
+
+      svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[3]);
+
+      svg.append("line")//making a line for legend
+        .attr("x1", legend_label_offset)
+        .attr("x2", legend_label_offset+legend_line_length)
+        .attr("y1", legend_line_segment_y)
+        .attr("y2", legend_line_segment_y)
+        .attr("stroke-width", rider_line_stroke_width[3])
+        .style("stroke-dasharray",rider_line_styles[3])
+        .style("stroke", rider_colours[3]);
+
+      svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
+      }
+      if (!jQuery.isEmptyObject(graph_data_5)){
+      legend_label_offset += (graph_data_4.title.length * legend_average_char_width) + legend_gap_length;
+
+      svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[4]);
+
+      svg.append("line")//making a line for legend
+        .attr("x1", legend_label_offset)
+        .attr("x2", legend_label_offset+legend_line_length)
+        .attr("y1", legend_line_segment_y)
+        .attr("y2", legend_line_segment_y)
+        .attr("stroke-width", rider_line_stroke_width[4])
+        .style("stroke-dasharray",rider_line_styles[4])
+        .style("stroke", rider_colours[4]);
+
+      svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
+      }
+      //add a title
+      // svg.append("text")
+      // .attr("x", (width / 2))
+      // .attr("y", 0 - (margin.top / 2))
+      // .attr("text-anchor", "middle")
+      // .style("font-size", "16px")
+      // .style("font-style", "italic")
+      // .text(selected_settings_name + ": " + graph_title);
+
+      // ************** D3 END **************
+
       break;
 
     default:
