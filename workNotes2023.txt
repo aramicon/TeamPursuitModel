@@ -371,3 +371,120 @@ let rider_colours = ['#648FFF','#785EF0','#DC267F','#FE6100','#FFB000'];
 -- flip in build_results_table()? not in the db end
 
 maybe flip too in the GA end?
+
+-- montag 14th, 41 now. so it goes, tick and tock till we drop.
+
+-- figure out the lag when we drop back 2 places, I imagine it has been there forever?
+
+-- so, the race order changes but physically the change is underway. last rider drops back wayyy too far. who exactly is it chasing as the front rider is dropping back? look at waht it's power does 
+262.14
+262.14
+199.35 drop begins
+153.61
+193.61
+233.61
+273.61
+313.61
+353.61
+393.61
+433.61
+473.61
+513.61
+413.61
+453.61
+493.61
+399.76
+439.76
+479.76
+519.76
+419.76
+459.76
+369.77
+269.77
+259.13
+260.34
+261.05
+261.49
+261.75
+261.91
+262 
+262.05
+262.1
+262.11
+262.12
+262.13
+262.14
+262.13
+262.14
+262.14
+262.14
+
+-- ok so now we want to go into debugger mode for that rider and see how it sets its velocity at those crucial points.
+-- added these 
+let targeted_debugging_rider_no = 2;
+let targeted_debugging_timestep_range_start = 20;
+let targeted_debugging_timestep_range_end = 30;
+let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset - settings.target_rider_gap) -  (race_rider.distance_covered - race_rider.start_offset);
+
+rider_to_follow.distance_covered  	247.71359291894967
+rider_to_follow.start_offset		0
+settings.target_rider_gap			2
+race_rider.distance_covered			232.21119176541472		
+race_rider.start_offset				0
+distance_to_cover					13.502401153534947
+race_rider.velocity					13.50252503847603
+
+--offset looks odd and the change in speed is minimal so why such a big drop?
+
+target_velocity after adjusting for gap 13.502455205671952
+	
+	-- oops! this is actually before the drop so it all looks fine. skip along to the actual drop timestep.
+	
+	hmmm, so it is timestep 23 that the drop happens from this instruction
+	  
+-- [[20,"drop=2"]]
+
+-- and here we have the issue methinks, this IF is coming up TRUE
+if((race_rider.velocity - rider_to_follow.velocity > settings.velocity_difference_limit) &&  (distance_to_cover < settings.damping_visibility_distance)){
+        target_velocity =  rider_to_follow.velocity;//assumption that by the time taken to adjust to the same velocity you will have caught them
+      }
+	  
+sooooo, I put in a check and only go TRUE if the rider_to_follow is not dropping back? how can we tell that?
+
+hmmm, rider_to_follow has the property
+current_aim:"drop"
+
+.current_aim !="lead"-- hmmm, this does seem to work, but how do i test it, and do i put it into the GA now?
+-- compare with/without for the original power output graph, then if it seems ok put it in the GA and rerun an experiment 
+
+the new one seems ok, see what happens. 
+
+-- bunch of drop 2 in this final GA strat. match the game? game 290.259. ga 290.259. with old form this slows to 292.775
+
+run a big test with NO overewagerness and see what comes out at the end, all equal. this may be 'encouraging' 2-drop instructions?
+
+-- can i get it to return a % more often? like every 5% instead of 10%?
+
+-- sep 5th, bug, perceentage message goes over 100, e.g. 120% done, max_performance_failure_percentage found 0
+
+-- run a one-stronger experiment to get an image to put in a slide.
+
+-- add a graph for one weaker rider 
+
+-- add u of G logo 
+
+-- maybe add an image of a peleton and break as the second to last slide?
+
+name:~=771
+
+
+-- 24th October. 
+
+-- need to build a basic simulated annealing progam and compare it with a few others on the road to understanding GA's. Can i incorporate it into the Test Suite page?
+
+-- 25th October
+-- 1, send leave  of absence form to COlm 
+
+-- Tuesday 7th of Nov
+
+-- work on simulated annealing. need to write on it while making code, this can be a way into starting the writing, need 1000 words a day

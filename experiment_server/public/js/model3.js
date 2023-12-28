@@ -8,6 +8,12 @@ import {settings_template} from './global_settings_template.js';
 import {race_template} from './race_settings_template.js';
 import {riders_template} from './riders_template.js';
 
+//dk23Aug allow for targeted debugging of a rider and a timestep
+let targeted_debugging = 0;
+let targeted_debugging_rider_no = 2;
+let targeted_debugging_timestep_range_start = 23;
+let targeted_debugging_timestep_range_end = 30;
+
 let settings = settings_template;
 let race = race_template;
 let riders = riders_template;
@@ -408,6 +414,13 @@ function moveRace(){
     race_rider.step_info = ""; //dk2021 used to add logging info
 
     if (race_rider.current_aim =="lead"){
+
+      //dk23UG targetted debugging
+
+      if(targeted_debugging && race.race_clock >= targeted_debugging_timestep_range_start && race.race_clock <= targeted_debugging_timestep_range_end &&  race.current_order[i] == targeted_debugging_rider_no){
+        console.log("targeted debugging rider " + race.current_order[i] + " timestep " + race.race_clock + " LEAD ");
+        debugger
+      }
       //LEAD rider. do what yer told!
       //push the pace at the front
       //what's the current effort?
@@ -578,11 +591,15 @@ function moveRace(){
         }
         //target_power = target_power - (target_power * failure_p);
       }
-
     }
     else{
+      //CHASING RIDER
       //rider may be following or dropping back. Either way they will be basing velocity on that of another rider- normally just following the rider in front of you
 
+      if(targeted_debugging && race.race_clock >= targeted_debugging_timestep_range_start && race.race_clock <= targeted_debugging_timestep_range_end &&  race.current_order[i] == targeted_debugging_rider_no){
+        console.log("targeted debugging rider " + race.current_order[i] + " timestep " + race.race_clock + " CHASE ");
+        debugger
+      }
       let rider_to_follow = {};
       if (i==0){
         rider_to_follow = race.riders[race.current_order[race.current_order.length-1]];
@@ -600,7 +617,9 @@ function moveRace(){
       //work out the power needed for this velocity- remember we are drafting
 
       //if your velocity is very high and you are approaching the target rider you will speed past, so if within a certain distance and traveling quickly set your target speed to be that of the target rider or very close to it.
-      if((race_rider.velocity - rider_to_follow.velocity > settings.velocity_difference_limit) &&  (distance_to_cover < settings.damping_visibility_distance)){
+      //dk23AUG adding clause to prevent this from affecting the last rider when the lead is changing
+      if((rider_to_follow.current_aim != "drop") && ((race_rider.velocity - rider_to_follow.velocity) > settings.velocity_difference_limit) &&  (distance_to_cover < settings.damping_visibility_distance) ){
+      //if(((race_rider.velocity - rider_to_follow.velocity) > settings.velocity_difference_limit) &&  (distance_to_cover < settings.damping_visibility_distance) ){
         target_velocity =  rider_to_follow.velocity;//assumption that by the time taken to adjust to the same velocity you will have caught them
       }
       else if((race_rider.velocity - target_velocity > 0) && (distance_to_cover < settings.damping_visibility_distance)){ //if slowing down and target velocity is low but you are close to the target rider, then only slow a little (dropping back)
@@ -1492,7 +1511,7 @@ function draw_line_graph(graph_name_opt){
           }
         }
         graph_data_1.x_label = "Timestep";
-        graph_data_1.y_label = "Timestep";
+        graph_data_1.y_label = "Power (Watts)";
 
         graph_data_1.x_scale_from = 0;
 
