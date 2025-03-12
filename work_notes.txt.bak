@@ -2953,14 +2953,4 @@ new
 
 [[30,"drop=3"],[41,"effort=6.22"],[62,"drop=3"],[102,"drop=2"],[103,"drop=2"],[111,"drop=2"],[151,"drop=1"],[181,"drop=3"],[195,"effort=7.11"],[203,"drop=2"],[213,"drop=1"],[273,"drop=3"],[284,"effort=8.309999999999999"]]
 
-time 289.456 seconds
-
-another faster time but not so much Start Order 3,1,0,2
-
-15,effort=6.05,29,effort=6.24,65,drop=3,102,drop=3,137,drop=2,158,drop=2,186,drop=3,187,drop=2,218,drop=3,255,drop=3,269,drop=2,270,effort=8.17,282,effort=9.6   287.832 seconds
-
-drops 270 all else is the same?
-
-[[15,"effort=6.05"],[29,"effort=6.24"],[65,"drop=3"],[102,"drop=3"],[137,"drop=2"],[158,"drop=2"],[186,"drop=3"],[187,"drop=2"],[218,"drop=3"],[255,"drop=3"],[269,"drop=2"],[282,"effort=9.62"]] 288.116 seconds
-
 

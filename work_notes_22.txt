@@ -1980,4 +1980,26 @@ let cost_matrix =  [
 -- grc presentations done, Tuesday morning 9:45, May 23rd. Went ok, felt I hadn't added enough new stuff at all.
 
 -- May 30. Tuesday. Need to submit a 4 page paper and a 500 word abstract to 
+IACSS 2023
+IACSS 2023: 14th International Symposium on Computer Science in Sport
+College of Education, Zhejiang University
+Hangzhou, China, September 27-30, 2023
+-- have to log in with Easy Chair 
+
+-- current title 
+Exploring Strategy in Sport: Finding Team Pursuit Track Cycling Race Instructions using a Genetic Algorithm
+-- new title 
+Discovering Strategy using Evolutionary Computation: Applying a Genetic Algorithm to a Team Pursuit Cycling Track Cycling Race
+
+(Note: Only Accepted Abstracts will be considered for publication, after which you will be prompted to submit the short or full version of your paper).
+
+-- sooo i just don't attach any file? Ooh, let's attach the 500 word abstract.
+
+-- keywords EVOLUTIONARY COMPUTATION, GENETIC ALGORITHM, STRATEGY, CYCLING, TEAM PURSUIT
+
+-- max of 5 keywords. 1 image referred to as 'figure 1'
+
+-- will have to include a few references? 
+
+BananaDanceParty
 

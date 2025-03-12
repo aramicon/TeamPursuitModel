@@ -215,6 +215,30 @@ function randn_bm() {
 
     let time_taken_old = r.time_taken;
 
+    //DonalK25: if the global ga_mutation_switch is set to anything other than 1, quit.
+    // this is a new setting so set the default to 1 if the setting is not found
+    let ga_mutation_switch = 1;
+    if (typeof(settings_r.ga_mutation_switch) != "undefined"){
+      ga_mutation_switch = settings_r.ga_mutation_switch;
+    }
+
+    if(ga_mutation_switch !== 1){
+      //console.log("************ ga_mutation_switch is OFF, no mutation! ************");
+      // going to make a copy of r and return that instead of using it as is?
+        let r_clone = JSON.parse(JSON.stringify(r)); //clone of object, no mutations
+        r_clone.time_taken = 0;
+        r_clone.stats = {};
+        r_clone.stats.number_of_instructions_added = 0;
+        r_clone.stats.number_of_instructions_removed = 0;
+        r_clone.stats.number_of_instructions_moved = 0;
+        r_clone.stats.number_of_effort_instructions_changed = 0;
+        r_clone.stats.number_of_drop_instructions_changed = 0;
+        r_clone.stats.number_of_start_order_shuffles = 0;
+        r_clone.stats.number_of_drop_instructions = 0;
+      return r_clone;
+    }
+
+
     new_race.start_order = [...r.start_order];
     new_race.variant_id = r.variant_id;
     //also set a geenration, type, and counter
@@ -233,8 +257,6 @@ function randn_bm() {
     new_race.stats.number_of_drop_instructions_changed = 0;
     new_race.stats.number_of_start_order_shuffles = 0;
     new_race.stats.number_of_drop_instructions = 0;
-
-
 
     if(Math.random() < p_shuffle_start){
       //note that shuffling in place may cause bugs
@@ -307,6 +329,78 @@ function randn_bm() {
     return new_race;
   }
 
+  function mutate_instruction(settings_r, race_r, instruction){
+    //tweak an instruction a little and return it
+    //move the time position?
+    //console.log("*>*>*> robustness instruction mutation BEGIN *<*<*<");
+    //console.log("original " + instruction);
+    let time_position_prob = 0.3;
+
+    if (settings_r.hasOwnProperty("robustness_mutate_inst_time_position_prob")){
+      time_position_prob = settings_r.robustness_mutate_inst_time_position_prob;
+    }
+    let range_to_move_instruction = 2;
+    if (settings_r.hasOwnProperty("robustness_mutate_inst_range_to_move_instruction")){
+      range_to_move_instruction = settings_r.robustness_mutate_inst_range_to_move_instruction;
+    }
+    let range_to_change_effort = 1;
+    if (settings_r.hasOwnProperty("robustness_mutate_inst_range_to_change_effort")){
+      range_to_change_effort = settings_r.robustness_mutate_inst_range_to_change_effort;
+    }
+
+    //robustness_mutate_inst_range_to_change_effort
+
+    let time_taken_old = race_r.time_taken;
+    let new_instruction=[...instruction]; //new instruction, copy of old one
+
+    if (Math.random() < time_position_prob){
+      debugger
+        //move, don't adjust value
+        let new_location = instruction[0] + Math.floor((range_to_move_instruction*-1) + (Math.random()*(range_to_move_instruction*2)));
+            if(new_location < 0){
+              new_location = 0;
+            }
+            //don't go over the old time
+            if(new_location > time_taken_old){
+              new_location = Math.floor(time_taken_old);
+            }
+            //only move it there is NOT an instruction already there
+            //only need to check the original (changing one at a time)
+            if(race_r.instructions.filter(a => a[0] == new_location).length==0){
+              new_instruction[0] = new_location;
+            }
+    }
+    else{
+      //tweak the effort or drop value
+      let is_effort_instruction = instruction[1].indexOf("effort");
+
+      if(is_effort_instruction != -1){
+        //effort
+        let current_effort = parseFloat(instruction[1].split("=")[1]);
+        let new_effort = Math.floor((current_effort + ((range_to_change_effort*-1) + (Math.random()*(range_to_change_effort*2))))*100)/100;
+        if(new_effort < settings_r.minimum_power_output){
+        	new_effort = settings_r.minimum_power_output;
+        }
+        else if(new_effort > 9){
+        	new_effort = 9;
+        }
+        new_instruction[1] = "effort=" + new_effort;
+        //console.log("*>*>*> robustness instruction mutation END *<*<*<");
+      }
+      else{
+        //drop
+        //don't allow the same value
+        let current_drop_value = parseInt(instruction[1].split("=")[1]);
+        let random_to_add = (1 + Math.floor(Math.random()*(settings_r.ga_team_size-2)));
+        //note the -2 above, as otherwise we can hit the same value again.
+        let new_drop_position = 1+((current_drop_value + (random_to_add-1)) % (settings_r.ga_team_size-1));
+        new_instruction[1] = "drop=" + new_drop_position;
+      }
+    }
+    //console.log("new " + new_instruction);
+    return new_instruction;
+  }
+
   function new_random_instruction(timestep, settings_r){
     let probability_of_drop_instruction = settings_r.ga_probability_of_drop_instruction;
     let new_instruction = [];
@@ -342,15 +436,27 @@ function randn_bm() {
     race_r.time_taken = race_results.time_taken;
     let original_time_taken = race_r.time_taken;
 
+
+
+    // running the race clears the instruction[] array but it is needed for the mutation function
+    race_r.instructions = [...race_r.race_instructions_r]; // added Jan 24, was not creating mutants because race_r.instrucitons was [] :-(
+
+    let original_instructions = [...race_r.instructions];
+    let original_start_order = [...race_r.start_order];
+
     //now set up a population of mutants
+    //debugger
+    //console.log("Creating mutant clones for " + race_r.instructions);
     for(i=0;i<settings_r.robustness_check_population_size;i++){
-      population.push(mutate_race(race_r,settings_r,1001));
+      let new_mutated_clone = mutate_race(race_r,settings_r,1001);
+      //console.log("mutant clone " + i + " " + new_mutated_clone.instructions);
+      population.push(new_mutated_clone);
     }
 
     let one_fifth = Math.floor(settings_r.robustness_check_population_size/5);
     let one_fifth_count = 0;
 
-    //now run each race and store results
+    //now run each race and store the results
     let population_stats = [];
     let race_result = 0;
     let fittest_mutant_time_taken = 100000;
@@ -362,10 +468,16 @@ function randn_bm() {
       race_r.start_order = [...load_race_properties.start_order];
       settings_r.run_type = "robustness_check";
 
-
       let race_results = run_race(settings_r,race_r,riders_r);
       load_race_properties.time_taken = race_results.time_taken;
       population_stats.push(load_race_properties.time_taken);
+
+      if (load_race_properties.time_taken < original_time_taken ){
+        //we've found a better solution, so log it?
+        console.log("Robustness check found better solution");
+        console.log("Start Order " + race_r.start_order);
+        console.log("Instructions " + load_race_properties.instructions);
+      }
 
       //update best and worst if needs be
       if (load_race_properties.time_taken > unfittest_mutant_time_taken){
@@ -376,7 +488,7 @@ function randn_bm() {
       }
 
       if (i % one_fifth == 0){
-        console.log(one_fifth_count*25 + "% done");
+        console.log("robustness check " + one_fifth_count*25 + "% done");
         one_fifth_count++;
       }
     }
@@ -397,7 +509,6 @@ function randn_bm() {
     robustness_result.unfittest_mutant_time_taken = unfittest_mutant_time_taken;
     robustness_result.fittest_mutant_time_taken = fittest_mutant_time_taken;
 
-
     //loop through again knowing the mean to work out the standard deviation
     let mutantStdDev = 0;
     let mutantVariance = 0;
@@ -411,16 +522,94 @@ function randn_bm() {
 
     robustness_result.robustness_check_standard_dev = mutantStdDev;
     //add a message
-    robustness_result.message = "Robustness Check:  Original race time taken " + original_time_taken + ". Average time of " + population.length + " mutants = " + mutantMean + " std. Dev. " + mutantStdDev;
+    robustness_result.message = "Robustness Check:  Original race time taken " + original_time_taken + "<br> Average time of " + population.length + " mutants = " + mutantMean + ", std. Dev. " + mutantStdDev;
 
+    //debugger
+    //donalK24: new robustness measure, mutate each instruction a fixed number of times and measure the effect of each
+    let ga_robustness_check_mutation_per_instruction = 0;
+    if (settings_r.ga_robustness_check_mutation_per_instruction){
+      ga_robustness_check_mutation_per_instruction = settings_r.ga_robustness_check_mutation_per_instruction;
+    }
+    if(ga_robustness_check_mutation_per_instruction > 0){
+        let robustness_single_mutation_times = [];
+        let robustness_single_mutation_mutations = [];
+        //get back to the original version of the race (unmutated)
+        race_r.race_instructions_r = [...original_instructions];
+        race_r.instrutions = [...original_instructions];
+        race_r.start_order = [...original_start_order];
+        settings_r.run_type = "robustness_check";
+        race_r.time_taken = original_time_taken;
+
+        //go through each instruction
+        for(let ii = 0; ii<race_r.race_instructions_r.length;ii++){
+          //do it a number of times
+          //we don't want to add any duplicates (run identical races)
+          let already_run = {};
+          let original_instruction = race_r.race_instructions_r[ii];
+          already_run[JSON.stringify(original_instruction)] = 1;
+
+          for(let ix = 0; ix < ga_robustness_check_mutation_per_instruction; ix++){
+            //need to reset the instructions each time
+            //race_r.instrutions_r = [...original_instructions];
+            let mutated_instruction = mutate_instruction(settings_r,race_r,race_r.race_instructions_r[ii]);
+            //check if the timestep contains a decimal point
+            if(String(mutated_instruction[0]).indexOf(".") >= 0){
+              debugger
+            }
+            //run  if NOT already run
+            if(JSON.stringify(mutated_instruction) in already_run){
+              //console.log("robustness variation already ran " + JSON.stringify(mutated_instruction));
+            }
+            else{
+              already_run[JSON.stringify(mutated_instruction)] = 1;
+              race_r.race_instructions_r[ii] = mutated_instruction;
+              let race_results = run_race(settings_r,race_r,riders_r);
+              robustness_single_mutation_times.push(race_results.time_taken);
+              robustness_single_mutation_mutations.push(JSON.stringify(original_instruction) + " -> " + JSON.stringify(mutated_instruction));
+              //reset to the original instruction
+              race_r.race_instructions_r[ii] =   original_instruction;
+            }
+          }
+        }
+
+      let average_single_mutation = 0;
+      let sum_mutation_times = 0;
+      let sum_percentage_time_worsens_total = 0;
+      //note that the number of actual mutations tried will vary as there may be duplicates (mostly with DROPs)
+      for(let iy = 0;iy<robustness_single_mutation_times.length;iy++){
+        sum_mutation_times += robustness_single_mutation_times[iy];
+        let time_worsens = robustness_single_mutation_times[iy]-original_time_taken;
+        let time_worsens_p = 0;
+        if(time_worsens < 0){
+          time_worsens = 0;
+        }
+        sum_percentage_time_worsens_total += (robustness_single_mutation_times[iy]/original_time_taken);
+      }
+      console.log("!!  Robustness robustness_single_mutation_times !!");
+      console.log(robustness_single_mutation_times);
+      console.log(robustness_single_mutation_mutations);
+
+      average_single_mutation = DecimalPrecision.round(sum_mutation_times / robustness_single_mutation_times.length,2);
+      let average_percentage_time_worsens_total = DecimalPrecision.round(sum_percentage_time_worsens_total / robustness_single_mutation_times.length,2);
+      robustness_result.robustness_single_mutation_qty = robustness_single_mutation_times.length;
+      robustness_result.robustness_single_mutation_average = average_single_mutation;
+      robustness_result.robustness_single_mutation_worsening_effect_multiplier = average_percentage_time_worsens_total;
+      robustness_result.robustness_single_mutation_times = JSON.stringify(robustness_single_mutation_times);
+
+      //append to the message (displays if you run it from the GA page)
+      robustness_result.message += "<br>Instruction Mutation tests";
+      robustness_result.message += "<br>Total variations run: " + robustness_result.robustness_single_mutation_qty;
+      robustness_result.message += "<br>Average race time: " + robustness_result.robustness_single_mutation_average;
+      robustness_result.message += "<br>Average % that times worsens: " + robustness_result.robustness_single_mutation_worsening_effect_multiplier;
+      robustness_result.message += "<br>Times: " + robustness_result.robustness_single_mutation_times;
+    }
+    console.log("!!robustness_result!!");
+    console.log(robustness_result);
     return robustness_result;
   }
-
   function run_consistency_check(settings_r, race_r, riders_r){
-
     //get the time of the original
     settings_r.run_type = "consistency_check";
-
     //repeatedly run the same race to check if it always returns the same time
     let consistency_check_population_size_used = 1000;
     if (settings_r.consistency_check_population_size){
@@ -591,8 +780,6 @@ function randn_bm() {
         console.log(one_segment_count*(100/segment_size) + "% done, max_performance_failure_percentage found " + max_performance_failure_percentage);
         one_segment_count++;
       }
-
-
       //d22: we want to send the best race time of the last gen to each race?
 
       for(let i = 0;i<population.length;i++){
@@ -834,6 +1021,9 @@ function randn_bm() {
       generation_results.robustness_check_standard_dev = 0;
       generation_results.race_fitness_all = race_fitness_all;
 
+      generation_results.robustness_single_mutation_qty = 0;
+      generation_results.robustness_single_mutation_average = 0;
+      generation_results.robustness_single_mutation_times = [];
 
       //get the power data of the best race
       generation_results.best_race_rider_power = best_race_rider_power;
@@ -867,11 +1057,16 @@ function randn_bm() {
         race_r.start_order = [...load_race_properties.start_order];
 
         let robustness_check_results = run_robustness_check(settings_r, race_r, riders_r);
+
         generation_results.robustness_check_number_of_mutants = settings_r.robustness_check_population_size;
         generation_results.robustness_check_average_mutant_time_taken = robustness_check_results.average_mutant_time_taken;
         generation_results.robustness_check_standard_dev = robustness_check_results.robustness_check_standard_dev;
         generation_results.robustness_check_best_mutant_time_taken = robustness_check_results.fittest_mutant_time_taken;
         generation_results.robustness_check_worst_mutant_time_taken = robustness_check_results.unfittest_mutant_time_taken;
+
+        generation_results.robustness_single_mutation_qty = robustness_result.robustness_single_mutation_qty;
+        generation_results.robustness_single_mutation_average = robustness_result.robustness_single_mutation_average;
+        generation_results.robustness_single_mutation_times = robustness_result.robustness_single_mutation_times;
 
         console.log("Run robustness check generation " + g + robustness_check_results.message);
       }
@@ -1117,6 +1312,8 @@ function randn_bm() {
     // split the popualtion into a set of groups; there may be a remainder
     let group_size = settings_r.ga_tournament_selection_group_size;
     let remainder = (current_population.length % group_size);
+
+
     //debugger;
     //return a new population based on mini-tournaments in current population.
     for(let i = 0;i< (current_population.length-remainder);i+=group_size){
@@ -1137,12 +1334,149 @@ function randn_bm() {
           best_time_player=current_population[i+k];
         }
       }
-      //make group_size copies of the winner and put them in the new population
+      //make group_size copies of the winner as is, or crossed over, or mutated and put them in the new population
+
+      //work out the proportional fitnesses for roulette selection
+      //work out the sum of race times
+      let sum_of_race_times = 0;
+      for(let k2 = 0;k2<group_size;k2++){
+        sum_of_race_times += current_population[(i+k2)].time_taken;
+      }
+      //now get the current fitness proportion with 1-(time/sum_times)
+      for(let k2 = 0;k2<group_size;k2++){
+        current_population[(i+k2)].tournament_proportional_fitness = (1-(current_population[(i+k2)].time_taken/sum_of_race_times));
+      }
+
+
 
       for(let k = 0;k<group_size;k++){
         let new_race = {};
+
+        //donalK25: added a new switch to use random selections from each group (with replacement)
+        let ga_selection_type = "tournament_elitist_winner_takes_all";
+        if (typeof(settings_r.ga_selection_type) != "undefined"){
+          ga_selection_type = settings_r.ga_selection_type;
+        }
+
+        if (ga_selection_type == "tournament_random_with_replacement"){
+            //generate a rando number between i and k
+            console.log("****** tournament_random_with_replacement ******");
+            let rand1 = Math.floor(i + Math.random()*(k-i));
+
+            new_race = current_population[rand1];
+            new_race.stats = {};
+            new_race.stats.number_of_instructions_added = 0;
+            new_race.stats.number_of_instructions_removed = 0;
+            new_race.stats.number_of_instructions_moved = 0;
+            new_race.stats.number_of_effort_instructions_changed = 0;
+            new_race.stats.number_of_drop_instructions_changed = 0;
+            new_race.stats.number_of_start_order_shuffles = 0;
+            new_race.stats.number_of_drop_instructions = 0;
+            stats.number_of_direct_copies++;
+        }
+        else if(ga_selection_type == "tournament_elitist_roulette"){
+          console.log("----------------- ga_selection_type tournament_elitist_roulette -----------------")
+          if((i+k) == best_time_index){
+            //add self without mutations at all - this is elitism at work
+            new_race = current_population[(i+k)];
+            new_race.stats = {};
+            new_race.stats.number_of_instructions_added = 0;
+            new_race.stats.number_of_instructions_removed = 0;
+            new_race.stats.number_of_instructions_moved = 0;
+            new_race.stats.number_of_effort_instructions_changed = 0;
+            new_race.stats.number_of_drop_instructions_changed = 0;
+            new_race.stats.number_of_start_order_shuffles = 0;
+            new_race.stats.number_of_drop_instructions = 0;
+
+            stats.number_of_direct_copies++;
+            //note: make sure the starting order of this race doesn not change!
+          }
+          else{ //otherwise, add a mutant or a crossover child of the group winner
+            console.log("choose two crossover parents using rolette")
+
+            let parent1 = {};
+            parent1.stats = {};
+            parent1.stats.number_of_instructions_added = 0;
+            parent1.stats.number_of_instructions_removed = 0;
+            parent1.stats.number_of_instructions_moved = 0;
+            parent1.stats.number_of_effort_instructions_changed = 0;
+            parent1.stats.number_of_drop_instructions_changed = 0;
+            parent1.stats.number_of_start_order_shuffles = 0;
+            parent1.stats.number_of_drop_instructions = 0;
+
+            let parent2 = {};
+            parent2.stats = {};
+            parent2.stats.number_of_instructions_added = 0;
+            parent2.stats.number_of_instructions_removed = 0;
+            parent2.stats.number_of_instructions_moved = 0;
+            parent2.stats.number_of_effort_instructions_changed = 0;
+            parent2.stats.number_of_drop_instructions_changed = 0;
+            parent2.stats.number_of_start_order_shuffles = 0;
+            parent2.stats.number_of_drop_instructions = 0;
+
+            let parent1_id = 0;
+            let parent2_id = 0;
+            let p_roulette1 = 0;
+            let p_roulette2 = 0;
+            let sum_fitness = 0;
+            // we don't want the two parents to be the same...
+            // maybe if the torunament size is 1 this might cause an infinite loop?
+            let max_tries = 10;
+            while(parent1_id == parent2_id && max_tries > 0) //repeat if they are identical
+            {
+              max_tries -= 1;
+              p_roulette1 = Math.random();
+              p_roulette2 = Math.random();
+
+              for(let k2 = 0;k2<group_size;k2++){
+                sum_fitness += current_population[(i+k2)].tournament_proportional_fitness;
+                if (p_roulette1 <  sum_fitness){
+                  parent1_id = i+k2;
+                  parent1 = current_population[(i+k2)];
+                }
+                if (p_roulette2 <  sum_fitness){
+                  parent2_id = i+k2;
+                  parent2 = current_population[(i+k2)];
+                }
+              }
+            }
+            //dk2020: add crossover effect
+            if (Math.random() < settings_r.ga_p_crossover){
+              //select two parents based on proportional fitnesses
+              //fitness is lowet stime
+              //console.log("Generating CROSSOVER strategy");
+              new_race = crossover(parent1,parent2,settings_r,generation,i+k);
+              //also mutate if the mutate_crossover is set (again, probabilitsic)
+              if (typeof(settings_r.crossover_apply_mutation_probability) != "undefined"){
+                if (Math.random() < settings_r.crossover_apply_mutation_probability){
+                  new_race = mutate_race(new_race,settings_r,generation);
+                  //console.log("****MUTATING CROSSOVER****");
+                }
+              }
+              stats.number_of_crossovers_total++;
+              //need to make sure that the stats properties exist and are set to zero, unlike in a mutation
+              new_race.stats = {};
+              new_race.stats.number_of_instructions_added = 0;
+              new_race.stats.number_of_instructions_removed = 0;
+              new_race.stats.number_of_instructions_moved = 0;
+              new_race.stats.number_of_effort_instructions_changed = 0;
+              new_race.stats.number_of_drop_instructions_changed = 0;
+              new_race.stats.number_of_start_order_shuffles = 0;
+              new_race.stats.number_of_drop_instructions = 0;
+
+            }
+            else{
+              //can use either parent 1 or 2, apply mutation
+              new_race = mutate_race(parent1,settings_r,generation);
+              stats.number_of_mutants_added_total++;
+              settings_r.mutant_counter++; //dk2020 this may be doing something just like the line above :-(
+              }
+            }
+        }
+        else if(ga_selection_type == "tournament_elitist_winner_takes_all"){
+
         if((i+k) == best_time_index){
-          //add self without mutations at all
+          //add self without mutations at all - this is elitism at work
           new_race = current_population[(i+k)];
           new_race.stats = {};
           new_race.stats.number_of_instructions_added = 0;
@@ -1156,7 +1490,7 @@ function randn_bm() {
           stats.number_of_direct_copies++;
           //note: make sure the starting order of this race doesn not change!
         }
-        else{ //otherwise add a mutant Or a crossover child of the gorup winner
+        else{ //otherwise, add a mutant or a crossover child of the group winner
 
           new_race = current_population[best_time_index];
           //dk2020: add crossover effect
@@ -1187,6 +1521,10 @@ function randn_bm() {
             stats.number_of_mutants_added_total++;
             settings_r.mutant_counter++; //dk2020 this may be doing something just like the line above :-(
             }
+          }
+        }//end of loop for selection type for elitist
+        else {
+          console.log("******************** WARNING! ISSUE WITH SELECTION TYPE " + ga_selection_type); + " ********************";
           }
           //console.log("New pop race id group " + i + " (of size "+ group_size + ") best race in group ("+best_time_player.variant_id + "_" + best_time_player.id_generation + "_" + best_time_player.id_type + "_" + best_time_player.id_mutant_counter+") " + new_race.variant_id + "_" + new_race.id_generation + "_" + new_race.id_type + "_" + new_race.id_mutant_counter);
           new_population.push(new_race);
@@ -1266,7 +1604,6 @@ function randn_bm() {
               new_race.stats.number_of_drop_instructions_changed = 0;
               new_race.stats.number_of_start_order_shuffles = 0;
               new_race.stats.number_of_drop_instructions = 0;
-
             }
             else{
               new_race = current_population[parent_population[i]];
@@ -1285,6 +1622,7 @@ function randn_bm() {
     }
 
     function crossover(parent1,parent2,settings_r,generation,population_index){
+
       let new_race_details = {};
       new_race_details.start_order = [...parent1.start_order];
       if(Math.random() > 0.5){
@@ -1313,17 +1651,13 @@ function randn_bm() {
         parent_2_variant = parent2.variant_id;
       }
 
-
       new_race_details.variant_id += parent_1_variant + "|" + parent_2_variant;
 
       //append a unique child identifier based on the current generation and population index
       new_race_details.variant_id += "||" + "G"+generation+"I"+population_index;
-
       new_race_details.id_generation = generation;
       new_race_details.id_type = 2;
       new_race_details.id_mutant_counter = 0;
-
-
 
       //let instruction_1_locations = parent1.instructions.map(a=>a[0]);
       //  let instruction_2_locations = parent2.instructions.map(a=>a[0]);
@@ -1683,8 +2017,6 @@ function randn_bm() {
     race_r.instructions = [];
     race_r.instructions_t = [];
 
-
-
     //dk22: if this is not the first generation, print the best last gen finish timeout
     let enable_pressure_noise = 0;
     if(settings_r.enable_pressure_noise){
@@ -1897,7 +2229,7 @@ function randn_bm() {
             }
           }
           else
-          { // only add an instruciton that is not delayed
+          { // only add an instruction that is not delayed
             let inst = new_instructions[i][1].split("=");
             if (inst.length=2){
               if(inst[0]=="effort"){
@@ -2769,7 +3101,7 @@ function randn_bm() {
 
           if (global_log_message.length > longest_LOG_MESSAGE_found){
             longest_LOG_MESSAGE_found = global_log_message.length;
-            console.log("====== longest_LOG_MESSAGE_found " + longest_LOG_MESSAGE_found);
+            //console.log("====== longest_LOG_MESSAGE_found " + longest_LOG_MESSAGE_found);
           }
           if (global_log_message.length < GLOBAL_LOG_MESSAGE_LIMIT){
 

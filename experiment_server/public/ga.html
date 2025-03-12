@@ -6,7 +6,8 @@
     <link rel="stylesheet" type = "text/css" href = "css/bootstrap.min.css">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css" crossorigin="anonymous">
-    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <!--<script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>-->
+    <script src = "js/jquery.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
     <script src="/saveSvgAsPng.js"></script>
@@ -241,6 +242,15 @@
           <label for="instructions">Instructions:</label>
           <textarea class="form-control" rows="5" id="instructions"></textarea>
         </div>
+        <h3> Race 2</h3>
+        <div class="form-group">
+          <label for="starting_order_race2">Starting Order 2:</label>
+          <input type="text" class="form-control" id="starting_order_race2">
+        </div>
+        <div class="form-group">
+          <label for="instructions_race2">Instructions:</label>
+          <textarea class="form-control" rows="5" id="instructions_race2"></textarea>
+        </div>
       </div>
       <div class="col">
         <div class="form-group">
@@ -261,6 +271,16 @@
         <div class="form-group">
           <button type="button" id="button_check_race_consistency" class="btn btn-warning">
             Check consistency
+          </button>
+        </div>
+        <div class="form-group">
+          <button type="button" id="button_check_race_distance_from_null" class="btn btn-warning">
+            Distance From Null Set
+          </button>
+        </div>
+        <div class="form-group">
+          <button type="button" id="button_check_race_distance_from_race2" class="btn btn-warning">
+            Distance From Race 2
           </button>
         </div>
           <div class="form-group">

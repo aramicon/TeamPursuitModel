@@ -257,53 +257,72 @@ function run_robustness_check(){
 
   $("#robustness_check_result").html("Running robustness check... wait...");
 
-  let current_settings_global = JSON.parse($("#global_settings").val());
-  let current_settings_race = JSON.parse($("#race_settings").val());
-  let current_settings_rider = JSON.parse($("#rider_settings").val());
-  let current_settings_option = $("#experiment_names").val();
-  chosen_global_settings = current_settings_global;
-  chosen_race_settings = current_settings_race;
-  chosen_rider_settings = current_settings_rider;
-
-  //update settings
-  let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
-  if(input_teamOrder.length > 0){
-    chosen_race_settings.start_order = input_teamOrder;
-    //console.log("updated race.start_order " + race.start_order )
+  // don't run if no settigns are selected
+  if($("#global_settings").val().length < 25){ //assuming that the instructions will be longer than 24 chars
+    alert("No experiment selected");
+    $("#cogs").css({"visibility":"hidden"})
   }
-  chosen_race_settings.drop_instruction = 0;
-  chosen_race_settings.live_instructions = [];
-  chosen_race_settings.race_instructions = [];
-  chosen_race_settings.race_instructions_r = [];
-
-  let instructions_t = [];
-  let new_instructions = $('#instructions').val();
-  if(new_instructions.length > 5){
-    //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
-    instructions_t = JSON.parse(new_instructions);
+  else if($('#starting_order').val().length < 5){
+    alert("No start order given");
+    $("#cogs").css({"visibility":"hidden"})
   }
-  if (instructions_t.length > 0){
-    chosen_race_settings.race_instructions_r = instructions_t;
-  }
-
-  if (window.Worker){
-    var gaWorker = new Worker("js/race_function_no_vis.js");
-    gaWorker.onmessage = function(e) {
-      let end_time = new Date().getTime();
-      let result_data = e.data;
-      console.log("Robustness Test Duration " + (end_time - start_time)/1000 + " seconds.");
-      $("#robustness_check_result").html(result_data);
-      //get rid of the thread
-      gaWorker.terminate();
-    }
-    console.log("robustness chosen_rider_settings " + JSON.stringify(chosen_rider_settings));
-
-    gaWorker.postMessage(["run_robustness_check",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
-    start_time =  new Date().getTime();
-    console.log('Robustness Check Message posted to worker');
+  else if($('#instructions').val().length < 5){
+    alert("No instructions given");
+    $("#cogs").css({"visibility":"hidden"})
   }
   else{
-    console.log("Worker cannot be created, maybe not supported by this browser?");
+
+    console.log("** run robustness test for given settings, start order, and instructions **");
+    let current_settings_global = JSON.parse($("#global_settings").val());
+    let current_settings_race = JSON.parse($("#race_settings").val());
+    let current_settings_rider = JSON.parse($("#rider_settings").val());
+    let current_settings_option = $("#experiment_names").val();
+    chosen_global_settings = current_settings_global;
+    chosen_race_settings = current_settings_race;
+    chosen_rider_settings = current_settings_rider;
+
+    //update settings
+    let givenStartingOrder =$('#starting_order').val().replace("[","").replace("]","");
+    let input_teamOrder = givenStartingOrder.split(",").map(a=>+a);
+    if(input_teamOrder.length > 0){
+      chosen_race_settings.start_order = input_teamOrder;
+      console.log("updated chosen_race_settings.start_order " + chosen_race_settings.start_order )
+    }
+    chosen_race_settings.drop_instruction = 0;
+    chosen_race_settings.live_instructions = [];
+    chosen_race_settings.race_instructions = [];
+    chosen_race_settings.race_instructions_r = [];
+
+    let instructions_t = [];
+    let new_instructions = $('#instructions').val();
+    if(new_instructions.length > 5){
+      //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+      instructions_t = JSON.parse(new_instructions);
+    }
+    if (instructions_t.length > 0){
+      chosen_race_settings.race_instructions_r = instructions_t;
+    }
+
+    if (window.Worker){
+      $("#robustness_check_result").html("Running a robustness test<br>Start order: " + JSON.stringify(chosen_race_settings.start_order) + "<br>Instructions: " + JSON.stringify(instructions_t));
+      var gaWorker = new Worker("js/race_function_no_vis.js");
+      gaWorker.onmessage = function(e) {
+        let end_time = new Date().getTime();
+        let result_data = e.data;
+        console.log("Robustness Test Duration " + (end_time - start_time)/1000 + " seconds.");
+        $("#robustness_check_result").html(result_data);
+        //get rid of the thread
+        gaWorker.terminate();
+      }
+      console.log("robustness chosen_rider_settings " + JSON.stringify(chosen_rider_settings));
+
+      gaWorker.postMessage(["run_robustness_check",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
+      start_time =  new Date().getTime();
+      console.log('Robustness Check Message posted to worker');
+    }
+    else{
+      console.log("Worker cannot be created, maybe not supported by this browser?");
+    }
   }
 
 }
@@ -362,6 +381,44 @@ function run_consistency_check(){
     console.log("Worker cannot be created, maybe not supported by this browser?");
   }
 
+}
+
+function run_distance_from_null_check(){
+  //to meaure diversity we want to give a strategy a score that changes as it does
+  //with some semblance of distance, whereby strategies can be more or less similar
+  console.log("** Measure strategy distance from null **");
+  $("#robustness_check_result").html("Running distance-from-null check... wait...");
+  //first measure the distance between starting order and null,
+  //hmmm... if I count the values I will get the SAME answer for every one.
+  // how are starting orders closer or further apart?
+  //attempt 1, give each configuration a unique value... there are N! of them?
+  // d1* 0 +
+  let starting_order = JSON.parse($('#starting_order').val());
+
+  let starting_order_distance_from_null = 0;
+  let starting_order_distance_from_null_2 = 0;
+
+  //calc n factorial
+  let n_fact = 0;
+  for(let i = 1; i <= starting_order.length;i++){
+    n_fact *= i;
+  }
+
+  if(typeof(starting_order) == "object"){
+    if(starting_order.length){//it is iterable, i.e., an array
+
+      for(let i = 0; i < starting_order.length;i++){
+        if(parseInt(starting_order[i])){
+          starting_order_distance_from_null+= (i * parseInt(starting_order[i]));
+          starting_order_distance_from_null_2 += (n_fact/(Math.pow(starting_order.length,i)*starting_order[i]));
+        }
+      }
+    }
+  }
+  //starting_order_distance_from
+  $("#robustness_check_result").html("starting_order_distance_from_null " + starting_order_distance_from_null + "<br>starting_order_distance_from_null_2" + starting_order_distance_from_null_2);
+  console.log("starting_order_distance_from_null " + starting_order_distance_from_null);
+  console.log("starting_order_distance_from_null 2" + starting_order_distance_from_null_2);
 }
 
 
@@ -1248,6 +1305,7 @@ const getDateTime = (format) => {
   return dateString;
 }
 
+if(typeof($)!=='undefined'){
 
 $(document).ready(function() {
 
@@ -1256,6 +1314,7 @@ $(document).ready(function() {
   $("#button_evolve_instructions").on("click", run_ga);
   $("#button_check_race_robustness").on("click", run_robustness_check);
   $("#button_check_race_consistency").on("click", run_consistency_check);
+  $("#button_check_race_distance_from_null").on("click", run_distance_from_null_check);
   $("#button_update_settings").on("click", updateExperimentSettings);
   $("#button_add_new_settings").on("click", addNewExperimentSettings);
 
@@ -1340,3 +1399,10 @@ getExperimentNames();
 setClientID();
 }
 );
+}
+else{
+  console.log("no jquery");
+  alert("No jQuery!!!");
+  //try to load settings from the experiment server
+
+}

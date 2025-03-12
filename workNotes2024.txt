@@ -1,0 +1,61 @@
+-- started new notes file April 27th, Todos Santos.
+
+-- what's the link to the leave of absence form?
+- https://www.universityofgalway.ie/student-registry-helpdesk/leave-of-absence/ Apply Here link on bottom right
+Do I fill this out, try to call Colm's office on Monday, send an email to Deirdre/Michael Madden?
+
+-- on to the wurk. write and do. write and do.
+
+
+
+
+things to do before Jenn arrives
+
+- sell shirts on depop
+
+- donate/sell shirt and some books to charity 
+
+- submit idea to Oil, write poems and make slideshow
+
+- sell sigma lens?
+
+- get back into yoga 
+
+- get up early even once 
+
+- start working on knee
+
+- hang calendar and art in house 
+
+
+
+
+
+- fix alan's website 
+
+
+
+
+pertsit shankill 
+
+- bins 
+
+cherry wood vts
+
+harv - 
+
+- list of tests to run
+
+- 1, no improvement. example of resulting strategy 
+- 2 selection that is NOT based on fitness, purely random.
+
+
+-- add an overall switch for turning mutations fully off. want to test with no mutations but not set each one to 0.
+
+- "ga_mutation_switch":0,
+
+-- ok, ahd to add more code than hoped for, but now mutate_race() returns a clone of the original, with some stats settings added
+
+	"ga_p_crossover": 0.3, - set this to 0, should then have NO crossover of mutation, but still have fitness based selection, so clones of the best strategy will spread?
+
+- next step wou;d be to have random selection instead of fitness-based 

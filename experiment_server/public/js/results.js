@@ -118,8 +118,10 @@ const draw_finish_times_graph = (generation) => {
 
 const clearCanvas = () => {
   //clear the canvas
-  console.log("Clear the canvas");
+  console.log("Clear the canvas and raw data");
   d3.select('#graph').selectAll('*').remove();
+  //also clear the raw data text input
+  $("#data_display").val('');
 }
 
 const draw_line_graph = (graph_name_opt) =>{
@@ -166,6 +168,8 @@ const draw_line_graph = (graph_name_opt) =>{
       let graph_data_4 = {};
       let graph_data_5 = {};
 
+      let graphYScaleMaxBuffer = 10;
+
       //set the data based on the selection
       if (graph_name=="best_fitness_per_generation"){
 
@@ -200,14 +204,14 @@ const draw_line_graph = (graph_name_opt) =>{
 
         graph_title = "Best Fitness Robustness";
         graph_data_1 = {};
-        graph_data_1.title = "Fastest Race";
+        graph_data_1.title = "Best-in-gen";
         graph_data_1.x_label = "GA Generation";
         graph_data_1.y_label = "Race Finish Time (s)";
         graph_data_1.x_scale_from = 0;
 
         graph_data_1.x_scale_to = selected_ga_results.generations.length;
-        graph_data_1.y_scale_from = 0;
-        graph_data_1.y_scale_to = d3.max(selected_ga_results.generations, function(d) { return +d.robustness_check_worst_mutant_time_taken; });
+        graph_data_1.y_scale_from = 280;
+        graph_data_1.y_scale_to = d3.max(selected_ga_results.generations, function(d) { return +d.robustness_check_average_mutant_time_taken + graphYScaleMaxBuffer });
 
         graph_data_1.data = [];
         for (i=0;i<selected_ga_results.generations.length;i++){
@@ -215,35 +219,34 @@ const draw_line_graph = (graph_name_opt) =>{
         }
 
         graph_data_2 = {};
-        graph_data_2.title = "Robustness Mutant Avg.";
+        graph_data_2.title = "Mutant Avg.";
         graph_data_2.data = [];
         for (i=0;i<selected_ga_results.generations.length;i++){
           graph_data_2.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].robustness_check_average_mutant_time_taken});
         }
 
+        // graph_data_3 = {};
+        // graph_data_3.title = "Mutant Worst.";
+        // graph_data_3.data = [];
+        // for (i=0;i<selected_ga_results.generations.length;i++){
+        //   graph_data_3.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].robustness_check_worst_mutant_time_taken});
+        // }
+
         graph_data_3 = {};
-        graph_data_3.title = "Robustness Mutant Worst.";
+        graph_data_3.title = "Mutant Best";
         graph_data_3.data = [];
         for (i=0;i<selected_ga_results.generations.length;i++){
-          graph_data_3.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].robustness_check_worst_mutant_time_taken});
+          graph_data_3.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].robustness_check_best_mutant_time_taken});
         }
 
-        graph_data_4 = {};
-        graph_data_4.title = "Robustness Mutant Best";
-        graph_data_4.data = [];
-        for (i=0;i<selected_ga_results.generations.length;i++){
-          graph_data_4.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].robustness_check_best_mutant_time_taken});
-        }
-
-        graph_data_5 = {};
-        graph_data_5.title = "Std. Deviation";
-        graph_data_5.data = [];
-        for (i=0;i<selected_ga_results.generations.length;i++){
-          graph_data_5.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].robustness_check_standard_dev});
-        }
-
-
+        // graph_data_5 = {};
+        // graph_data_5.title = "Std. Deviation";
+        // graph_data_5.data = [];
+        // for (i=0;i<selected_ga_results.generations.length;i++){
+        //   graph_data_5.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].robustness_check_standard_dev});
+        // }
       }
+
       else if (graph_name=="instructions_change_per_generation"){
         raw_data = []; //donalK22, output data so it can be used in Python graphing code
 
@@ -310,8 +313,6 @@ const draw_line_graph = (graph_name_opt) =>{
         }
         }
         raw_data.push(raw_data_average_drop_instructions);
-
-
       }
       else if (graph_name=="variants_per_generation"){
 
@@ -671,11 +672,11 @@ svg.append("text")
 //   svg.append("text").attr("x", totalWidth - (legendLeftIndent - bulletIndent)).attr("y", 100).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
 // }
 
-//try to dynamically sapce out the legend labels using their widths
+//try to dynamically space out the legend labels using their widths
 let legend_label_offset = 100;
 let legend_icon_gap = 12;
 let legend_line_length = 60;
-let legend_average_char_width = 16;
+let legend_average_char_width = 14;
 let legend_gap_length = 10;
 let legend_line_segment_y = -22;
 
@@ -791,8 +792,22 @@ case "generation_instructions_info":
     if(raw_data_string){
      $("#data_display").val(raw_data_string);
  }
-
 }
+  break;
+case "robustness_instruction_variation_times":
+
+  raw_data = []; //donalK24, output data of robustness test where each instruction is varied
+  for (i=0;i<selected_ga_results.generations.length;i++){
+    let generation_result_array = [];
+    //gen id
+    generation_result_array.push(selected_ga_results.generations[i].generation_id);
+    //original time
+    generation_result_array.push(selected_ga_results.generations[i].best_race_time);
+    //array of times after mutations
+    generation_result_array.push(JSON.parse(selected_ga_results.generations[i].robustness_single_mutation_times));
+    raw_data.push(generation_result_array);
+  }
+  $("#data_display").val(JSON.stringify(raw_data));
 
 
   break;
@@ -843,7 +858,6 @@ const draw_multi_line_graph = (graph_name_opt) =>{
 
         let is_raw_data = false;
 
-
         let graph_title ="unknown";
         let graph_data_1 = {};
         let graph_data_2 = {};
@@ -855,15 +869,12 @@ const draw_multi_line_graph = (graph_name_opt) =>{
           case "best_in_final_gen_tests":{
             is_raw_data = true;
 
-
             console.log("|||||||||||| Data for best in gen tests ||||||||||||");
             console.log(data);
 
             //try to parse the data
             best_in_final_gen_tests_dataset = [];
             let total_data_object =data;
-
-
             for(let i = 0; i<total_data_object.length; i++){
 
               let best_in_final_gen_noise_value = total_data_object[i].best_in_final_gen_noise_value;
@@ -893,8 +904,6 @@ const draw_multi_line_graph = (graph_name_opt) =>{
           let short_titles = Array.from(data[0]);
           data = data.splice(1);
           is_raw_data = false;
-
-
 
           //set the data based on the selection
           if (graph_name=="best_fitness_per_generation"){

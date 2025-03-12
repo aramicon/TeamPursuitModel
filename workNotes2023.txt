@@ -488,3 +488,253 @@ name:~=771
 -- Tuesday 7th of Nov
 
 -- work on simulated annealing. need to write on it while making code, this can be a way into starting the writing, need 1000 words a day
+
+
+let is_effort_instruction = current_instruction[1].indexOf("effort");
+
+let current_effort = parseFloat(current_instruction[1].split("=")[1]);
+              
+let new_effort = Math.floor((current_effort + ((range_to_change_effort*-1) + (Math.random()*(range_to_change_effort*2))))*100)/100;
+if(new_effort < settings_r.minimum_power_output){
+	new_effort = settings_r.minimum_power_output;
+}
+else if(new_effort > 9){
+	new_effort = 9;
+}
+current_instruction[1] = "effort=" + new_effort;
+
+else{ //drop 
+  current_instruction[1] = "drop=" + (1 + Math.floor(Math.random()*(settings_r.ga_team_size-1)));
+
+if(Math.random() < p_move_instruction){
+            let new_location = current_instruction[0] + Math.floor((range_to_move_instruction*-1) + (Math.random()*(range_to_move_instruction*2)));
+            if(new_location < 0){
+              new_location = 0;
+            }
+            if(new_location > time_taken_old){
+              new_location = time_taken_old;
+            }
+            //only move it there is NOT an instruciton already there
+            if(r.instructions.filter(a => a[0] == new_location).length==0 && new_race.instructions.filter(a => a[0] == new_location).length==0){
+              current_instruction[0] = new_location;
+              new_race.stats.number_of_instructions_moved++;
+            }
+			
+			o*X = o+n
+			X = (n)/o
+			
+			
+			1 2 3
+			
+			o = 2
+			a = 2
+			
+			1 + ((o + a-1) % 3) = 1
+			
+		
+-- sunday 11th. 4 hours to do?
+-- go through the new robustness coding.
+
+-- idea, shouldn't repeat a run, i.e. we don't want to waste time re-doing them. But is it efficient to check?
+
+-- make the probability constants global settings
+
+-- still don't know why there is race_r.instructions and race_r.instructions_r? 
+
+-- print a parallel array to show, for each mutation, the actual mutation as well as the race time. Many seem to be unchanged from the original, are these EFFORT or DROP? 
+
+-- seems like some of these drop instructions can be removed to no ill-effect?
+
+-- note there are unused instructions with timesteps too high
+
+-- a drop has a cost but the same cost for each value.
+
+-- need to graph the effects of the instruction variations: some kind of box-plot?
+
+-- some instructins may be much more sensitive than others. how do i represent this or visualise it?
+
+-- let's look at some kinds of plot to see what might work.. box plot? shows min/max/median/Q1/Q3
+
+-- weird, one of the mutations looks like this: [515,"effort=7.83"] -> [296.206,"effort=7.83"] Looks like this is the race finish time?
+
+-- ah, the issue is if the adjustment is a timestep one and it tries to push the time past the original finish time.
+if(new_location > time_taken_old){
+              new_location =time_taken_old;
+            }
+-- this shoudl fix it
+if(new_location > time_taken_old){
+              new_location = Math.floor(time_taken_old);
+            }
+			
+			
+-- try to create a violin graph to show the variation of the single mutation finish times and how it varies from generation to generation.
+
+-- what do we need to log? every difference, +/- from the original finish time.
+
+-- add robustness_instruction_variation_times to the results page.
+
+-- raw data format? [[0,297.12, [298.34,297.123]],...,] [[generation, best_in_gen_time,[list of instruction variation times]]]
+
+robustness_result.robustness_single_mutation_qty = robustness_single_mutation_times.length;
+robustness_result.robustness_single_mutation_average = average_single_mutation;
+robustness_result.robustness_single_mutation_worsening_effect_multiplier = average_percentage_time_worsens_total;
+robustness_result.robustness_single_mutation_times
+
+robustness_single_mutation_average is 0.
+
+-- 14 Feb 2024.i still alive.
+-- buggo im the code again, wasn't totalling or averaging right. 
+
+-- seems to be saving, have the following in the results: 
+robustness_single_mutation_qty":66,"robustness_single_mutation_average":312.25,"robustness_single_mutation_times:[......]
+
+-- next to the graph to just spit out the times...
+
+make the clear canvas button also clear the raw data.
+
+-- basic box plot running, not sure if this is usable.
+
+
+-- run it for a bigger test, e.g. population 3000, 50 generations, make 10 entries in the box plot
+
+-- the violin plot works but not sure if it's actually useful, can i put it in a paragraph?
+
+-- what changes if i throw random mutations at the whole instruciton set?
+
+-- move the probabilities into the settings
+-- how can i  measure robustness?
+-- is the length of the strategy not important?
+-- is my model not problematic given that it performs ok without any instruction?
+-- think about robustness again as a randomised local search
+
+-- add these 3
+robustness_mutate_inst_time_position_prob 0.3
+robustness_mutate_inst_range_to_move_instruction 2
+robustness_mutate_inst_range_to_change_effort 1
+
+see what happens if you make these daft values, e.g. 
+robustness_mutate_inst_time_position_prob 0
+robustness_mutate_inst_range_to_move_instruction 2
+robustness_mutate_inst_range_to_change_effort 100
+
+this should push all effort instructions to the top or bottom? 
+
+-- weird results, not sure how to decipher them, maybe step through an example or two?
+-- bug, it doesn't pick up the time prob since it is set to 0 and this is falsy
+need to use   if (settings_r.hasOwnProperty('x')){}
+instead of if(settings_r['x']){}
+
+think about measuring the comparative robustness of an instruction in relation to its peers,
+and that of the strategy as a whole to others 
+
+go back to the original Check Robustness button on the GA page and get it to run.
+[0,3,2,1]
+[[144,"effort=6.08"],[210,"effort=6.08"],[239,"drop=1"],[253,"effort=7.47"],[256,"drop=3"],[262,"effort=9"],[266,"effort=8.55"]]
+
+-- make sure a settings is selected...
+settings has no start_position_offset?
+
+-- oh, problem is a NaN as a start order.
+
+-- huh, it runs now, and seems to run the new instruction tests 
+
+-- now returns the new tests, but the average % worsens time is 1. Looks wrong. Maybe work out in a spreadsheet?
+
+-- create a grand TOC that has some kind of progress bar
+
+-- i can actually put in progress bars https://www.statology.org/google-sheets-progress-bars/
+
+
+-- Feb 22, 2024. on an airplane over Greenland on the way to Seattle.
+
+-- we want to measure diversity, compare a strategy to a null strategy or to another strategy, measure how different they are.
+
+-- on GA page add a new botton at the robustness section.
+
+-- new inputs starting_order_race2 and instructions_race2, new button button_check_race_distance_from_null
+-- new function run_distance_from_null_check()
+-- NaN is not truthy 
+
+-- ah carp, jQuery is not local! I can't actually work offline? I've done it before so it must cache it?
+
+-- weird, attaching a different locally found jQuery works, now I can go again...
+
+-- how to give each starting order a unique number that has some measure or distance? 
+-- again, how many moves are needed? but this is a combination and we are comparing it to null.
+-- sum(team_num*pos) e.g. [1,2,3] = 0*1 + 1*2 + 2*3 = 6. But [1,3,2] will give you the same score? 0*1 + 1*3 + 2*2 = 7.
+-- works but no idea if it makes any sense?
+-- each needs to be different?
+-- imagine with just 2. [1,2]. [1,2] = 2 [2,1] = 1
+-- with 3 .. ah crap write some code... loops in loops.
+
+function testcombos4(){
+	for(let i = 0; i < 4; i++){
+		for(let j = 0; j < 4; j++){
+			if(j!==i){
+				for(let k = 0; k < 4; k++){
+					if(k!== j && k!== i){
+						for(let l = 0; l < 4; l++){
+							if(l!==k && l!==j && l!== i){
+								console.log(i + " " + j + " " + k + " " + l + " = " + (i*0 + j*1 + k*2 + l*3));					
+							}
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+-- ok so [0,3,1,2] = 11 and [0,2,3,1] = 11. this is a dud then?
+
+I know this is possible, like indexing the N! space... 4*3*2*1. 3,2,1... a, c, b. 
+
+-- PSO
+
+put in the difference between a flock and a swarm as a footnote (in a flock each agent pays attention to its direct neighbours)
+
+[DK] Week 1 >>> Discussion 1: Object-Oriented Heavy Lifter, but flawed? - Java Strength & Weakness
+
+Java is a very established language, but is one of many, even where it once dominated in large scale enterprise architectures.
+
+What do you see as Java's principal strength and Java's principle drawback?
+ 
+
+If using an outside resource when responding to these questions, please support your responses with text citations, following Harvard referencing guidelines in the Cite it Right Guide to Harvard Referencing, 4th edition. https://libguides.ul.ie/citeitright
+
+
+
+
+[DK] Week 1 >>> Discussion 2: Which IDE is best for thee?*
+
+Take a look online and see what Java Integrated Development Environments (IDEs) you can find. Research their capabilities and reputation and share the information with your classmates.
+
+What's your opinion of the tools your classmates have found? 
+
+* We'll use Eclipse even if you rank something else superior.
+
+If using an outside resource when responding to these questions, please support your responses with text citations, following Harvard referencing guidelines in the Cite it Right Guide to Harvard Referencing, 4th edition. https://libguides.ul.ie/citeitright
+
+
+[DK] Week 1 >>> Uncredited Discussion: A Total Eclipse of the Heart
+
+Hi all,
+
+Welcome to a new Monday and a new module, where we'll get to joust with Java and explore the orient ourselves on obect-oriented design.
+
+I've never taught this module before, and I'm looking forward to picking up some new things; in my work in the DISC support lab we had a lot of Java assignments coming in, it's a mainstay langauge in the computer science undergratuate programs. I also worked on some Stuts and JSF and Spring code ago ago.
+
+From my experience with the assignments it is slower to pick up then the likes of Python, and pretty unwieldy if you want to do something quickly like create a web service  (servlets are little fun), but on the other hand it is fast, well structured, has a big enterprise ecosystem, lots of libraries available, documentation, tutorials, online help, etc. It is also very object oriented, and more or less forces you to grasp object oriented principles as you go. Java is a good feather in the cap and line on a CV. If you have built up knowledge in another language it will transfer well, though it might take a little work at first to get used to things.
+
+This week a big aim is to get set up with the Eclipse IDE and get to that vital "howya world" stage as quickly as possible: in theory Java should run fine on pretty much all machines, but if you haven't used it before I'd recommend doing this pretty early in the week.
+
+If you run into issues or have any advice for others they might find useful, please post in this discussion and hopefully all of us will have things running smoothly for the rest of the module.
+
+I'd also advise you to wander through the Cite it Right Guide to Harvard Referencing, 4th edition PDF and use these discussions to practice using references and citations. 
+
+Finally I'd also recommend that you treat java a little like a human language like French or English, and spending a bit of time learning off its keywords and generl syntax, and finding examples of code to read, to try and immerse yourself a bit over the weeks.  
+
+
+Best of luck!
+
+Donal
