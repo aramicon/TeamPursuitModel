@@ -150,7 +150,7 @@ function power_from_velocity(aero, headwind, total_resistance, transv, target_ve
   return powerv;
 }
 
-function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold, rider_max ){
+function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold, rider_max, maximum_effort_value ){
   let power_from_effort = 0;
 
   if (rider_effort < threshold_effort_level){
@@ -160,12 +160,12 @@ function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold,
     power_from_effort = rider_threshold;
   }
   else{
-    power_from_effort = rider_threshold + (rider_max - rider_threshold) *((rider_effort-threshold_effort_level)/(9-threshold_effort_level));
+    power_from_effort = rider_threshold + (rider_max - rider_threshold) *((rider_effort-threshold_effort_level)/(maximum_effort_value-threshold_effort_level));
   }
   //console.log("mapped effort " + rider_effort + " to power " + power_from_effort);
   return power_from_effort;
 }
-function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, rider_max ){
+function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, rider_max, maximum_effort_value ){
   let effort_level = 0;
   if (rider_power < rider_threshold){
     effort_level = ((rider_power*threshold_effort_level)/rider_threshold);
@@ -176,7 +176,7 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
   }
   else{ //power is over threshold
     if (rider_power >= rider_max ){
-      effort_level = 9;
+      effort_level = maximum_effort_value;
     }
     else{
       //reverse how power is worked out when over the threshold
@@ -255,7 +255,7 @@ function switchLead(positions_to_drop_back){
   //console.log("power_from_velocity returns " + target_power + " watts");
 
   //now figure out what effort level will equate to this power, and aim for that
-  new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, target_power, new_leader.threshold_power, new_leader.max_power);
+  new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, target_power, new_leader.threshold_power, new_leader.max_power, settings.maximum_effort_value);
   //console.log("Maps to output_level " + new_leader.output_level);
 
   //test: map this output level back to power and see what velocity it produces
@@ -434,6 +434,7 @@ function moveRace(){
         accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
       }
         let failure_level = settings.fatigue_failure_level*accumulated_effect;
+        race_rider.rider_fatigue_failure_level = failure_level;
 
       if(race_rider.endurance_fatigue_level >= failure_level){
         race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
@@ -456,7 +457,7 @@ function moveRace(){
           $("#race_info").html("Leader <strong>overeager </strong> "+ original_output_level + " to " + race_rider.output_level);
         }
 
-      race_rider.current_power_effort = mapEffortToPower(settings.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power );
+      race_rider.current_power_effort = mapEffortToPower(settings.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power, settings.maximum_effort_value);
 
       let target_power = race_rider.current_power_effort; //try to get to this
       //work out the velocity from the power
@@ -554,11 +555,13 @@ function moveRace(){
       //recover if going under the threshold
 
       if (race_rider.power_out < race_rider.threshold_power){
+
         if (race_rider.endurance_fatigue_level > 0){
           let recovery_power_rate = 1;
           if (settings.recovery_power_rate){
             recovery_power_rate = settings.recovery_power_rate;
           }
+          
 
           race_rider.endurance_fatigue_level -= race_rider.recovery_rate* Math.pow(( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
           if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
@@ -647,8 +650,19 @@ function moveRace(){
         level_of_shelter = 0; //after 3m assume no shelter: this is a hardcoded guess
       }
       else if (race_rider.distance_from_rider_in_front > 0){
-        //between 0 and three metres need to drop off - try a linear model
-        level_of_shelter = (1-(level_of_shelter/settings.shelter_max_distance));
+        //between 0 and shelter_max_distance metres need to drop off - try a linear model
+        //donalK25: seeing a major issue with   level_of_shelter = (1-(level_of_shelter/settings.shelter_max_distance));
+        // why is the distance_from_rider_in_front not in there?
+        //debugger;
+        //level_of_shelter = (1-(level_of_shelter/settings.shelter_max_distance));
+        //new version march 2025
+        if (race_rider.distance_from_rider_in_front < settings.target_rider_gap) { //provide no benefit if too close
+          level_of_shelter = 1;
+        }
+        else{
+          // what spot in the gap between min and max shelter are we at? (e.g., 2m to 5m)
+          level_of_shelter = (1-((race_rider.distance_from_rider_in_front-settings.target_rider_gap)/(settings.shelter_max_distance-settings.target_rider_gap)));
+        }
       }
       else if (race_rider.distance_from_rider_in_front == -1){
         //if you have no rider in front of you this distance is set to -1, so you have no shelter
@@ -671,7 +685,9 @@ function moveRace(){
       else{
         accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
       }
+
       let failure_level = settings.fatigue_failure_level*accumulated_effect;
+      race_rider.rider_fatigue_failure_level = failure_level;
       if(race_rider.endurance_fatigue_level >= failure_level){
         current_max_power = (race_rider.threshold_power*((settings.threshold_power_effort_level-settings.recovery_effort_level_reduction)/10));
       }
@@ -978,10 +994,11 @@ function moveRace(){
 
 
       //display the rider properties
-       $("#rider_values_"+i).html("<div class='info_column ic_header'><div class='circle' style='background-color:"+display_rider.colour+"'> </div>" + display_rider.name + "<span class = 'rider_aim'>" + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' <i class="fas fa-flag-checkered"></i>':'') + "</span></div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) +  "</div><div class='info_column'>" + display_rider.time_on_front + " ( " + DecimalPrecision.round((display_rider.time_on_front / race.race_clock)*100,2) + " %) </div>");
+
+       $("#rider_values_"+i).html("<div class='info_column ic_header'><div class='circle' style='background-color:"+display_rider.colour+"'> </div>" + display_rider.name + "<span class = 'rider_aim'>" + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' <i class="fas fa-flag-checkered"></i>':'') + "</span></div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + "(" + Math.round(display_rider.rider_fatigue_failure_level) +  ")</div><div class='info_column'>" + display_rider.time_on_front + " ( " + DecimalPrecision.round((display_rider.time_on_front / race.race_clock)*100,2) + " %) </div>");
 
       if(settings.log_each_step){
-        logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| " + display_rider.step_info;
+        logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + "(" + Math.round(failure_level) + ") |||| " + display_rider.step_info;
       }
     }
     if(settings.log_each_step){
@@ -1344,26 +1361,34 @@ function load_details_from_url(){
             $("#instructions_textarea").val(instructions_from_url);
           }
 
+
+          //donalK25: check if this objet exists first
+          if(instruction_noise_alterations_from_url){
           if(!(Object.keys(instruction_noise_alterations_from_url).length === 0 && instruction_noise_alterations_from_url.constructor === Object)){
             console.log("loaded instruction_noise_alterations from URL: " + JSON.stringify(instruction_noise_alterations_from_url));
             $("#instruction_noise_alterations").val(instruction_noise_alterations_from_url);
           }
+        }
 
+          if(performance_failures_from_url){
           if(!(Object.keys(performance_failures_from_url).length === 0 && performance_failures_from_url.constructor === Object)){
             console.log("loaded performance_failures from URL: " + JSON.stringify(performance_failures_from_url));
             $("#performance_failures_textarea").val(performance_failures_from_url);
           }
+        }
 
+        if(instruction_noise_choke_under_pressure_from_url){
           if(!(Object.keys(instruction_noise_choke_under_pressure_from_url).length === 0 && instruction_noise_choke_under_pressure_from_url.constructor === Object)){
             console.log("loaded instruction_noise_choke_under_pressure_from_url from URL: " + JSON.stringify(instruction_noise_choke_under_pressure_from_url));
             $("#instruction_noise_choke_under_pressure_textarea").val(instruction_noise_choke_under_pressure_from_url);
           }
+        }
+        if(instruction_noise_overeagerness_from_url){
           if(!(Object.keys(instruction_noise_overeagerness_from_url).length === 0 && instruction_noise_overeagerness_from_url.constructor === Object)){
             console.log("loaded instruction_noise_overeagerness_from_url from URL: " + JSON.stringify(instruction_noise_overeagerness_from_url));
             $("#instruction_noise_overeagerness_textarea").val(instruction_noise_overeagerness_from_url);
           }
-
-
+        }
           //need to make sure the race is loaded AFTER we get the settings
           update_race_settings();
           load_race();

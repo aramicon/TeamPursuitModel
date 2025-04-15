@@ -64,13 +64,16 @@ let newton_lookup = []; //used to store newton() function calculations to avoid 
 
 
 function shuffleArray(array) {
+  // this is a version of the Fisher-Yates/knuth shuffle https://en.wikipedia.org/wiki/Fisher%E2%80%93Yates_shuffle#The_modern_algorithm
+
   for (let i = array.length - 1; i >= 0; i--) { //changed i > 0 to i >= 0 cos i figured item at 0 will be less likely to be swapped?
     const j = Math.floor(Math.random() * (i + 1));
     [array[i], array[j]] = [array[j], array[i]];
   }
 }
 
-function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold, rider_max ){
+function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold, rider_max, maximum_effort_value ){
+  //donalK25: changing refs to constant 9 to maximum_effort_value var
   let power_from_effort = 0;
 
   if (rider_effort < threshold_effort_level){
@@ -80,12 +83,12 @@ function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold,
     power_from_effort = rider_threshold;
   }
   else{
-    power_from_effort = rider_threshold + (rider_max - rider_threshold) *((rider_effort-threshold_effort_level)/(9-threshold_effort_level));
+    power_from_effort = rider_threshold + (rider_max - rider_threshold) *((rider_effort-threshold_effort_level)/(maximum_effort_value-threshold_effort_level));
   }
   //console.log("mapped effort " + rider_effort + " to power " + power_from_effort);
   return power_from_effort;
 }
-function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, rider_max ){
+function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, rider_max, maximum_effort_value ){
   let effort_level = 0;
   if (rider_power < rider_threshold){
     effort_level = ((rider_power*threshold_effort_level)/rider_threshold);
@@ -96,11 +99,11 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
   }
   else{ //power is over threshold
     if (rider_power >= rider_max ){
-      effort_level = 9;
+      effort_level = maximum_effort_value;
     }
     else{
       //reverse how power is worked out when over the threshold
-      effort_level = ((rider_power - rider_threshold )*(9-threshold_effort_level))/(rider_max - rider_threshold) + threshold_effort_level;
+      effort_level = ((rider_power - rider_threshold )*(maximum_effort_value-threshold_effort_level))/(rider_max - rider_threshold) + threshold_effort_level;
     }
   }
   //console.log("mapped power " + rider_power + " to effort " + effort_level);
@@ -264,7 +267,8 @@ function randn_bm() {
       new_race.stats.number_of_start_order_shuffles++;
     }
 
-    for(let i = 0;i<time_taken_old;i++){
+    //for(let i = 0;i<time_taken_old;i++){
+    for(let i = 0;i<r.instructions.length;i++){
       if(r.instructions.filter(a => a[0] == i).length == 0){
         //no instruction here- add a new one?
         if (Math.random() < p_add_instruction){
@@ -289,8 +293,8 @@ function randn_bm() {
               if(new_effort < settings_r.minimum_power_output){
                 new_effort = settings_r.minimum_power_output;
               }
-              else if(new_effort > 9){
-                new_effort = 9;
+              else if(new_effort > settings_r.maximum_effort_value){
+                new_effort = settings_r.maximum_effort_value;
               }
               current_instruction[1] = "effort=" + new_effort;
               new_race.stats.number_of_effort_instructions_changed++;
@@ -309,9 +313,12 @@ function randn_bm() {
             if(new_location < 0){
               new_location = 0;
             }
+            //DonalK25 april: could remove this? i.e. let it be slower, and just trim it out if it is not used? otherwise it will have a higher chance of putting instructions right at the last step?
+            /*
             if(new_location > time_taken_old){
               new_location = time_taken_old;
             }
+            */
             //only move it there is NOT an instruciton already there
             if(r.instructions.filter(a => a[0] == new_location).length==0 && new_race.instructions.filter(a => a[0] == new_location).length==0){
               current_instruction[0] = new_location;
@@ -361,9 +368,12 @@ function randn_bm() {
               new_location = 0;
             }
             //don't go over the old time
+            //DonalK25 april: let it go over anf then have it trimmed out it new_instructions_reduced
+            /*
             if(new_location > time_taken_old){
               new_location = Math.floor(time_taken_old);
             }
+            */
             //only move it there is NOT an instruction already there
             //only need to check the original (changing one at a time)
             if(race_r.instructions.filter(a => a[0] == new_location).length==0){
@@ -381,8 +391,8 @@ function randn_bm() {
         if(new_effort < settings_r.minimum_power_output){
         	new_effort = settings_r.minimum_power_output;
         }
-        else if(new_effort > 9){
-        	new_effort = 9;
+        else if(new_effort > settings_r.maximum_effort_value){
+        	new_effort = settings_r.maximum_effort_value;
         }
         new_instruction[1] = "effort=" + new_effort;
         //console.log("*>*>*> robustness instruction mutation END *<*<*<");
@@ -638,9 +648,7 @@ function randn_bm() {
       else{
         consistency_result_dict[race_results_all[i]] = 1;
       }
-
     }
-
 
     consistency_result.message = "Consistency Check: Ran race " + consistency_check_population_size_used + " times. Race times " + JSON.stringify(consistency_result_dict);
     consistency_result.result = consistency_result_dict;
@@ -727,6 +735,7 @@ function randn_bm() {
       let stats_total_number_of_instructions = 0;
       let race_fitness_all = [];
       let stats_average_number_of_instructions = 0;
+      let stats_std_dev_number_of_instructions = 0;
       //need to find the best solution from the whole population
       let final_best_race_properties_index = 0;
       let final_best_race_properties = population[0];
@@ -755,7 +764,6 @@ function randn_bm() {
 
       //dk23 reset the generation_best_time
       generation_best_time = Infinity;
-
 
       let log_generation_instructions_info = false;
       if(settings_r.log_generation_instructions_info){
@@ -798,7 +806,6 @@ function randn_bm() {
           //add data to the structure for saving instruciton info
           //will need to go through each instruciton for each citizen
           for (let ii = 0; ii < race_r.race_instructions_r.length; ii++){
-            //debugger
             let timestep_ii =  parseInt(race_r.race_instructions_r[ii][0]);
             //split the actual instruction
             let inst = race_r.race_instructions_r[ii][1].split("=");
@@ -849,7 +856,6 @@ function randn_bm() {
         let race_r_copy = (JSON.stringify(race_r));
         let riders_r_copy = (JSON.stringify(riders_r));
 
-
         //donalK22: average the results if needed (to handle effects of noise)
         let number_of_races_to_average = 1;
         if (settings_r.number_of_races_to_average){
@@ -871,7 +877,6 @@ function randn_bm() {
             race_results = run_race(settings_r,race_r,riders_r);
             //console.log("====== Race " + a_i + " " + race_results.time_taken + " ======");
             total_time_taken += race_results.time_taken;
-
           }
           average_time_taken = (total_time_taken/number_of_races_to_average);
           //console.log("====== average_time_taken " + average_time_taken + " ======");
@@ -909,12 +914,50 @@ function randn_bm() {
 
         //let's check the 3 arguments to see if anything is changing as the ga loops through the population
 
-
         //load_race_properties.time_taken = race_results.time_taken;
         load_race_properties.time_taken = average_time_taken;
         stats_total_time += load_race_properties.time_taken;
         stats_total_number_of_instructions += load_race_properties.instructions.length;
-        race_fitness_all.push(average_time_taken); //add all times to an arroar to be able to analyse laterz
+        race_fitness_all.push(average_time_taken); //add all times to an array to be able to analyse laterz
+
+        //donalK25: log the number of instructions that happen AFTER the race finishes.
+        // find any instructions with timestamps greater than load_race_properties.time_taken
+
+        //try and trim the unused instructions, if the setting is on
+        let ga_trim_unused_late_instructions = 0;
+        if (typeof(settings_r.ga_trim_unused_late_instructions) != "undefined"){
+          ga_trim_unused_late_instructions = settings_r.ga_trim_unused_late_instructions;
+        }
+
+        let check_inst = load_race_properties.instructions.length-1;
+        while(check_inst >= 0 && load_race_properties.instructions[check_inst][0] > load_race_properties.time_taken){
+          check_inst--;
+        }
+        if(check_inst < load_race_properties.instructions.length-1){
+          //console.log("^^^^^^^^^^ " + (load_race_properties.instructions.length-1 - check_inst) + " instructions past the race end time " + load_race_properties.time_taken + " ^^^^^^^^^^");
+        //  console.log("^^^^^^^^^^ race end time " + load_race_properties.time_taken + " ^^^^^^^^^^");
+          //console.log("^^^^^^^^^^ instructions " + JSON.stringify(load_race_properties.instructions) + " ^^^^^^^^^^");
+
+          if(ga_trim_unused_late_instructions == 1){
+            //create a new array up to the trim point and assign this to the original
+            let trim_array = [];
+            let i_trim = 0;
+            while(i_trim < load_race_properties.instructions.length){
+              if(load_race_properties.instructions[i_trim]){
+                if(load_race_properties.instructions[i_trim][0]){
+                  if(load_race_properties.instructions[i_trim][0] <= Math.floor(load_race_properties.time_taken)){
+                    trim_array.push(load_race_properties.instructions[i_trim]);
+                  }
+                }
+              }
+               i_trim++;
+            }
+
+            //console.log("^^^^^^^^^^ Replace " + JSON.stringify(load_race_properties.instructions) + " with " + JSON.stringify(trim_array) + " ^^^^^^^^^^");
+            load_race_properties.instructions = trim_array;
+          }
+
+        }
 
         //update best race if a new best is found
         //console.log("race run, id " + population[i].variant_id + "_" + population[i].id_generation + "_" + population[i].id_type + "_" + population[i].id_mutant_counter + " " +population[i].time_taken + " seconds | start_order " +  population[i].start_order);
@@ -943,7 +986,6 @@ function randn_bm() {
             //  console.log(global_race_tracker);
             //  console.log(global_riders_tracker);
           }
-
         }
 
         //DonalK2020 june 25: also track the WORST race to see what kind of instructions it is using
@@ -958,11 +1000,8 @@ function randn_bm() {
           worst_race_instruction_noise_choke_under_pressure = race_results.instruction_noise_choke_under_pressure;
           worst_race_instruction_noise_overeagerness = race_results.instruction_noise_overeagerness;
         }
-
-
         //console.log("race " + i + " time taken " + load_race_properties.time_taken + " instructions " + JSON.stringify(race_r.race_instructions_r));
-      }
-
+      } //end of population loop
       if(log_generation_instructions_info){
         console.log("[[[[[[[[ Log log_generation_instructions_info after updates ]]]]]]]]");
         console.log(JSON.stringify(generation_instructions_info));
@@ -975,6 +1014,17 @@ function randn_bm() {
 
       stats_average_time = stats_total_time/population.length;
       stats_average_number_of_instructions = stats_total_number_of_instructions/population.length;
+      //donalK25: work out the standard deviation for the  number of instructions
+      let variance_total = 0;
+      for(let i = 0;i<population.length;i++){
+        variance_total += Math.pow((population[i].instructions.length - stats_average_number_of_instructions),2);
+      }
+      //variance is the mean of the total variance
+      let variance = (variance_total/population.length);
+
+      //the root of this is the standard deviation
+      let std_deviation = Math.sqrt(variance);
+      stats_std_dev_number_of_instructions = DecimalPrecision.round(std_deviation,2);
 
       //find the best instructions
 
@@ -1014,6 +1064,7 @@ function randn_bm() {
 
       generation_results.stats_average_time = stats_average_time;
       generation_results.stats_average_number_of_instructions = stats_average_number_of_instructions;
+      generation_results.stats_std_dev_number_of_instructions = stats_std_dev_number_of_instructions;
       generation_results.robustness_check_number_of_mutants = 0;
       generation_results.robustness_check_average_mutant_time_taken = 0;
       generation_results.robustness_check_best_mutant_time_taken = 0;
@@ -1343,11 +1394,72 @@ function randn_bm() {
         sum_of_race_times += current_population[(i+k2)].time_taken;
       }
       //now get the current fitness proportion with 1-(time/sum_times)
-      for(let k2 = 0;k2<group_size;k2++){
-        current_population[(i+k2)].tournament_proportional_fitness = (1-(current_population[(i+k2)].time_taken/sum_of_race_times));
+      let sum_tournament_proportional_fitness = 0;
+
+      //get the exponent to apply to the fitness proportion amount
+      let ga_tournament_roulette_exponent_group_size_divisor = 4;
+      if (typeof(settings_r.ga_tournament_roulette_exponent_group_size_divisor) != "undefined"){
+        ga_tournament_roulette_exponent_group_size_divisor = settings_r.ga_tournament_roulette_exponent_group_size_divisor;
       }
+      //dynamic version, divide it by 4, store that 4 as a global constant?
+      let ga_selection_fitness_pressure_exponent = (group_size/ga_tournament_roulette_exponent_group_size_divisor);
 
+      //donalK25: set a constant for an adjustment amount to add to the differences between each time and the slowest
+      //otherwise the slowest time has a diff and therefore a fitness of zero
+      //note, after some tests, I replaced this with a simple dynamic version where we simply divide 1/group_size and use that
 
+    //  let ga_roulette_p_of_diff_sum_to_add = 0.02;
+    //  if (typeof(settings_r.ga_roulette_p_of_diff_sum_to_add) != "undefined"){
+    //    ga_roulette_p_of_diff_sum_to_add = settings_r.ga_roulette_p_of_diff_sum_to_add;
+    //  }
+
+      //dynamic version, based on group size
+        let ga_roulette_p_of_diff_sum_to_add = (1/group_size);
+
+      //remember that SMALLER is better, i.e., the fastest solution is the fittest
+      //debugger;
+    //  let minimum_percentage = 0.01; //percentage of the roulette wheel that the slowest value takes up
+      //get the slowest time
+      let slowest_race_time = current_population[i].time_taken;
+      for(let k2 = 1;k2<group_size;k2++){
+        if (current_population[(i+k2)].time_taken > slowest_race_time){
+          slowest_race_time = current_population[(i+k2)].time_taken;
+        }
+      }
+      //now, need the sum of the differences between each time and the slowest (to normalise)
+      let sum_distance_from_slowest_time = 0;
+      let sum_distance_from_slowest_time_with_exponent = 0;
+
+      for(let k2 = 0;k2<group_size;k2++){
+          sum_distance_from_slowest_time += (slowest_race_time - current_population[(i+k2)].time_taken);
+          //sum_distance_from_slowest_time_with_exponent += Math.pow((slowest_race_time - current_population[(i+k2)].time_taken),ga_selection_fitness_pressure_exponent);
+      }
+      //get adjustment to add
+      let adjustment_to_add_to_all_diffs = sum_distance_from_slowest_time * ga_roulette_p_of_diff_sum_to_add;
+
+      //get sum of adjusted diffs with exponent applied
+      let sum_adjusted_diff_with_exponent = 0;
+      for(let k2 = 0;k2<group_size;k2++){
+        sum_adjusted_diff_with_exponent += Math.pow((slowest_race_time - current_population[(i+k2)].time_taken + adjustment_to_add_to_all_diffs),ga_selection_fitness_pressure_exponent);
+      }
+      //now we can normalise these as a proportional fitness- a slice of the roulette wheel
+
+      //now get amount_to_add, (sum_distance_from_slowest_time_with_exponent*minimum_percentage)/(1 + N*minimum_percentage)
+      //let additional_min_amount = (sum_distance_from_slowest_time_with_exponent * minimum_percentage)/(1 + (group_size * minimum_percentage));
+
+      //console.log(" >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent " + ga_selection_fitness_pressure_exponent + " ga_roulette_p_of_diff_sum_to_add " + ga_roulette_p_of_diff_sum_to_add + " slowest_race_time " + slowest_race_time + " sum_distance_from_slowest_time " + sum_distance_from_slowest_time + " adjustment_to_add_to_all_diffs " + adjustment_to_add_to_all_diffs + " sum_adjusted_diff_with_exponent " + sum_adjusted_diff_with_exponent);
+
+      //console.log("i \t race_time \t tournament_proportional_fitness");
+
+      for(let k2 = 0;k2<group_size;k2++){
+        let proportional_improvement_over_slowest = (Math.pow((adjustment_to_add_to_all_diffs + (slowest_race_time - current_population[(i+k2)].time_taken)),ga_selection_fitness_pressure_exponent)/sum_adjusted_diff_with_exponent);
+
+        current_population[(i+k2)].tournament_proportional_fitness = proportional_improvement_over_slowest;
+        sum_tournament_proportional_fitness += proportional_improvement_over_slowest;
+        //console.log((i+k2) + "\t" + current_population[(i+k2)].time_taken + "\t" + current_population[(i+k2)].tournament_proportional_fitness);
+      }
+      // tournament_proportional_fitness should sum to 1 - but does it?
+      //console.log(" >>>>>>>>>> sum of " + group_size + " values of tournament_proportional_fitness " + sum_tournament_proportional_fitness);
 
       for(let k = 0;k<group_size;k++){
         let new_race = {};
@@ -1360,7 +1472,7 @@ function randn_bm() {
 
         if (ga_selection_type == "tournament_random_with_replacement"){
             //generate a rando number between i and k
-            console.log("****** tournament_random_with_replacement ******");
+            //console.log("****** tournament_random_with_replacement ******");
             let rand1 = Math.floor(i + Math.random()*(k-i));
 
             new_race = current_population[rand1];
@@ -1375,7 +1487,7 @@ function randn_bm() {
             stats.number_of_direct_copies++;
         }
         else if(ga_selection_type == "tournament_elitist_roulette"){
-          console.log("----------------- ga_selection_type tournament_elitist_roulette -----------------")
+          //console.log("----------------- ga_selection_type tournament_elitist_roulette -----------------")
           if((i+k) == best_time_index){
             //add self without mutations at all - this is elitism at work
             new_race = current_population[(i+k)];
@@ -1392,7 +1504,7 @@ function randn_bm() {
             //note: make sure the starting order of this race doesn not change!
           }
           else{ //otherwise, add a mutant or a crossover child of the group winner
-            console.log("choose two crossover parents using rolette")
+            //console.log("choose two crossover parents using roulette")
 
             let parent1 = {};
             parent1.stats = {};
@@ -1414,29 +1526,38 @@ function randn_bm() {
             parent2.stats.number_of_start_order_shuffles = 0;
             parent2.stats.number_of_drop_instructions = 0;
 
-            let parent1_id = 0;
-            let parent2_id = 0;
+            let parent1_id = -1;
+            let parent2_id = -1;
             let p_roulette1 = 0;
             let p_roulette2 = 0;
-            let sum_fitness = 0;
+
             // we don't want the two parents to be the same...
             // maybe if the torunament size is 1 this might cause an infinite loop?
             let max_tries = 10;
             while(parent1_id == parent2_id && max_tries > 0) //repeat if they are identical
             {
+              parent1_id = -1; //reset each time, otherwise we exit the loop
+              parent2_id = -1;
               max_tries -= 1;
               p_roulette1 = Math.random();
               p_roulette2 = Math.random();
+              let sum_fitness = 0;
+
+              //debugger;
 
               for(let k2 = 0;k2<group_size;k2++){
                 sum_fitness += current_population[(i+k2)].tournament_proportional_fitness;
-                if (p_roulette1 <  sum_fitness){
+
+                if (parent1_id < 0 && p_roulette1 <  sum_fitness){
                   parent1_id = i+k2;
                   parent1 = current_population[(i+k2)];
                 }
-                if (p_roulette2 <  sum_fitness){
+                if (parent2_id < 0 && p_roulette2 <  sum_fitness){
                   parent2_id = i+k2;
                   parent2 = current_population[(i+k2)];
+                }
+                if(parent1_id >= 0 && parent2_id >= 0){
+                  break;
                 }
               }
             }
@@ -1690,6 +1811,9 @@ function randn_bm() {
             inst_1_counter++;
           }
           else{
+              //if(inst_1_counter ){
+              //  debugger;
+              //}
             if(parent1.instructions[inst_1_counter][0] < parent2.instructions[inst_2_counter][0]){
               new_instructions.push(parent1.instructions[inst_1_counter]);
               //console.log("inst 1 smaller " + parent1.instructions[inst_1_counter][0] + " " + parent1.instructions[inst_1_counter][1]);
@@ -1784,7 +1908,7 @@ function randn_bm() {
 
       }
       new_race_details.instructions = new_instructions;
-      //set the time taken or the mutation resets the whole thing tp []
+      //set the time taken or the mutation resets the whole thing to []
       if(new_race_details.instructions.length > 0){
         new_race_details.time_taken = parseInt(new_race_details.instructions[new_race_details.instructions.length-1][0]) + 10 //10 is arbitrary;
       }
@@ -1989,7 +2113,7 @@ function randn_bm() {
     //now work out the power needed for this new leader using that target velocity
     let target_power = power_from_velocity(aero_A2_no_shelter, settings_r.headwindv, new_leader.aero_tres, settings_r.transv, current_leader_velocity);
     //now work out the output level that will transalte to that power (which can take some time to reach)
-    new_leader.output_level = mapPowerToEffort(settings_r.threshold_power_effort_level, target_power, new_leader.threshold_power, new_leader.max_power)
+    new_leader.output_level = mapPowerToEffort(settings_r.threshold_power_effort_level, target_power, new_leader.threshold_power, new_leader.max_power, settings_r.maximum_effort_value)
 
 
     if (new_leader.output_level < 0){
@@ -2245,8 +2369,8 @@ function randn_bm() {
                     effort_value =  settings_r.minimum_power_output;
                     //console.log("NOISE 1: settign effort to  settings_r.minimum_power_output " +  settings_r.minimum_power_output);
                   }
-                  else if(effort_value > 9){
-                    effort_value = 9;
+                  else if(effort_value > settings_r.maximum_effort_value){
+                    effort_value = settings_r.maximum_effort_value;
                     //console.log("NOISE 1: settign effort to 9");
                   }
                   noise_alteration["altered_instruction"] = [race_r.race_clock, "effort=" + effort_value];
@@ -2326,8 +2450,8 @@ function randn_bm() {
           if(instruction[1] < settings_r.minimum_power_output){
             instruction[1] = 1;
           }
-          else if(instruction[1] > 9){
-            instruction[1] = 9;
+          else if(instruction[1] > settings_r.maximum_effort_value){
+            instruction[1] = settings_r.maximum_effort_value;
           }
           setEffort(settings_r, race_r,riders_r, instruction[1]);
         }
@@ -2423,8 +2547,6 @@ function randn_bm() {
             }
           }
           //dk2023 overeagerness noise
-
-
           let overeagerness_switch = 0;
           if (typeof(settings_r.overeagerness_switch) != "undefined"){
             overeagerness_switch = settings_r.overeagerness_switch;
@@ -2502,7 +2624,7 @@ function randn_bm() {
           }
           //set the power level based on the effort instruction
 
-          race_rider.current_power_effort = mapEffortToPower(settings_r.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power );
+          race_rider.current_power_effort = mapEffortToPower(settings_r.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power, settings_r.maximum_effort_value );
 
           let target_power = race_rider.current_power_effort; //try to get to this
           //work out the velocity from the power
@@ -2798,13 +2920,25 @@ function randn_bm() {
               level_of_shelter = 0; //after 3m assume no shelter: this is a hardcoded guess
             }
             else if (race_rider.distance_from_rider_in_front > 0){
-              //between 0 and three metres need to drop off - try a linear model
-              level_of_shelter = (1-(level_of_shelter/settings_r.shelter_max_distance));
+              //between 0 and shelter_max_distance metres need to drop off - try a linear model
+              //donalK25: seeing a major issue with   level_of_shelter = (1-(level_of_shelter/settings_r.shelter_max_distance));
+              // why is the distance_from_rider_in_front not in there?
+              //debugger;
+              //level_of_shelter = (1-(level_of_shelter/settings_r.shelter_max_distance));
+              //new version march 2025
+              if (race_rider.distance_from_rider_in_front < settings_r.target_rider_gap) { //provide no benefit if too close
+                level_of_shelter = 1;
+              }
+              else{
+                // what spot in the gap between min and max shelter are we at? (e.g., 2m to 5m)
+                level_of_shelter = (1-((race_rider.distance_from_rider_in_front-settings_r.target_rider_gap)/(settings_r.shelter_max_distance-settings_r.target_rider_gap)));
+              }
             }
             else if (race_rider.distance_from_rider_in_front == -1){
               //if you have no rider in front of you this distance is set to -1, so you have no shelter
               level_of_shelter = 0;
             }
+            //console.log(">> a e r o >>  settings_r.target_rider_gap "+settings_r.target_rider_gap+" settings_r.shelter_max_distance "+settings_r.shelter_max_distance+" distance_from_rider_in_front  " + race_rider.distance_from_rider_in_front + "  level_of_shelter  " + level_of_shelter + " *shelter_effect_strength " + shelter_effect_strength + " " + shelter_effect_strength*level_of_shelter);
             race_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter_effect_strength*level_of_shelter))*10000)/10000;
             let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
             let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings_r.transv;
