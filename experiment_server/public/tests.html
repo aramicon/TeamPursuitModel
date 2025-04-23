@@ -1,0 +1,138 @@
+<html>
+  <head>
+    <title>TP TESTS</title>
+    <link rel="shortcut icon" type="image/jpg" href="images/favicon.png"/>
+    <link rel="stylesheet" type = "text/css" href = "css/model3.css">
+    <link rel="stylesheet" type = "text/css" href = "css/bootstrap.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/5.9.2/d3.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.9.0/css/all.min.css" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
+    <!-- <script src = "race_function_no_vis.js" type="module"></script> -->
+
+
+    <script src = "js/test_functions.js"></script>
+
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <div class="col">
+          <nav class="navbar  navbar-expand-lg navbar-dark bg-dark">
+              <div class="collapse navbar-collapse" id="navbarSupportedContent">
+                <ul class="navbar-nav mr-auto">
+                  <li class="nav-item ">
+                    <a class="nav-link active" href="#">Home <span class="sr-only">(current)</span></a>
+                  </li>
+                  <li class="nav-item ">
+                    <a class="nav-link" href="tpgame">Game <span class="sr-only">(current)</span></a>
+                  </li>
+                  <li class="nav-item ">
+                    <a class="nav-link" href="ga">GA <span class="sr-only">(current)</span></a>
+                  </li>
+                  <li class="nav-item ">
+                    <a class="nav-link" href="sequence">Sequence<span class="sr-only">(current)</span></a>
+                  </li>
+                  <li class="nav-item ">
+                    <a class="nav-link" href="results">Results <span class="sr-only">(current)</span></a>
+                  </li>
+                  <li class="nav-item ">
+                    <a class="nav-link" href="test_suite">Test Suite<span class="sr-only">(current)</span></a>
+                  </li>
+                  <li class="nav-item ">
+                    <a class="nav-link" href="about">About <span class="sr-only">(current)</span></a>
+                  </li>
+                </ul>
+            </div>
+          </nav>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+            <h1>test JS special page: loads test_functions.js file</h1>
+        </div>
+      </div>
+
+      <div class="row">
+
+        <div class="col-sm">
+
+          <div class="form-group">
+            <label for="current_velocity">Current velocity:</label>
+            <input type="text" class="form-control" id="current_velocity" value="0">
+          </div>
+
+          <div class="form-group">
+            <label for="target_velocity">target velocity:</label>
+            <input type="text" class="form-control" id="target_velocity" value="1.5">
+          </div>
+
+          <div class="form-group">
+            <label for="total_power">(Total) Power:</label>
+            <input type="text" class="form-control" id="total_power" value="200">
+          </div>
+
+          <div class="form-group">
+            <label for="air_density">Air density:</label>
+            <input type="text" class="form-control" id="air_density" value="1.1696">
+          </div>
+
+
+          <div class="form-group">
+            <label for="rolling_resistance_coefficient">Rolling Res. Coeffic.:</label>
+            <input type="text" class="form-control" id="rolling_resistance_coefficient" value="0.004">
+          </div>
+
+          <div class="form-group">
+            <label for="rider_and_bike_mass">Rider+Bike mass:</label>
+            <input type="text" class="form-control" id="rider_and_bike_mass" value="84">
+          </div>
+
+          <div class="form-group">
+            <label for="gravity_accel">Gravity Accel.:</label>
+            <input type="text" class="form-control" id="gravity_accel" value="9.8">
+          </div>
+
+          <div class="form-group">
+            <label for="drag_coeffic_times_frontal_area">Coeffc. of Drag * Frontal Area:</label>
+            <input type="text" class="form-control" id="drag_coeffic_times_frontal_area" value="0.223">
+          </div>
+
+
+
+          <div class="form-group">
+            <label for="drivetrain_efficiency">Drivetrain Efficiency:</label>
+            <input type="text" class="form-control" id="drivetrain_efficiency" value="0.95">
+          </div>
+
+        </div>
+
+        <div class="col-sm">
+          <div class="form-group">
+            <button type="button" id="velocity_from_power_with_acceleration" class="btn btn-success btn-lg">
+              <i class="far fa-play-circle" style="color:#e62e50;"></i> Velocity From Power
+            </button>
+          </div>
+          <div class="form-group">
+            <button type="button" id="power_from_velocity_with_acceleration" class="btn btn-success btn-lg">
+              <i class="far fa-play-circle" style="color:#e62e50;"></i> Power From Velocity
+            </button>
+          </div>
+        </div>
+
+        <div class="col-sm">
+          <div class="form-group">
+              <div id = "result_velocity_from_power_with_acceleration" class="alert alert-primary">result 1</div>
+          </div>
+          <div class="form-group">
+              <div id = "result_power_from_velocity_with_acceleration" class="alert alert-primary">result 2</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    </body>
+</html>

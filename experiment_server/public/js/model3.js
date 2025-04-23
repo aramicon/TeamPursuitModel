@@ -13,6 +13,10 @@ let targeted_debugging = 0;
 let targeted_debugging_rider_no = 2;
 let targeted_debugging_timestep_range_start = 23;
 let targeted_debugging_timestep_range_end = 30;
+//donalK25: april, add array to log for specific timesteps
+let debug_log_specific_timesteps = [114,115,116,117,118,119];
+
+let power_application_include_acceleration = 1;
 
 let settings = settings_template;
 let race = race_template;
@@ -144,10 +148,89 @@ function power_from_velocity(aero, headwind, total_resistance, transv, target_ve
   // returns a power in watts needed to produce a certain velocity for the given rider
   //target_velocity needs to be in m/s
   //let velocity_ms = target_velocity / 3.6;  // converted to m/s; (this is already done)
+  //note that the target velocity might be an AVERAGE rather than a continuous/constant value
   let total_velocity = target_velocity + headwind;
   let aeroEff = (total_velocity > 0.0) ? aero : -aero; // wind in face; reverse effect
   let powerv = (target_velocity * total_resistance + target_velocity * total_velocity * total_velocity * aeroEff) / transv;
   return powerv;
+}
+
+function power_from_velocity_with_acceleration(aero, headwind, total_resistance, transv, target_velocity,current_velocity, mass){
+  // get the original drag and rolling resistance power, but also need to work in acceleration
+  //if(target_velocity <= current_velocity){
+  //  debugger;
+  //}
+
+  let average_velocity = (current_velocity + target_velocity)/2;
+  let drag_and_rolling_resistance_power = power_from_velocity(aero, headwind, total_resistance, transv, average_velocity);
+  if(drag_and_rolling_resistance_power < 0){
+    drag_and_rolling_resistance_power = 0;
+  }
+  //now need to add on the acceleration
+  let acceleration_power = (0.5*mass*((target_velocity*target_velocity)-(current_velocity*current_velocity))) / transv;
+  if(acceleration_power < 0){
+    acceleration_power = 0;
+  }
+  let powerv = drag_and_rolling_resistance_power + acceleration_power;
+  return powerv;
+
+}
+
+function velocity_from_power_with_acceleration(power_total, C_rr, mass, gravity_force, p_air_density, coefficient_of_drag_x_frontal_area, current_velocity){
+  //assumption: no gradient!
+  //assumption: 1 second of time!
+  // 1: get F_rolling_res
+  //debugger;
+  let rolling_resistance = mass * C_rr * gravity_force;
+
+  let new_velocity = current_velocity;
+  //we need a special case for when the current_velocity is 0, i.e., at the very beginning
+  if (current_velocity <= 0){
+      //1: get total power energy
+      let total_energy = power_total; //multiply power by time, which in this case is 1 second
+
+      //2: get speed is if ALL energy is used to produce a velocity
+      // kinetic_energy = 0.5*mass*velocity^2 so v = square_root(2*kinetic_energy/mass)
+      let velocity_all_energy = Math.sqrt((2*total_energy)/mass); // m/s
+
+      //3: get the average speed (over 1 second)
+      let v_average = velocity_all_energy/2; // (start_v + end_v)/2 where start_v = 0
+
+      //4: estimate rolling resistance work over that distance
+      let rolling_resistance_work = rolling_resistance * v_average; //note that this is very much an estimate
+
+      //5: work out the net energy using (total_energy - rolling_resistance_work)
+      let net_energy = (total_energy - rolling_resistance_work);
+      //6: work out the speed again using this net energy
+      new_velocity = Math.sqrt((2*net_energy)/mass);
+  }
+  else {
+    //for lead rider, after the first timestep
+
+    //use a loop to get more accurate drag values (refinement)
+    let velocity_start = current_velocity;
+    let velocity_end = current_velocity;
+    let velocity_estimate = 0;
+
+    for(let i=0;i<4;i++){
+      velocity_estimate = (velocity_start+velocity_end)/2;
+
+      //2: get F_drag (estimate 1)
+      let drag_force_estimate = 0.5*coefficient_of_drag_x_frontal_area*p_air_density*velocity_estimate*velocity_estimate;
+
+      let power_resistance_estimate = (rolling_resistance + drag_force_estimate) * velocity_estimate;
+
+      //3: get acceleration estimate 1
+      let acceleration_estimate = (power_total - power_resistance_estimate)/(mass*velocity_start);
+      //4: get new velocity estimate 1
+      velocity_end = velocity_start + acceleration_estimate;
+    }
+    new_velocity = velocity_end;
+  }
+
+  // return this new velocity
+
+  return new_velocity;
 }
 
 function mapEffortToPower(threshold_effort_level, rider_effort, rider_threshold, rider_max, maximum_effort_value ){
@@ -180,7 +263,7 @@ function mapPowerToEffort(threshold_effort_level, rider_power, rider_threshold, 
     }
     else{
       //reverse how power is worked out when over the threshold
-      effort_level = ((rider_power - rider_threshold )*(9-threshold_effort_level))/(rider_max - rider_threshold) + threshold_effort_level;
+      effort_level = ((rider_power - rider_threshold )*(maximum_effort_value-threshold_effort_level))/(rider_max - rider_threshold) + threshold_effort_level;
     }
   }
   //console.log("mapped power " + rider_power + " to effort " + effort_level);
@@ -249,10 +332,19 @@ function switchLead(positions_to_drop_back){
   //console.log("Target Velocity = " + current_leader_velocity + " (" + current_leader_velocity*3.6 + ") new_leader.aero_A2 " + new_leader.aero_A2 + " settings.headwindv " + settings.headwindv + " new_leader.aero_tres " + new_leader.aero_tres + " settings.transv " + settings.transv);
 
   // should aim for power to produce the target speed WITHOUT SHELTER so need to make sure the correct aero_A2 value is used
-  let aero_A2_no_shelter = Math.round((0.5 * settings.frontalArea * new_leader.aero_density)*10000)/10000;
-
-  let target_power = power_from_velocity(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, current_leader_velocity);
+  let aero_A2_no_shelter = Math.round((0.5 * settings.frontalArea * new_leader.air_density)*10000)/10000;
+  let target_power = 0;
   //console.log("power_from_velocity returns " + target_power + " watts");
+  //donalK25: apply constant-speed drag calc or acceleration-based calc
+  if(power_application_include_acceleration){
+    target_power = power_from_velocity_with_acceleration(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, current_leader_velocity, new_leader.velocity, (new_leader.weight + settings.bike_weight));
+
+    // console.log("switch lead switch lead ACCEL method, CHASING rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity + " target_power: " + target_power);
+  }
+  else{
+    target_power = power_from_velocity(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, current_leader_velocity);
+  }
+
 
   //now figure out what effort level will equate to this power, and aim for that
   new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, target_power, new_leader.threshold_power, new_leader.max_power, settings.maximum_effort_value);
@@ -289,7 +381,10 @@ function moveRace(){
 
   $("#race_info_clock").text(race.race_clock);
 
-
+//debugging problem discrep april 25
+//if (race.race_clock == 115){
+//  debugger
+//}
   ctx.clearRect(0, 0, c.width, c.height);
 
   //add any stored instructions if found
@@ -373,9 +468,9 @@ function moveRace(){
         console.log("WARNING! effort instruction < 1, updating to minimum 1");
         instruction[1] = 1;
       }
-      else if(instruction[1] > 9){
-          console.log("WARNING!effort instruction > 9, updating to maximum 9");
-        instruction[1] = 9;
+      else if(instruction[1] > settings.maximum_effort_value){
+          console.log("WARNING!effort instruction > max value, updating to maximum from settings.maximum_effort_value");
+        instruction[1] = settings.maximum_effort_value;
       }
       setEffort(instruction[1]);
       $("#instruction_info_text").text(race.race_clock + " - Effort updated to " + instruction[1]);
@@ -409,7 +504,7 @@ function moveRace(){
 
 
     let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
-    race_rider.aero_A2 = Math.round((0.5 * settings.frontalArea * race_rider.aero_density)*10000)/10000;   // full air resistance parameter
+    race_rider.aero_A2 = Math.round((0.5 * settings.frontalArea * race_rider.air_density)*10000)/10000;   // full air resistance parameter
 
     race_rider.step_info = ""; //dk2021 used to add logging info
 
@@ -502,42 +597,15 @@ function moveRace(){
 
       //console.log("***:: " + race.race_clock + " race_rider.accumulated_fatigue " +  race_rider.accumulated_fatigue + " settings.accumulated_fatigue_maximum " + settings.accumulated_fatigue_maximum + " accumulated_effect " + accumulated_effect + " failure_level " + failure_level + " race_rider.endurance_fatigue_level " + race_rider.endurance_fatigue_level + " race_rider.output_level " + race_rider.output_level + " race_rider.current_power_effort " + race_rider.current_power_effort + " power_adjustment " + power_adjustment + " powerv " + powerv + "   ::***");
 
-      //check the lookup table
-      if (use_lookup_velocity)
-      {
-        let lookup_velocity = -1;
-        if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
-          if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
-            lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)];
-          }
-        }
-        if ( lookup_velocity === undefined || lookup_velocity === -1){
-          //does not exist in the lookup so call the function and save it
-          race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
-          if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
-            if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
-              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
-            }
-            else{
-              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
-              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
-            }
-          }
-          else{
-            //add new array for total weight and A2 values
-            newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
-          }
-        }
-        else{
-          race_rider.velocity = lookup_velocity;
-        }
+      let current_velocity = race_rider.velocity;
+      //donalK25: apply constant-speed drag calc or acceleration-based calc
+      if(power_application_include_acceleration){
+        race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings.rollingRes, race_rider.weight + settings.bike_weight, 9.8, race_rider.air_density, settings.frontalArea, current_velocity);
+        console.log("ACCELL method, LEAD rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity);
       }
-      else {
-        //use_lookup_velocity is turned off, so always call the newton function (slower)
-        race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
-    }
+      else{
+          race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
+      }
 
     if(powerv < 0){
       console.log("oh crap! powerv 2 = " + powerv);
@@ -561,7 +629,6 @@ function moveRace(){
           if (settings.recovery_power_rate){
             recovery_power_rate = settings.recovery_power_rate;
           }
-          
 
           race_rider.endurance_fatigue_level -= race_rider.recovery_rate* Math.pow(( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
           if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
@@ -668,9 +735,24 @@ function moveRace(){
         //if you have no rider in front of you this distance is set to -1, so you have no shelter
         level_of_shelter = 0;
       }
-      race_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter_effect_strength*level_of_shelter))*10000)/10000;
-      let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
-      let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings.transv;
+
+        let target_power = 0;
+        let current_velocity = race_rider.velocity;
+        race_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter_effect_strength*level_of_shelter))*10000)/10000;
+        let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
+
+        if(power_application_include_acceleration){
+          debugger
+          target_power = power_from_velocity_with_acceleration(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, target_velocity, race_rider.velocity, (race_rider.weight + settings.bike_weight));
+          // console.log("ACCEL method, CHASING rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity + " target_power: " + target_power);
+        }
+        else{
+        target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings.transv;
+        }
+
+
+
+
 
       //can't go below zero : otherwise riders can go backwards!
       if (target_power < 0){
@@ -732,39 +814,13 @@ function moveRace(){
       powerv+=power_adjustment;
       powerv = Math.round((powerv)*100)/100;
 
-      if (use_lookup_velocity){
-        let lookup_velocity = -1;
-        if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
-          if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
-            lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)];
-          }
-        }
-        if ( lookup_velocity === undefined || lookup_velocity === -1){
-          //does not exist in the lookup so call the function and save it
-          race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
-          if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
-            if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)]){
-              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
-            }
-            else{
-              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
-              newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
-            }
-          }
-          else{
-            //add new array for total weight and A2 values
-            newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)] = [];
-            newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*10000)][parseInt(powerv*100)] = race_rider.velocity;
-          }
+
+      if(power_application_include_acceleration){
+        race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings.rollingRes, race_rider.weight + settings.bike_weight, 9.8, race_rider.air_density, settings.frontalArea, current_velocity);
+        // console.log("ACCELL method, LEAD rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity);
       }
       else{
-        race_rider.velocity = lookup_velocity;
-      }
-    }
-    else {
-       //use_lookup_velocity is turned off, so always call the newton function (slower)
-       race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
+          race_rider.velocity = newton(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, powerv);
       }
 
       //if you are dropping back and get back to the rider in front, go back to a follow state
@@ -997,11 +1053,11 @@ function moveRace(){
 
        $("#rider_values_"+i).html("<div class='info_column ic_header'><div class='circle' style='background-color:"+display_rider.colour+"'> </div>" + display_rider.name + "<span class = 'rider_aim'>" + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' <i class="fas fa-flag-checkered"></i>':'') + "</span></div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + "(" + Math.round(display_rider.rider_fatigue_failure_level) +  ")</div><div class='info_column'>" + display_rider.time_on_front + " ( " + DecimalPrecision.round((display_rider.time_on_front / race.race_clock)*100,2) + " %) </div>");
 
-      if(settings.log_each_step){
-        logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + "(" + Math.round(failure_level) + ") |||| " + display_rider.step_info;
+      if(settings.log_each_step || debug_log_specific_timesteps.includes(race.race_clock)){
+        logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + "(" + Math.round(display_rider.rider_fatigue_failure_level) + ") |||| " + display_rider.step_info;
       }
     }
-    if(settings.log_each_step){
+    if(settings.log_each_step || debug_log_specific_timesteps.includes(race.race_clock)){
       console.log(logMessage);
     }
 
@@ -1109,6 +1165,12 @@ function load_race(){
 
   race.instruction_noise_alterations_r = {};
 
+  //donalK25: set the new global for the acceleration calculations (default to OFF/0)
+  if (typeof(settings.power_application_include_acceleration) != 'undefined'){
+    power_application_include_acceleration = settings.power_application_include_acceleration;
+  }
+
+
   // Set up the switch range points: this is where riders can start to drop back
   // I added settings.switch_prebend_start_addition to allow the swithc to start before the bend proper (speed up switches)
   race.bend1_switch_start_distance = settings.track_straight_length/2 - settings.switch_prebend_start_addition;
@@ -1146,7 +1208,7 @@ function load_race(){
     load_rider.output_level=settings.threshold_power_effort_level;
 
     //set up the aero properties so they don't have to be recalculated
-    load_rider.aero_density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
+    load_rider.air_density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
     load_rider.aero_twt = Math.round((9.8 * (load_rider.weight + settings.bike_weight)*10))/10;  // total weight of rider + bike in newtons, rouded to 1 decimal place
     load_rider.aero_tres = load_rider.aero_twt * (settings.gradev + settings.rollingRes);
 

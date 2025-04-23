@@ -59,3 +59,750 @@ harv -
 	"ga_p_crossover": 0.3, - set this to 0, should then have NO crossover of mutation, but still have fitness based selection, so clones of the best strategy will spread?
 
 - next step wou;d be to have random selection instead of fitness-based 
+
+ga_selection_type:"tournament_random_with_replacement",
+
+- seeeems to work, but how do i know for sure? can see that sometimes the best strategy is taken out.
+
+- what other selection could i use? fitness-proportional. consider the finish times, or positinal based?
+
+
+- create fitness-based elitism for selections... 
+1- copy in tournament winner
+2 - if crossover, select two (different parents) using roulette wheel -crossover and mutate 
+3 - if not, select one parent - mutate
+
+-- how do i know what the seleciton options are?
+
+- explain the drag effect and sheltering 
+- settings that affect it 
+
+	"drafting_effect_on_drag": 0.4,
+	"shelter_max_distance": 4,
+	"two_riders_in_front_extra_shelter": 0.1,
+	"more_than_two_riders_in_front_extra_shelter": 0.12,
+	
+is this line a bug???
+  level_of_shelter = (1-(level_of_shelter/settings_r.shelter_max_distance)); //why is level_of_shelter in that inner section???
+  
+ -- added code to fix this issue. but now need to figure uot how to test it, and also need to mainly write about it... need to finish today!
+ 
+ -- error in the game sim, with this line 
+ if(!(Object.keys(instruction_noise_alterations_from_url).length === 0 && instruction_noise_alterations_from_url.constructor === Object)){
+ - methinks instruction_noise_alterations_from_url is nothing 
+ http://127.0.0.1:3003/tpgame.html?source=ga&settings_id=67d06f3c41cac4023c77e98d&startorder=3,2,1,0&instructions=%5B%5B157,%22drop=2%22%5D,%5B203,%22drop=2%22%5D,%5B277,%22effort=9.71%22%5D,%5B303,%22effort=9.95%22%5D,%5B314,%22drop=3%22%5D,%5B321,%22drop=1%22%5D,%5B345,%22effort=9.59%22%5D,%5B376,%22drop=2%22%5D,%5B461,%22drop=2%22%5D,%5B496,%22drop=2%22%5D,%5B544,%22drop=3%22%5D,%5B592,%22drop=2%22%5D,%5B615,%22effort=9.47%22%5D%5D
+ 
+ -- objects for noise were null, whichs causes failure of object.keys function check
+ 
+ -- now write the formula.
+ 
+ - done, i think, needs more testing.
+ 
+ - should i spend a day goign over the realism of the model, like, compare the number of lead changes, and how long they take, any maybe tune things to make them match a bit?
+ 
+- want a form of instruction that is independent of the rider, i.e. the threshold model with a mapping, but I still don't think this is very well explained? 
+
+- should I move thax to 10? for roundness reasons? 
+
+-- try with 10, seems to run? yeah, seems to run.
+
+-- need to read the WHOLE section
+	
+	
+-- March 24th 25, Shankill
+
+-- need to mention things like the damping mechanism and how constrained increases and decreases in power.
+
+- on to the power mapping now, need to redo that diagram?
+
+-- april 1st 2025
+- should I be removing instructions that aren't used, i.e. those after the finsih time?
+
+- experiemnt with different values for ga_probability_of_instruction_per_timestep_lower and ga_probability_of_instruction_per_timestep_upper.
+
+what would i need to see? average number of instructions? 
+
+- also maybe add a setting that can 'trim' unused instructions after the race is run? even as a coding mechanism... perhaps first log some info about unused instructions. are there many?
+
+- perhaps add the standard deviation of instruction numbers as well as the mean? I expect it will fall over time?
+
+- current settings are 
+	"ga_probability_of_instruction_per_timestep_lower": 0.02,
+	"ga_probability_of_instruction_per_timestep_upper": 0.04,
+
+- could try something way more radical for testing, create some mad ones like?
+
+- could add a stats_num_instructions_after_race_finishes alongside stats_total_number_of_instructions?
+- and a stats_std_dev_number_of_instructions near to stats_average_number_of_instructions
+
+-- wednesday 2nd
+- seems to save the st. dev. should round it to two digits?
+- rounded to 2 using DecimalPrecision.round(std_deviation,2).
+- now look at the idea of trimming unused instructions after the initial round, but before the selection/change
+
+- lots of solutions have extra instrucitons past the finish time
+
+- add a new setting to control this, default to off/0
+-   "ga_trim_unused_late_instructions":1,
+
+- seems tyo have crashed now on this line 
+if(r.instructions.filter(a => a[0] == i).length == 0){ // line 269 
+
+looks like it loops into the trimmed instructions... how to I prevent this?
+
+-- so this loop is the mutation function, and it must essentialluy already trim the set, as it only loops to the time taken. This means it won't happen if mutation is not applied, so it's not consistent. poor.
+
+-- ok, so the current version is already doing a kind of trim when mutating, need to address this... changed it to go through the full length and commented out things based on old_time_taken 
+
+- also throwing a wobbly at line 1739 
+if(parent1.instructions[inst_1_counter][0] < parent2.instructions[inst_2_counter][0]){
+
+
+- test if filtering breaks if the index is greater than the time taken
+r.instructions.filter(a => a[0] == i).length == 0)
+
+-- yikes, it appears like there are a TOn of undefined instructions being addded to the array.. these must have been cleaned out by the old_time_taken code, now it causes a crash in crossover.
+
+-- where is it adding undefined elements???
+
+-- ok, so the loop to trim was dumbies, was based on looping to the finish time, not the array length 
+^^^^^^^^^^ 5 instructions past the race end time 319.253 ^^^^^^^^^^
+js/race_function_no_vis.js:936 ^^^^^^^^^^ race end time 319.253 ^^^^^^^^^^
+js/race_function_no_vis.js:937 ^^^^^^^^^^ instructions [[103,"drop=3"],[159,"effort=4.109999999999999"],[224,"drop=2"],[322,"effort=2.83"],[347,"drop=2"],[364,"drop=3"],[399,"drop=3"],[517,"drop=2"]] ^^^^^^^^^^
+js/race_function_no_vis.js:954 ^^^^^^^^^^ Replace [[103,"drop=3"],[159,"effort=4.109999999999999"],[224,"drop=2"],[322,"effort=2.83"],[347,"drop=2"],[364,"drop=3"],[399,"drop=3"],[517,"drop=2"]] with [[103,"drop=3"],[159,"effort=4.109999999999999"],[224,"drop=2"]] ^^^^^^^^^^
+
+-- seems to work better now. how do i test?
+
+- BUG - looks like, in the results, the best instructions stored are all the same, they are the last fastest one... somereferencing issue no doubt?
+-- n0, I think it is actually the fastest each time, with zero instrucitons, but how does this happen? ooh, is it just probability?
+
+- zero instructions is too fast?? how can i improve on this? 
+
+-- why does such a small amount over effort=6 lead to failure?
+
+-- friday 4th. meet with Cornelia at 3. what do I need to go over?
+
+-- latex not putting in the references... seems to work sometimes, or when i have the core model only... sometimes the citations are also missing. 
+-- table of contents is also not showing. grrrrr
+
+-- went through the bugs noted in the printed version COlm gave me.
+
+-- split the lit review into 2 files, trying to figure out where it went wrong.
+
+
+-- munday 7/4
+
+- bug in code with the roulette selection, it's not summing to one, have a 1- there on the line
+  current_population[(i+k2)].tournament_proportional_fitness = (1-(current_population[(i+k2)].time_taken/sum_of_race_times));
+  
+  - le yikes
+  
+  - also need to add a multiplier to this, i.e. an exponent, so that we can apply more pressure towards the fitter/fittest. 
+  - ga_selection_fitness_pressure_exponent
+  
+  "ga_selection_fitness_pressure_exponent":2,
+  
+  - default is 1.
+  
+  -- ok, need to carefully review the whole roulette section. it's muckery! 
+   >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 0 minimum_percentage 0.01 slowest_race_time 400.48 sum_distance_from_slowest_time 0 additional_min_amount 3.5757142857142856 sum_with_exponent 4314751593218408000
+race_function_no_vis.js:1426 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1433 0	383.437	2.0875555477372222e-10
+race_function_no_vis.js:1433 1	343.893	31144332.89596117
+race_function_no_vis.js:1433 2	315.387	74709793147895920000
+race_function_no_vis.js:1433 3	343.026	74116064.16657898
+race_function_no_vis.js:1433 4	333.7	832037090866.9592
+race_function_no_vis.js:1433 5	336.356	58432779209.00221
+race_function_no_vis.js:1433 6	339.866	1746959800.3233619
+race_function_no_vis.js:1433 7	341.146	485719986.8821443
+race_function_no_vis.js:1433 8	359.736	4.100639171890612
+race_function_no_vis.js:1433 9	400.48	8.278605456096826e-18
+race_function_no_vis.js:1433 10	343.748	36004081.2173305
+race_function_no_vis.js:1433 11	347.442	895504.7969018453
+race_function_no_vis.js:1436  >>>>>>>>>> sum of 12 values of tournament_proportional_fitness 74709794040740660000
+
+-- exponent is 0, shoud be default 1, set to 2 in the settings, see what changes: 
+
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 2 minimum_percentage 0.01 slowest_race_time 401.331 sum_distance_from_slowest_time 0 additional_min_amount 3.5833125000000003 sum_with_exponent 4726657656094989000
+race_function_no_vis.js:1426 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1433 0	338.79	11037478997.020687
+race_function_no_vis.js:1433 1	345.805	9915031.53038439
+race_function_no_vis.js:1433 2	364.445	0.07962417708702976
+race_function_no_vis.js:1433 3	316.921	34710103999420834000
+race_function_no_vis.js:1433 4	401.331	7.614803440697292e-18
+race_function_no_vis.js:1433 5	351.664	28298.455325391376
+race_function_no_vis.js:1433 6	395.198	3.5090273643752224e-15
+race_function_no_vis.js:1433 7	345.515	13250720.681845233
+race_function_no_vis.js:1433 8	360.816	2.999850637714083
+race_function_no_vis.js:1433 9	344.158	51472719.14808174
+race_function_no_vis.js:1433 10	331.593	14739653574424.217
+race_function_no_vis.js:1433 11	346.092	7441347.455342994
+race_function_no_vis.js:1436  >>>>>>>>>> sum of 12 values of tournament_proportional_fitness 34710118750194000000
+race_function_no_vis.js:1465 ----------------- ga_selection_type tournament_elitist_roulette -----------------
+
+-- sum_with_exponent is still enormous, but not wrong - the tournament_proportional_fitness values are very yikes!
+- sum_distance_from_slowest_time is 0, used a + instead of a +=. weird that it didin't break.
+
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 2 minimum_percentage 0.01 slowest_race_time 389.303 sum_distance_from_slowest_time 458.78800000000007 additional_min_amount 3.4759196428571424 sum_with_exponent 2.3119019357507157e+217
+race_function_no_vis.js:1426 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1433 0	337.813	3.2168157392468713e-194
+race_function_no_vis.js:1433 1	317.097	3.1935275870103294e-185
+race_function_no_vis.js:1433 2	375.563	1.2966103774603207e-210
+race_function_no_vis.js:1433 3	320.585	9.760038240076425e-187
+race_function_no_vis.js:1433 4	389.303	1.3983095115773993e-216
+race_function_no_vis.js:1433 5	333.544	2.2984196623105456e-192
+race_function_no_vis.js:1433 6	342.922	1.943639323030591e-196
+race_function_no_vis.js:1433 7	358.346	3.890967363830566e-203
+race_function_no_vis.js:1433 8	339.621	5.2749914705860666e-195
+race_function_no_vis.js:1433 9	360.893	3.0472602229403616e-204
+race_function_no_vis.js:1433 10	333.11	3.547424273659911e-192
+race_function_no_vis.js:1433 11	352.561	1.2660508988548909e-200
+race_function_no_vis.js:1436  >>>>>>>>>> sum of 12 values of tournament_proportional_fitness 3.2911285577592403e-185
+race_function_no_vis.js:1465 ----------------- ga_selection_type tournament_elitist_roulette -----------------
+
+-- hmmm, this makes little sense, still using the slowest time where I need to use the sum of the differences all raised to the exponent given.
+
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 2 minimum_percentage 0.01 slowest_race_time 392.445 sum_distance_from_slowest_time_with_exponent 2.306800402588649e+34 additional_min_amount 2.0596432165970078e+32
+race_function_no_vis.js:1424 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1431 0	351.171	Infinity
+race_function_no_vis.js:1431 1	330.038	Infinity
+race_function_no_vis.js:1431 2	333.364	Infinity
+race_function_no_vis.js:1431 3	313.322	Infinity
+race_function_no_vis.js:1431 4	342.126	Infinity
+race_function_no_vis.js:1431 5	332.91	Infinity
+race_function_no_vis.js:1431 6	341.308	Infinity
+race_function_no_vis.js:1431 7	339.72	Infinity
+race_function_no_vis.js:1431 8	392.445	Infinity
+race_function_no_vis.js:1431 9	320.511	Infinity
+race_function_no_vis.js:1431 10	367.659	Infinity
+race_function_no_vis.js:1431 11	335.655	Infinity
+race_function_no_vis.js:1434  >>>>>>>>>> sum of 12 values of tournament_proportional_fitness Infinity
+race_function_no_vis.js:1463 ----------------- ga_selection_type tournament_elitist_roulette -----------------
+
+- Math.exp() is to return e raised to a power. I should be using Math.pow()
+
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 2 minimum_percentage 0.01 slowest_race_time 418.267 sum_distance_from_slowest_time_with_exponent 79839.05048900002 additional_min_amount 712.8486650803573
+race_function_no_vis.js:1425 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1432 0	339.703	7.844958107760665
+race_function_no_vis.js:1432 1	352.731	7.588801258548743
+race_function_no_vis.js:1432 2	338.505	7.868726676373512
+race_function_no_vis.js:1432 3	309.352	8.458210826785091
+race_function_no_vis.js:1432 4	318.864	8.263534741269394
+race_function_no_vis.js:1432 5	323.554	8.168381749444917
+race_function_no_vis.js:1432 6	418.267	6.36472022393176
+race_function_no_vis.js:1432 7	324.123	8.156875081865147
+race_function_no_vis.js:1432 8	312.901	8.385310622460363
+race_function_no_vis.js:1432 9	343.884	7.7622878868101886
+race_function_no_vis.js:1432 10	340.813	7.822967565466823
+race_function_no_vis.js:1432 11	334.774	7.942980830293421
+race_function_no_vis.js:1435  >>>>>>>>>> sum of 12 values of tournament_proportional_fitness 94.62775557101003
+race_function_no_vis.js:1464 ----------------- ga_selection_type tournament_elitist_roulette -----------------
+
+
+-- make list of essential/minimal things to do for draft of core section:
+
+- rerun some experiments
+- describe selection, crossover, and mutation mechanisms
+- have a day for adding new results 
+- keep existing diagrams if they are too slow to remake 
+- finish the new/working roulette selection and make darn sure it does what it should 
+
+- Tuesday 15th april 25. all to do. less than the beginning?
+
+- moe excel sheet to google sheet
+- we want to add a minimum amount to get the lowest fitness above 0. This will be added to all fitnesses. We do not want to change the order. But this value X must have some meaning? We don't want to upset the general proportions across the measures.
+
+- ok, generating a pie chart in spreadsheet and it looks grand, but not quite sure what min value to pick- 1% of sum of (slowest-time) seems to go to 0 very quickly as the exponent grows (it will be < 1% because it is added to everything)
+
+- could also add an amount to just that 0 one, but not enough to 'catch' the 2nd slowest time. either way I need to have it working as the current model is broken.
+
+--  had a go at coding this 
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 2 percentage_of_diff_sum_to_add 0.05 slowest_race_time 407.392 sum_distance_from_slowest_time 684.3999999999999 adjustment_to_add_to_all_diffs 34.21999999999999 sum_adjusted_diff_with_exponent 111902.067142
+race_function_no_vis.js:1442 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1449 0	377.477	0.036758018239112275
+race_function_no_vis.js:1449 1	326.473	0.11846956593015674
+race_function_no_vis.js:1449 2	317.864	0.13684794119636412
+race_function_no_vis.js:1449 3	397.342	0.017513822130855165
+race_function_no_vis.js:1449 4	328.761	0.11380797983686271
+race_function_no_vis.js:1449 5	339.118	0.09387690776676609
+race_function_no_vis.js:1449 6	318.601	0.13522275778693496
+race_function_no_vis.js:1449 7	407.392	0.01046458237910859
+race_function_no_vis.js:1449 8	333.019	0.10538178561112535
+race_function_no_vis.js:1449 9	336.349	0.09901782381677963
+race_function_no_vis.js:1449 10	364.316	0.05339196825040188
+race_function_no_vis.js:1449 11	327.677	0.11600486529464467
+race_function_no_vis.js:1452  >>>>>>>>>> sum of 12 values of tournament_proportional_fitness 1.036758018239112
+
+-- summing to more than 1, warum?
+ 
+- needed to adjust the loops, they were starting from 1 not 0 
+
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 2 percentage_of_diff_sum_to_add 0.05 slowest_race_time 360.445 sum_distance_from_slowest_time 321.1039999999998 adjustment_to_add_to_all_diffs 16.055199999999992 sum_adjusted_diff_with_exponent 23433.06662807997
+ 
+i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1449 0	325.446	0.11123304427072192
+race_function_no_vis.js:1449 1	331.386	0.08685551378926633
+race_function_no_vis.js:1449 2	337.385	0.06529230234025767
+race_function_no_vis.js:1449 3	321.146	0.13075913222421703
+race_function_no_vis.js:1449 4	324.925	0.11351485903481807
+race_function_no_vis.js:1449 5	327.171	0.10384342823162883
+race_function_no_vis.js:1449 6	351.434	0.026813152218288214
+race_function_no_vis.js:1449 7	332.925	0.08103071122431145
+race_function_no_vis.js:1449 8	333.468	0.07902381136154886
+race_function_no_vis.js:1449 9	330.358	0.09085889843750466
+race_function_no_vis.js:1449 10	328.147	0.09977490301838356
+race_function_no_vis.js:1449 11	360.445	0.011000243849053595
+race_function_no_vis.js:1452  >>>>>>>>>> sum of 12 values of tournament_proportional_fitness 1.0000000000000002
+
+-- ok, this looks better... let's add a new global setting for the % of the diff sum that we adjust everything by (before exponent is applied) 
+       "ga_selection_fitness_pressure_exponent":5,
+       "ga_roulette_p_of_diff_sum_to_add":0.05,
+	   
+-- test again 
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 5 percentage_of_diff_sum_to_add 0.05 slowest_race_time 378.256 sum_distance_from_slowest_time 379.3169999999997 adjustment_to_add_to_all_diffs 18.965849999999985 sum_adjusted_diff_with_exponent 9589882642.046106
+race_function_no_vis.js:1442 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1449 0	331.427	0.12857194484275614
+race_function_no_vis.js:1449 1	331.073	0.13206818194808387
+race_function_no_vis.js:1449 2	378.256	0.0002558870247324732
+race_function_no_vis.js:1449 3	344.733	0.04154530926539029
+race_function_no_vis.js:1449 4	322.894	0.23656176982555996
+race_function_no_vis.js:1449 5	352.073	0.019562311552906716
+race_function_no_vis.js:1449 6	327.338	0.17380842409852726
+race_function_no_vis.js:1449 7	371.27	0.0012275192720703407
+race_function_no_vis.js:1449 8	364.756	0.0037611495010697552
+race_function_no_vis.js:1449 9	355.361	0.013403768566373715
+race_function_no_vis.js:1449 10	322.718	0.23937582352985562
+race_function_no_vis.js:1449 11	357.856	0.009857910572673953
+race_function_no_vis.js:1452  >>>>>>>>>> sum of 12 values of tournament_proportional_fitness 1
+
+-- try it with a smaller group size. e.g. 6
+-- wait, why is the group size 12, that's the population size.
+"ga_tournament_selection_group_size": 8,
+-- oh, it's because it adds on the extra part if another tournament doesn't fit... try 
+"ga_tournament_selection_group_size": 4,
+
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 5 ga_roulette_p_of_diff_sum_to_add 0.05 slowest_race_time 356.712 sum_distance_from_slowest_time 67.19799999999998 adjustment_to_add_to_all_diffs 3.359899999999999 sum_adjusted_diff_with_exponent 89616373.90248702
+race_function_no_vis.js:1445 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1452 0	348.704	0.0021184287197561647
+race_function_no_vis.js:1452 1	331.143	0.22608525226259443
+race_function_no_vis.js:1452 2	356.712	0.000004777980704091278
+race_function_no_vis.js:1452 3	323.091	0.7717915410369453
+race_function_no_vis.js:1455  >>>>>>>>>> sum of 4 values of tournament_proportional_fitness 1
+
+-- ok, good, group is 4, normalised fitnesses sum to 1. 
+
+- in this case, with an exponent of 5, the slower races bascially disappear. the amount we add might need to be higher and the exponent be lower when the tournament group size is smaller?
+- could try linking them... make the adjustment 1/N and the exponent can be group_size/4 
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 1 ga_roulette_p_of_diff_sum_to_add 0.25 slowest_race_time 447.343 sum_distance_from_slowest_time 314.4510000000001 adjustment_to_add_to_all_diffs 78.61275000000002 sum_adjusted_diff_with_exponent 628.902
+race_function_no_vis.js:1451 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1458 0	352.427	0.2759233553081402
+race_function_no_vis.js:1458 1	447.343	0.12500000000000003
+race_function_no_vis.js:1458 2	354.609	0.27245381633386445
+race_function_no_vis.js:1458 3	320.542	0.32662282835799544
+race_function_no_vis.js:1461  >>>>>>>>>> sum of 4 values of tournament_proportional_fitness 1.0000000000000002
+
+-- try with a group of 8 
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 2 ga_roulette_p_of_diff_sum_to_add 0.125 slowest_race_time 354.203 sum_distance_from_slowest_time 167.62399999999974 adjustment_to_add_to_all_diffs 20.952999999999967 sum_adjusted_diff_with_exponent 15343.392273999954
+race_function_no_vis.js:1451 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1458 0	329.437	0.136229780460086
+race_function_no_vis.js:1458 1	308.944	0.28572748879196147
+race_function_no_vis.js:1458 2	338.278	0.08863664955660107
+race_function_no_vis.js:1458 3	339.23	0.08411943414802109
+race_function_no_vis.js:1458 4	354.203	0.028613503530373206
+race_function_no_vis.js:1458 5	326.696	0.15305426323352297
+race_function_no_vis.js:1458 6	326.166	0.15642043539921308
+race_function_no_vis.js:1458 7	343.046	0.06719844488022113
+race_function_no_vis.js:1461  >>>>>>>>>> sum of 8 values of tournament_proportional_fitness 1.0000000000000002
+
+- remove ga_roulette_p_of_diff_sum_to_add
+instead we divide 1/group_size.
+
+- rename ga_selection_fitness_pressure_exponent to 
+ga_tournament_roulette_exponent_group_size_divisor
+ >>>>>>>>>> Roulette wheel times and fitness probabilities. ga_selection_fitness_pressure_exponent 1.5 ga_roulette_p_of_diff_sum_to_add 0.16666666666666666 slowest_race_time 360.74 sum_distance_from_slowest_time 133.23800000000006 adjustment_to_add_to_all_diffs 22.20633333333334 sum_adjusted_diff_with_exponent 1824.7748453398117
+race_function_no_vis.js:1452 i 	 race_time 	 tournament_proportional_fitness
+race_function_no_vis.js:1459 0	360.74	0.05734637844085246
+race_function_no_vis.js:1459 1	336.514	0.17338897420804225
+race_function_no_vis.js:1459 2	334.765	0.1832774086322924
+race_function_no_vis.js:1459 3	329.389	0.21479250943913392
+race_function_no_vis.js:1459 4	345.063	0.12778003197880908
+race_function_no_vis.js:1459 5	324.731	0.24341469730086995
+race_function_no_vis.js:1462  >>>>>>>>>> sum of 6 values of tournament_proportional_fitness 1
+
+- test the applicaiton of an all-equal team.
+
+- seems to converge quickly on solutions with tiny numbers of instructions. warum?
+
+- current settings 
+   "ga_tournament_selection_group_size": 12,
+       "ga_tournament_roulette_exponent_group_size_divisor":4,       
+	"ga_p_crossover": 0.8,
+        "ga_mutation_switch":1,
+	"ga_crossover_length_adjustment_probability": 0.5,
+	"crossover_apply_mutation_probability": 0.8,
+	"ga_team_size": 4,
+	"ga_p_shuffle_start": 0.08,
+	"ga_p_add_instruction": 0.049,
+	"ga_p_delete_instruction": 0.3,
+	"ga_p_change_effort": 0.45,
+	"ga_p_change_drop": 0.45,
+	"ga_p_move_instruction": 0.45,
+	"ga_range_to_move_instruction": 10,
+	"ga_range_to_change_effort": 1.5,
+	
+- need to create a few copies with varying levels of mutation to see what happens?
+
+- can I actually replicate these in the game visualiser?
+
+
+-- can't find any smoking gun in the github changes. scary how old the code is though. fooooook.
+
+- the biggest change I made is that the shelter is actually affected by the distance. Could that be it?
+
+- are these settings any different in the newer runs?
+"fatigue_failure_level":100,
+"accumulated_fatigue_maximum":500,
+
+- oooh, look at this, 
+	"fatigue_failure_level": 100,
+	"accumulated_fatigue_maximum": 200,
+	
+- is this why they fatigue so much faster? 
+
+-- found discrep between ga and visual race... 
+[[0,"effort=5.02"],[32,"effort=5.05"],[112,"drop=1"]]
+
+ga race:  296.502
+vis race: 296.726
+
+- the "run single race" method also returns 296.502. so can use this to debug?
+
+**SETTINGS BEFORE RACE BEGINS**
+js/race_function_no_vis.js:2246 {"threshold_power_effort_level":5,"recovery_effort_level_reduction":2,"radius":100,"track_length":250,"fixed_test_distance":1,"track_bend_radius":22,"track_straight_length":55.88496162102456,"vis_scale":5,"track_centre_x":400,"track_centre_y":200,"race_bend_distance":69.11503837897544,"start_position_offset":0,"target_rider_gap":2,"drag_coefficent":0.32,"air_density":1.225,"draft_power_savings":0.33,"drafting_effect_on_drag":0.4,"shelter_max_distance":6,"two_riders_in_front_extra_shelter":0.1,"more_than_two_riders_in_front_extra_shelter":0.12,"temperaturev":25,"elevationv":100,"bike_weight":9,"gradev":0,"rollingRes":0.004,"frontalArea":0.233,"transv":0.95,"headwindv":0,"minimum_power_output":1,"maximum_effort_value":10,"minimum_power_output_limit":50,"power_adjustment_step_size_up":40,"power_adjustment_step_size_down":-100,"race_move_wait_time":100,"damping_visibility_distance":50,"fatigue_failure_level":100,"accumulated_fatigue_maximum":500,"fatigue_power_rate":1,"recovery_power_rate":1,"velocity_difference_limit":1,"damping_deceleration_distance":10,"velocity_adjustment_dropping_back":4,"bend_switch_range_angle":30,"switch_prebend_start_addition":5,"log_each_step":0,"ga_trim_unused_late_instructions":1,"ga_log_each_step":0,"ga_population_size":1200,"ga_population_size_first_generation":1200,"ga_number_of_generations":20,"ga_max_timestep":700,"ga_probability_of_instruction_per_timestep_lower":0.01,"ga_probability_of_instruction_per_timestep_upper":0.08,"ga_probability_of_drop_instruction":0.6,"ga_selection_type":"tournament_elitist_roulette","ga_tournament_selection_group_size":12,"ga_tournament_roulette_exponent_group_size_divisor":4,"ga_p_crossover":0.8,"ga_mutation_switch":1,"ga_crossover_length_adjustment_probability":0.5,"crossover_apply_mutation_probability":0.8,"ga_team_size":4,"ga_p_shuffle_start":0.08,"ga_p_add_instruction":0.049,"ga_p_delete_instruction":0.3,"ga_p_change_effort":0.45,"ga_p_change_drop":0.45,"ga_p_move_instruction":0.45,"ga_range_to_move_instruction":10,"ga_range_to_change_effort":1.5,"stats":{"crossover_instruction_sizes":[]},"consistency_check_population_size":5000,"ga_run_robustness_check":0,"ga_robustness_check_mutation_per_instruction":10,"robustness_mutate_inst_time_position_prob":0,"robustness_mutate_inst_range_to_move_instruction":2,"robustness_mutate_inst_range_to_change_effort":0.3,"robustness_check_population_size":10,"limit_drop_to_contiguous_group":1,"contiguous_group_drop_distance":10,"enable_instruction_noise_1_random":0,"noise_1_probability_instruction_misheard":0.6,"noise_1_probability_instruction_delayed":0.3,"noise_1_probability_instruction_delay_range":5,"noise_1_probability_instruction_effort_range":5,"noise_1_probability_instruction_drop_range":3,"performance_failure_enabled":0,"performance_failure_effect_type":2,"performance_failure_probability_exponent":2,"performance_failure_effort_importance_multiplier":1,"performance_failure_amount_exponent":2,"performance_failure_base_max_percentage":1,"rider_performance_failure_rate_max":10,"performance_failure_multiplier_max":10,"choke_under_pressure_switch":0,"choke_under_pressure_amount_percentage":0.5,"overeagerness_switch":0,"overeagerness_race_distance_end_point":0.5,"overeagerness_effort_inflation_min_amount":0.1,"overeagerness_effort_inflation_max_amount":0.4,"overeagerness_exponent":2,"log_generation_instructions_info":[0,49],"number_of_races_to_average":1,"run_type":"single_race"}
+js/race_function_no_vis.js:2247 {"distance":4000,"start_order":[0,2,1,3],"current_order":[0,2,1,3],"riders":[],"riders_r":[{"name":"RIDER 1","colour":"#648FFF","threshold_power":400,"current_power_effort":400,"max_power":1100,"weight":75,"fatigue_rate":40,"recovery_rate":30,"current_position_x":400,"current_position_y":90,"starting_position_x":400,"starting_position_y":90,"current_track_position":"start","velocity":0,"straight_distance_travelled":0,"bend_distance_travelled":0,"distance_this_step":0,"acceleration_this_step":0,"start_offset":0,"distance_this_step_remaining":0,"current_bend_angle":0,"distance_covered":0,"bend_centre_x":0,"power_out":0,"distance_from_rider_in_front":0,"number_of_riders_in_front":0,"endurance_fatigue_level":0,"accumulated_fatigue":0,"output_level":6,"start_output_level":6,"performance_failure_rate":10,"performance_failure_multiplier":10,"choke_under_pressure_tendency":0,"choke_under_pressure_state":0,"burst_fatigue_level":0,"step_info":"","original_threshold_power":400,"original_max_power":1100,"current_aim":"lead","aero_density":1.169670496951128,"aero_twt":823.2,"aero_A2":0.14,"aero_tres":3.2928},{"name":"RIDER 2","colour":"#785EF0","threshold_power":400,"current_power_effort":400,"max_power":1100,"weight":75,"fatigue_rate":40,"recovery_rate":30,"current_position_x":400,"current_position_y":90,"starting_position_x":400,"starting_position_y":90,"current_track_position":"start","velocity":0,"straight_distance_travelled":0,"bend_distance_travelled":0,"distance_this_step":0,"acceleration_this_step":0,"start_offset":0,"distance_this_step_remaining":0,"current_bend_angle":0,"distance_covered":0,"bend_centre_x":0,"power_out":0,"distance_from_rider_in_front":0,"number_of_riders_in_front":0,"endurance_fatigue_level":0,"accumulated_fatigue":0,"output_level":6,"start_output_level":6,"performance_failure_rate":10,"performance_failure_multiplier":10,"choke_under_pressure_tendency":0,"choke_under_pressure_state":0,"burst_fatigue_level":0,"step_info":"","original_threshold_power":400,"original_max_power":1100,"current_aim":"follow","aero_density":1.169670496951128,"aero_twt":823.2,"aero_A2":0.14,"aero_tres":3.2928},{"name":"RIDER 3","colour":"#DC267F","threshold_power":400,"current_power_effort":400,"max_power":1100,"weight":75,"fatigue_rate":40,"recovery_rate":30,"current_position_x":400,"current_position_y":90,"starting_position_x":400,"starting_position_y":90,"current_track_position":"start","velocity":0,"straight_distance_travelled":0,"bend_distance_travelled":0,"distance_this_step":0,"acceleration_this_step":0,"start_offset":0,"distance_this_step_remaining":0,"current_bend_angle":0,"distance_covered":0,"bend_centre_x":0,"power_out":0,"distance_from_rider_in_front":0,"number_of_riders_in_front":0,"endurance_fatigue_level":0,"accumulated_fatigue":0,"output_level":6,"start_output_level":6,"performance_failure_rate":10,"performance_failure_multiplier":10,"choke_under_pressure_tendency":0,"choke_under_pressure_state":0,"burst_fatigue_level":0,"step_info":"","original_threshold_power":400,"original_max_power":1100,"current_aim":"follow","aero_density":1.169670496951128,"aero_twt":823.2,"aero_A2":0.14,"aero_tres":3.2928},{"name":"RIDER 4","colour":"#FE6100","threshold_power":400,"current_power_effort":400,"max_power":1100,"weight":75,"fatigue_rate":40,"recovery_rate":30,"current_position_x":400,"current_position_y":90,"starting_position_x":400,"starting_position_y":90,"current_track_position":"start","velocity":0,"straight_distance_travelled":0,"bend_distance_travelled":0,"distance_this_step":0,"acceleration_this_step":0,"start_offset":0,"distance_this_step_remaining":0,"current_bend_angle":0,"distance_covered":0,"bend_centre_x":0,"power_out":0,"distance_from_rider_in_front":0,"number_of_riders_in_front":0,"endurance_fatigue_level":0,"accumulated_fatigue":0,"output_level":6,"start_output_level":6,"performance_failure_rate":10,"performance_failure_multiplier":10,"choke_under_pressure_tendency":0,"choke_under_pressure_state":0,"burst_fatigue_level":0,"step_info":"","original_threshold_power":400,"original_max_power":1100,"current_aim":"follow","aero_density":1.169670496951128,"aero_twt":823.2,"aero_A2":0.14,"aero_tres":3.2928}],"race_clock":0,"race_instructions":[],"race_instructions_r":[[0,"effort=5.02"],[32,"effort=5.05"],[112,"drop=1"]],"current_distance_of_finish_rider":0,"live_instructions":[],"drop_instruction":0,"bend1_switch_start_distance":22.94248081051228,"bend1_switch_end_distance":34.46165387367485,"bend2_switch_start_distance":147.94248081051228,"bend2_switch_end_distance":159.46165387367486,"contiguous_group_size":1,"instructions":[],"instructions_t":[],"instruction_noise_alterations":{},"performance_failures":{},"instruction_noise_delays":{},"instruction_noise_choke_under_pressure":{},"instruction_noise_overeagerness":{}}
+js/race_function_no_vis.js:2248 [{"name":"RIDER 1","colour":"#648FFF","threshold_power":400,"current_power_effort":400,"max_power":1100,"weight":75,"fatigue_rate":40,"recovery_rate":30,"current_position_x":400,"current_position_y":90,"starting_position_x":400,"starting_position_y":90,"current_track_position":"start","velocity":0,"straight_distance_travelled":0,"bend_distance_travelled":0,"distance_this_step":0,"acceleration_this_step":0,"start_offset":0,"distance_this_step_remaining":0,"current_bend_angle":0,"distance_covered":0,"bend_centre_x":0,"power_out":0,"distance_from_rider_in_front":0,"number_of_riders_in_front":0,"endurance_fatigue_level":0,"accumulated_fatigue":0,"output_level":6,"start_output_level":6,"performance_failure_rate":10,"performance_failure_multiplier":10,"choke_under_pressure_tendency":0,"choke_under_pressure_state":0,"burst_fatigue_level":0,"step_info":"","original_threshold_power":400,"original_max_power":1100,"current_aim":"lead","aero_density":1.169670496951128,"aero_twt":823.2,"aero_A2":0.14,"aero_tres":3.2928},{"name":"RIDER 2","colour":"#785EF0","threshold_power":400,"current_power_effort":400,"max_power":1100,"weight":75,"fatigue_rate":40,"recovery_rate":30,"current_position_x":400,"current_position_y":90,"starting_position_x":400,"starting_position_y":90,"current_track_position":"start","velocity":0,"straight_distance_travelled":0,"bend_distance_travelled":0,"distance_this_step":0,"acceleration_this_step":0,"start_offset":0,"distance_this_step_remaining":0,"current_bend_angle":0,"distance_covered":0,"bend_centre_x":0,"power_out":0,"distance_from_rider_in_front":0,"number_of_riders_in_front":0,"endurance_fatigue_level":0,"accumulated_fatigue":0,"output_level":6,"start_output_level":6,"performance_failure_rate":10,"performance_failure_multiplier":10,"choke_under_pressure_tendency":0,"choke_under_pressure_state":0,"burst_fatigue_level":0,"step_info":"","original_threshold_power":400,"original_max_power":1100,"current_aim":"follow","aero_density":1.169670496951128,"aero_twt":823.2,"aero_A2":0.14,"aero_tres":3.2928},{"name":"RIDER 3","colour":"#DC267F","threshold_power":400,"current_power_effort":400,"max_power":1100,"weight":75,"fatigue_rate":40,"recovery_rate":30,"current_position_x":400,"current_position_y":90,"starting_position_x":400,"starting_position_y":90,"current_track_position":"start","velocity":0,"straight_distance_travelled":0,"bend_distance_travelled":0,"distance_this_step":0,"acceleration_this_step":0,"start_offset":0,"distance_this_step_remaining":0,"current_bend_angle":0,"distance_covered":0,"bend_centre_x":0,"power_out":0,"distance_from_rider_in_front":0,"number_of_riders_in_front":0,"endurance_fatigue_level":0,"accumulated_fatigue":0,"output_level":6,"start_output_level":6,"performance_failure_rate":10,"performance_failure_multiplier":10,"choke_under_pressure_tendency":0,"choke_under_pressure_state":0,"burst_fatigue_level":0,"step_info":"","original_threshold_power":400,"original_max_power":1100,"current_aim":"follow","aero_density":1.169670496951128,"aero_twt":823.2,"aero_A2":0.14,"aero_tres":3.2928},{"name":"RIDER 4","colour":"#FE6100","threshold_power":400,"current_power_effort":400,"max_power":1100,"weight":75,"fatigue_rate":40,"recovery_rate":30,"current_position_x":400,"current_position_y":90,"starting_position_x":400,"starting_position_y":90,"current_track_position":"start","velocity":0,"straight_distance_travelled":0,"bend_distance_travelled":0,"distance_this_step":0,"acceleration_this_step":0,"start_offset":0,"distance_this_step_remaining":0,"current_bend_angle":0,"distance_covered":0,"bend_centre_x":0,"power_out":0,"distance_from_rider_in_front":0,"number_of_riders_in_front":0,"endurance_fatigue_level":0,"accumulated_fatigue":0,"output_level":6,"start_output_level":6,"performance_failure_rate":10,"performance_failure_multiplier":10,"choke_under_pressure_tendency":0,"choke_under_pressure_state":0,"burst_fatigue_level":0,"step_info":"","original_threshold_power":400,"original_max_power":1100,"current_aim":"follow","aero_density":1.169670496951128,"aero_twt":823.2,"aero_A2":0.14,"aero_tres":3.2928}]
+ga.js:77 Single race result = {"time_taken":296.502,"power_output":[[40,80,120,160,200,240,280,320,360,400,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,307,237.4,277.4,217.42,257.42,272.9,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09],[4.76,44.76,84.76,108.35,118.17,139.47,160.63,181.68,202.63,223.54,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,224.99,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.17,227.18,227.19,227.18,227.18,227.18,227.18,227.18,227.17,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,257.67,157.93,159.26,188.55,222.39,232.03,227.18,227.18,227.19,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.17,227.19,227.18,227.18,227.18,227.18,227.18,227.18,227.17,227.18,227.19,227.18,227.18,227.18,227.18,227.18,227.17,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.17,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.17,227.19,227.18,227.18,227.18,227.18,227.18,227.18,227.17,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18,227.18],[14.64,54.64,90.59,109.33,134.51,159.55,184.47,209.3,234.06,258.78,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,260.5,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,303.09,343.09,383.09,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407],[1.8,30.48,70.48,110.48,131.21,135.33,155.73,175.99,196.16,216.28,217.68,217.68,217.68,217.68,217.68,217.68,217.68,217.68,217.68,217.68,217.68,217.68,217.68,217.68,217.68,217.67,217.68,217.68,217.68,217.68,217.68,217.68,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.78,219.8,219.79,219.78,219.79,219.79,219.78,219.78,219.78,219.79,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,249.11,149.11,148.07,171.94,211.94,231.69,219.78,219.79,219.79,219.79,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.78,219.8,219.79,219.78,219.79,219.79,219.78,219.78,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.77,219.8,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.78,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79,219.78,219.79,219.79,219.78,219.79,219.79,219.78,219.79]],"distance_2nd_last_timestep":3993.174435417184,"distance_last_timestep":4006.7619012068067,"instruction_noise_alterations":{},"performance_failures":{},"instruction_noise_choke_under_pressure":{},"instruction_noise_overeagerness":{}} at 2025-4-15 17:49:59
+
+how do I produce this in the vis version?
+
+looking at overlaid power graphs- the vis version is goign very slightly slower after a lead change.
+
+- could it be the drag change? in ga version, lead is at 407, and new leader 
+
+Here's the vis version 
+
+[[{"x":0,"y":40},{"x":1,"y":80},{"x":2,"y":120},{"x":3,"y":160},{"x":4,"y":200},{"x":5,"y":240},{"x":6,"y":280},{"x":7,"y":320},{"x":8,"y":360},{"x":9,"y":400},{"x":10,"y":402.8},{"x":11,"y":402.8},{"x":12,"y":402.8},{"x":13,"y":402.8},{"x":14,"y":402.8},{"x":15,"y":402.8},{"x":16,"y":402.8},{"x":17,"y":402.8},{"x":18,"y":402.8},{"x":19,"y":402.8},{"x":20,"y":402.8},{"x":21,"y":402.8},{"x":22,"y":402.8},{"x":23,"y":402.8},{"x":24,"y":402.8},{"x":25,"y":402.8},{"x":26,"y":402.8},{"x":27,"y":402.8},{"x":28,"y":402.8},{"x":29,"y":402.8},{"x":30,"y":402.8},{"x":31,"y":402.8},{"x":32,"y":407},{"x":33,"y":407},{"x":34,"y":407},{"x":35,"y":407},{"x":36,"y":407},{"x":37,"y":407},{"x":38,"y":407},{"x":39,"y":407},{"x":40,"y":407},{"x":41,"y":407},{"x":42,"y":407},{"x":43,"y":407},{"x":44,"y":407},{"x":45,"y":407},{"x":46,"y":407},{"x":47,"y":407},{"x":48,"y":407},{"x":49,"y":407},{"x":50,"y":407},{"x":51,"y":407},{"x":52,"y":407},{"x":53,"y":407},{"x":54,"y":407},{"x":55,"y":407},{"x":56,"y":407},{"x":57,"y":407},{"x":58,"y":407},{"x":59,"y":407},{"x":60,"y":407},{"x":61,"y":407},{"x":62,"y":407},{"x":63,"y":407},{"x":64,"y":407},{"x":65,"y":407},{"x":66,"y":407},{"x":67,"y":407},{"x":68,"y":407},{"x":69,"y":407},{"x":70,"y":407},{"x":71,"y":407},{"x":72,"y":407},{"x":73,"y":407},{"x":74,"y":407},{"x":75,"y":407},{"x":76,"y":407},{"x":77,"y":407},{"x":78,"y":407},{"x":79,"y":407},{"x":80,"y":407},{"x":81,"y":407},{"x":82,"y":407},{"x":83,"y":407},{"x":84,"y":407},{"x":85,"y":407},{"x":86,"y":407},{"x":87,"y":407},{"x":88,"y":407},{"x":89,"y":407},{"x":90,"y":407},{"x":91,"y":407},{"x":92,"y":407},{"x":93,"y":407},{"x":94,"y":407},{"x":95,"y":407},{"x":96,"y":407},{"x":97,"y":407},{"x":98,"y":407},{"x":99,"y":407},{"x":100,"y":407},{"x":101,"y":407},{"x":102,"y":407},{"x":103,"y":407},{"x":104,"y":407},{"x":105,"y":407},{"x":106,"y":407},{"x":107,"y":407},{"x":108,"y":407},{"x":109,"y":407},{"x":110,"y":407},{"x":111,"y":407},{"x":112,"y":407},{"x":113,"y":407},{"x":114,"y":407},{"x":115,"y":307},{"x":116,"y":237.4},{"x":117,"y":277.4},{"x":118,"y":216.66},{"x":119,"y":256.66},{"x":120,"y":271.92},{"x":121,"y":262.23},{"x":122,"y":262.23},{"x":123,"y":262.23},{"x":124,"y":262.23},{"x":125,"y":262.22},{"x":126,"y":262.23},{"x":127,"y":262.23},{"x":128,"y":262.23},{"x":129,"y":262.22},{"x":130,"y":262.23},{"x":131,"y":262.23},{"x":132,"y":262.23},{"x":133,"y":262.22},{"x":134,"y":262.23},{"x":135,"y":262.23},{"x":136,"y":262.22},{"x":137,"y":262.23},{"x":138,"y":262.23},{"x":139,"y":262.23},{"x":140,"y":262.22},{"x":141,"y":262.23},{"x":142,"y":262.23},{"x":143,"y":262.23},{"x":144,"y":262.22},{"x":145,"y":262.23},{"x":146,"y":262.23},{"x":147,"y":262.23},{"x":148,"y":262.22},{"x":149,"y":262.23},{"x":150,"y":262.23},{"x":151,"y":262.23},{"x":152,"y":262.22},{"x":153,"y":262.23},{"x":154,"y":262.23},{"x":155,"y":262.23},{"x":156,"y":262.22},{"x":157,"y":262.23},{"x":158,"y":262.23},{"x":159,"y":262.23},{"x":160,"y":262.22},{"x":161,"y":262.23},{"x":162,"y":262.23},{"x":163,"y":262.23},{"x":164,"y":262.22},{"x":165,"y":262.23},{"x":166,"y":262.23},{"x":167,"y":262.22},{"x":168,"y":262.23},{"x":169,"y":262.23},{"x":170,"y":262.23},{"x":171,"y":262.22},{"x":172,"y":262.23},{"x":173,"y":262.23},{"x":174,"y":262.23},{"x":175,"y":262.22},{"x":176,"y":262.23},{"x":177,"y":262.23},{"x":178,"y":262.23},{"x":179,"y":262.22},{"x":180,"y":262.23},{"x":181,"y":262.23},{"x":182,"y":262.23},{"x":183,"y":262.22},{"x":184,"y":262.23},{"x":185,"y":262.23},{"x":186,"y":262.23},{"x":187,"y":262.22},{"x":188,"y":262.23},{"x":189,"y":262.23},{"x":190,"y":262.23},{"x":191,"y":262.22},{"x":192,"y":262.23},{"x":193,"y":262.23},{"x":194,"y":262.22},{"x":195,"y":262.23},{"x":196,"y":262.23},{"x":197,"y":262.23},{"x":198,"y":262.22},{"x":199,"y":262.23},{"x":200,"y":262.23},{"x":201,"y":262.23},{"x":202,"y":262.22},{"x":203,"y":262.23},{"x":204,"y":262.23},{"x":205,"y":262.23},{"x":206,"y":262.22},{"x":207,"y":262.23},{"x":208,"y":262.23},{"x":209,"y":262.23},{"x":210,"y":262.22},{"x":211,"y":262.23},{"x":212,"y":262.23},{"x":213,"y":262.23},{"x":214,"y":262.22},{"x":215,"y":262.23},{"x":216,"y":262.23},{"x":217,"y":262.23},{"x":218,"y":262.22},{"x":219,"y":262.23},{"x":220,"y":262.23},{"x":221,"y":262.23},{"x":222,"y":262.22},{"x":223,"y":262.23},{"x":224,"y":262.23},{"x":225,"y":262.22},{"x":226,"y":262.23},{"x":227,"y":262.23},{"x":228,"y":262.23},{"x":229,"y":262.22},{"x":230,"y":262.23},{"x":231,"y":262.23},{"x":232,"y":262.23},{"x":233,"y":262.22},{"x":234,"y":262.23},{"x":235,"y":262.23},{"x":236,"y":262.23},{"x":237,"y":262.22},{"x":238,"y":262.23},{"x":239,"y":262.23},{"x":240,"y":262.23},{"x":241,"y":262.22},{"x":242,"y":262.23},{"x":243,"y":262.23},{"x":244,"y":262.23},{"x":245,"y":262.22},{"x":246,"y":262.23},{"x":247,"y":262.23},{"x":248,"y":262.23},{"x":249,"y":262.22},{"x":250,"y":262.23},{"x":251,"y":262.23},{"x":252,"y":262.22},{"x":253,"y":262.23},{"x":254,"y":262.23},{"x":255,"y":262.23},{"x":256,"y":262.22},{"x":257,"y":262.23},{"x":258,"y":262.23},{"x":259,"y":262.23},{"x":260,"y":262.22},{"x":261,"y":262.23},{"x":262,"y":262.23},{"x":263,"y":262.23},{"x":264,"y":262.22},{"x":265,"y":262.23},{"x":266,"y":262.23},{"x":267,"y":262.23},{"x":268,"y":262.22},{"x":269,"y":262.23},{"x":270,"y":262.23},{"x":271,"y":262.23},{"x":272,"y":262.22},{"x":273,"y":262.23},{"x":274,"y":262.23},{"x":275,"y":262.23},{"x":276,"y":262.22},{"x":277,"y":262.23},{"x":278,"y":262.23},{"x":279,"y":262.23},{"x":280,"y":262.22},{"x":281,"y":262.23},{"x":282,"y":262.23},{"x":283,"y":262.22},{"x":284,"y":262.23},{"x":285,"y":262.23},{"x":286,"y":262.23},{"x":287,"y":262.22},{"x":288,"y":262.23},{"x":289,"y":262.23},{"x":290,"y":262.23},{"x":291,"y":262.22},{"x":292,"y":262.23},{"x":293,"y":262.23},{"x":294,"y":262.23},{"x":295,"y":262.22},{"x":296,"y":262.23},{"x":297,"y":262.23}],[{"x":0,"y":40},{"x":1,"y":80},{"x":2,"y":120},{"x":3,"y":160},{"x":4,"y":200},{"x":5,"y":240},{"x":6,"y":280},{"x":7,"y":320},{"x":8,"y":360},{"x":9,"y":400},{"x":10,"y":402.8},{"x":11,"y":402.8},{"x":12,"y":402.8},{"x":13,"y":402.8},{"x":14,"y":402.8},{"x":15,"y":402.8},{"x":16,"y":402.8},{"x":17,"y":402.8},{"x":18,"y":402.8},{"x":19,"y":402.8},{"x":20,"y":402.8},{"x":21,"y":402.8},{"x":22,"y":402.8},{"x":23,"y":402.8},{"x":24,"y":402.8},{"x":25,"y":402.8},{"x":26,"y":402.8},{"x":27,"y":402.8},{"x":28,"y":402.8},{"x":29,"y":402.8},{"x":30,"y":402.8},{"x":31,"y":402.8},{"x":32,"y":407},{"x":33,"y":407},{"x":34,"y":407},{"x":35,"y":407},{"x":36,"y":407},{"x":37,"y":407},{"x":38,"y":407},{"x":39,"y":407},{"x":40,"y":407},{"x":41,"y":407},{"x":42,"y":407},{"x":43,"y":407},{"x":44,"y":407},{"x":45,"y":407},{"x":46,"y":407},{"x":47,"y":407},{"x":48,"y":407},{"x":49,"y":407},{"x":50,"y":407},{"x":51,"y":407},{"x":52,"y":407},{"x":53,"y":407},{"x":54,"y":407},{"x":55,"y":407},{"x":56,"y":407},{"x":57,"y":407},{"x":58,"y":407},{"x":59,"y":407},{"x":60,"y":407},{"x":61,"y":407},{"x":62,"y":407},{"x":63,"y":407},{"x":64,"y":407},{"x":65,"y":407},{"x":66,"y":407},{"x":67,"y":407},{"x":68,"y":407},{"x":69,"y":407},{"x":70,"y":407},{"x":71,"y":407},{"x":72,"y":407},{"x":73,"y":407},{"x":74,"y":407},{"x":75,"y":407},{"x":76,"y":407},{"x":77,"y":407},{"x":78,"y":407},{"x":79,"y":407},{"x":80,"y":407},{"x":81,"y":407},{"x":82,"y":407},{"x":83,"y":407},{"x":84,"y":407},{"x":85,"y":407},{"x":86,"y":407},{"x":87,"y":407},{"x":88,"y":407},{"x":89,"y":407},{"x":90,"y":407},{"x":91,"y":407},{"x":92,"y":407},{"x":93,"y":407},{"x":94,"y":407},{"x":95,"y":407},{"x":96,"y":407},{"x":97,"y":407},{"x":98,"y":407},{"x":99,"y":407},{"x":100,"y":407},{"x":101,"y":407},{"x":102,"y":407},{"x":103,"y":407},{"x":104,"y":407},{"x":105,"y":407},{"x":106,"y":407},{"x":107,"y":407},{"x":108,"y":407},{"x":109,"y":407},{"x":110,"y":407},{"x":111,"y":407},{"x":112,"y":407},{"x":113,"y":407},{"x":114,"y":407},{"x":115,"y":307},{"x":116,"y":237.4},{"x":117,"y":277.4},{"x":118,"y":216.66},{"x":119,"y":256.66},{"x":120,"y":271.92},{"x":121,"y":262.23},{"x":122,"y":262.23},{"x":123,"y":262.23},{"x":124,"y":262.23},{"x":125,"y":262.22},{"x":126,"y":262.23},{"x":127,"y":262.23},{"x":128,"y":262.23},{"x":129,"y":262.22},{"x":130,"y":262.23},{"x":131,"y":262.23},{"x":132,"y":262.23},{"x":133,"y":262.22},{"x":134,"y":262.23},{"x":135,"y":262.23},{"x":136,"y":262.22},{"x":137,"y":262.23},{"x":138,"y":262.23},{"x":139,"y":262.23},{"x":140,"y":262.22},{"x":141,"y":262.23},{"x":142,"y":262.23},{"x":143,"y":262.23},{"x":144,"y":262.22},{"x":145,"y":262.23},{"x":146,"y":262.23},{"x":147,"y":262.23},{"x":148,"y":262.22},{"x":149,"y":262.23},{"x":150,"y":262.23},{"x":151,"y":262.23},{"x":152,"y":262.22},{"x":153,"y":262.23},{"x":154,"y":262.23},{"x":155,"y":262.23},{"x":156,"y":262.22},{"x":157,"y":262.23},{"x":158,"y":262.23},{"x":159,"y":262.23},{"x":160,"y":262.22},{"x":161,"y":262.23},{"x":162,"y":262.23},{"x":163,"y":262.23},{"x":164,"y":262.22},{"x":165,"y":262.23},{"x":166,"y":262.23},{"x":167,"y":262.22},{"x":168,"y":262.23},{"x":169,"y":262.23},{"x":170,"y":262.23},{"x":171,"y":262.22},{"x":172,"y":262.23},{"x":173,"y":262.23},{"x":174,"y":262.23},{"x":175,"y":262.22},{"x":176,"y":262.23},{"x":177,"y":262.23},{"x":178,"y":262.23},{"x":179,"y":262.22},{"x":180,"y":262.23},{"x":181,"y":262.23},{"x":182,"y":262.23},{"x":183,"y":262.22},{"x":184,"y":262.23},{"x":185,"y":262.23},{"x":186,"y":262.23},{"x":187,"y":262.22},{"x":188,"y":262.23},{"x":189,"y":262.23},{"x":190,"y":262.23},{"x":191,"y":262.22},{"x":192,"y":262.23},{"x":193,"y":262.23},{"x":194,"y":262.22},{"x":195,"y":262.23},{"x":196,"y":262.23},{"x":197,"y":262.23},{"x":198,"y":262.22},{"x":199,"y":262.23},{"x":200,"y":262.23},{"x":201,"y":262.23},{"x":202,"y":262.22},{"x":203,"y":262.23},{"x":204,"y":262.23},{"x":205,"y":262.23},{"x":206,"y":262.22},{"x":207,"y":262.23},{"x":208,"y":262.23},{"x":209,"y":262.23},{"x":210,"y":262.22},{"x":211,"y":262.23},{"x":212,"y":262.23},{"x":213,"y":262.23},{"x":214,"y":262.22},{"x":215,"y":262.23},{"x":216,"y":262.23},{"x":217,"y":262.23},{"x":218,"y":262.22},{"x":219,"y":262.23},{"x":220,"y":262.23},{"x":221,"y":262.23},{"x":222,"y":262.22},{"x":223,"y":262.23},{"x":224,"y":262.23},{"x":225,"y":262.22},{"x":226,"y":262.23},{"x":227,"y":262.23},{"x":228,"y":262.23},{"x":229,"y":262.22},{"x":230,"y":262.23},{"x":231,"y":262.23},{"x":232,"y":262.23},{"x":233,"y":262.22},{"x":234,"y":262.23},{"x":235,"y":262.23},{"x":236,"y":262.23},{"x":237,"y":262.22},{"x":238,"y":262.23},{"x":239,"y":262.23},{"x":240,"y":262.23},{"x":241,"y":262.22},{"x":242,"y":262.23},{"x":243,"y":262.23},{"x":244,"y":262.23},{"x":245,"y":262.22},{"x":246,"y":262.23},{"x":247,"y":262.23},{"x":248,"y":262.23},{"x":249,"y":262.22},{"x":250,"y":262.23},{"x":251,"y":262.23},{"x":252,"y":262.22},{"x":253,"y":262.23},{"x":254,"y":262.23},{"x":255,"y":262.23},{"x":256,"y":262.22},{"x":257,"y":262.23},{"x":258,"y":262.23},{"x":259,"y":262.23},{"x":260,"y":262.22},{"x":261,"y":262.23},{"x":262,"y":262.23},{"x":263,"y":262.23},{"x":264,"y":262.22},{"x":265,"y":262.23},{"x":266,"y":262.23},{"x":267,"y":262.23},{"x":268,"y":262.22},{"x":269,"y":262.23},{"x":270,"y":262.23},{"x":271,"y":262.23},{"x":272,"y":262.22},{"x":273,"y":262.23},{"x":274,"y":262.23},{"x":275,"y":262.23},{"x":276,"y":262.22},{"x":277,"y":262.23},{"x":278,"y":262.23},{"x":279,"y":262.23},{"x":280,"y":262.22},{"x":281,"y":262.23},{"x":282,"y":262.23},{"x":283,"y":262.22},{"x":284,"y":262.23},{"x":285,"y":262.23},{"x":286,"y":262.23},{"x":287,"y":262.22},{"x":288,"y":262.23},{"x":289,"y":262.23},{"x":290,"y":262.23},{"x":291,"y":262.22},{"x":292,"y":262.23},{"x":293,"y":262.23},{"x":294,"y":262.23},{"x":295,"y":262.22},{"x":296,"y":262.23},{"x":297,"y":262.23}],[{"x":0,"y":40},{"x":1,"y":80},{"x":2,"y":120},{"x":3,"y":160},{"x":4,"y":200},{"x":5,"y":240},{"x":6,"y":280},{"x":7,"y":320},{"x":8,"y":360},{"x":9,"y":400},{"x":10,"y":402.8},{"x":11,"y":402.8},{"x":12,"y":402.8},{"x":13,"y":402.8},{"x":14,"y":402.8},{"x":15,"y":402.8},{"x":16,"y":402.8},{"x":17,"y":402.8},{"x":18,"y":402.8},{"x":19,"y":402.8},{"x":20,"y":402.8},{"x":21,"y":402.8},{"x":22,"y":402.8},{"x":23,"y":402.8},{"x":24,"y":402.8},{"x":25,"y":402.8},{"x":26,"y":402.8},{"x":27,"y":402.8},{"x":28,"y":402.8},{"x":29,"y":402.8},{"x":30,"y":402.8},{"x":31,"y":402.8},{"x":32,"y":407},{"x":33,"y":407},{"x":34,"y":407},{"x":35,"y":407},{"x":36,"y":407},{"x":37,"y":407},{"x":38,"y":407},{"x":39,"y":407},{"x":40,"y":407},{"x":41,"y":407},{"x":42,"y":407},{"x":43,"y":407},{"x":44,"y":407},{"x":45,"y":407},{"x":46,"y":407},{"x":47,"y":407},{"x":48,"y":407},{"x":49,"y":407},{"x":50,"y":407},{"x":51,"y":407},{"x":52,"y":407},{"x":53,"y":407},{"x":54,"y":407},{"x":55,"y":407},{"x":56,"y":407},{"x":57,"y":407},{"x":58,"y":407},{"x":59,"y":407},{"x":60,"y":407},{"x":61,"y":407},{"x":62,"y":407},{"x":63,"y":407},{"x":64,"y":407},{"x":65,"y":407},{"x":66,"y":407},{"x":67,"y":407},{"x":68,"y":407},{"x":69,"y":407},{"x":70,"y":407},{"x":71,"y":407},{"x":72,"y":407},{"x":73,"y":407},{"x":74,"y":407},{"x":75,"y":407},{"x":76,"y":407},{"x":77,"y":407},{"x":78,"y":407},{"x":79,"y":407},{"x":80,"y":407},{"x":81,"y":407},{"x":82,"y":407},{"x":83,"y":407},{"x":84,"y":407},{"x":85,"y":407},{"x":86,"y":407},{"x":87,"y":407},{"x":88,"y":407},{"x":89,"y":407},{"x":90,"y":407},{"x":91,"y":407},{"x":92,"y":407},{"x":93,"y":407},{"x":94,"y":407},{"x":95,"y":407},{"x":96,"y":407},{"x":97,"y":407},{"x":98,"y":407},{"x":99,"y":407},{"x":100,"y":407},{"x":101,"y":407},{"x":102,"y":407},{"x":103,"y":407},{"x":104,"y":407},{"x":105,"y":407},{"x":106,"y":407},{"x":107,"y":407},{"x":108,"y":407},{"x":109,"y":407},{"x":110,"y":407},{"x":111,"y":407},{"x":112,"y":407},{"x":113,"y":407},{"x":114,"y":407},{"x":115,"y":307},{"x":116,"y":237.4},{"x":117,"y":277.4},{"x":118,"y":216.66},{"x":119,"y":256.66},{"x":120,"y":271.92},{"x":121,"y":262.23},{"x":122,"y":262.23},{"x":123,"y":262.23},{"x":124,"y":262.23},{"x":125,"y":262.22},{"x":126,"y":262.23},{"x":127,"y":262.23},{"x":128,"y":262.23},{"x":129,"y":262.22},{"x":130,"y":262.23},{"x":131,"y":262.23},{"x":132,"y":262.23},{"x":133,"y":262.22},{"x":134,"y":262.23},{"x":135,"y":262.23},{"x":136,"y":262.22},{"x":137,"y":262.23},{"x":138,"y":262.23},{"x":139,"y":262.23},{"x":140,"y":262.22},{"x":141,"y":262.23},{"x":142,"y":262.23},{"x":143,"y":262.23},{"x":144,"y":262.22},{"x":145,"y":262.23},{"x":146,"y":262.23},{"x":147,"y":262.23},{"x":148,"y":262.22},{"x":149,"y":262.23},{"x":150,"y":262.23},{"x":151,"y":262.23},{"x":152,"y":262.22},{"x":153,"y":262.23},{"x":154,"y":262.23},{"x":155,"y":262.23},{"x":156,"y":262.22},{"x":157,"y":262.23},{"x":158,"y":262.23},{"x":159,"y":262.23},{"x":160,"y":262.22},{"x":161,"y":262.23},{"x":162,"y":262.23},{"x":163,"y":262.23},{"x":164,"y":262.22},{"x":165,"y":262.23},{"x":166,"y":262.23},{"x":167,"y":262.22},{"x":168,"y":262.23},{"x":169,"y":262.23},{"x":170,"y":262.23},{"x":171,"y":262.22},{"x":172,"y":262.23},{"x":173,"y":262.23},{"x":174,"y":262.23},{"x":175,"y":262.22},{"x":176,"y":262.23},{"x":177,"y":262.23},{"x":178,"y":262.23},{"x":179,"y":262.22},{"x":180,"y":262.23},{"x":181,"y":262.23},{"x":182,"y":262.23},{"x":183,"y":262.22},{"x":184,"y":262.23},{"x":185,"y":262.23},{"x":186,"y":262.23},{"x":187,"y":262.22},{"x":188,"y":262.23},{"x":189,"y":262.23},{"x":190,"y":262.23},{"x":191,"y":262.22},{"x":192,"y":262.23},{"x":193,"y":262.23},{"x":194,"y":262.22},{"x":195,"y":262.23},{"x":196,"y":262.23},{"x":197,"y":262.23},{"x":198,"y":262.22},{"x":199,"y":262.23},{"x":200,"y":262.23},{"x":201,"y":262.23},{"x":202,"y":262.22},{"x":203,"y":262.23},{"x":204,"y":262.23},{"x":205,"y":262.23},{"x":206,"y":262.22},{"x":207,"y":262.23},{"x":208,"y":262.23},{"x":209,"y":262.23},{"x":210,"y":262.22},{"x":211,"y":262.23},{"x":212,"y":262.23},{"x":213,"y":262.23},{"x":214,"y":262.22},{"x":215,"y":262.23},{"x":216,"y":262.23},{"x":217,"y":262.23},{"x":218,"y":262.22},{"x":219,"y":262.23},{"x":220,"y":262.23},{"x":221,"y":262.23},{"x":222,"y":262.22},{"x":223,"y":262.23},{"x":224,"y":262.23},{"x":225,"y":262.22},{"x":226,"y":262.23},{"x":227,"y":262.23},{"x":228,"y":262.23},{"x":229,"y":262.22},{"x":230,"y":262.23},{"x":231,"y":262.23},{"x":232,"y":262.23},{"x":233,"y":262.22},{"x":234,"y":262.23},{"x":235,"y":262.23},{"x":236,"y":262.23},{"x":237,"y":262.22},{"x":238,"y":262.23},{"x":239,"y":262.23},{"x":240,"y":262.23},{"x":241,"y":262.22},{"x":242,"y":262.23},{"x":243,"y":262.23},{"x":244,"y":262.23},{"x":245,"y":262.22},{"x":246,"y":262.23},{"x":247,"y":262.23},{"x":248,"y":262.23},{"x":249,"y":262.22},{"x":250,"y":262.23},{"x":251,"y":262.23},{"x":252,"y":262.22},{"x":253,"y":262.23},{"x":254,"y":262.23},{"x":255,"y":262.23},{"x":256,"y":262.22},{"x":257,"y":262.23},{"x":258,"y":262.23},{"x":259,"y":262.23},{"x":260,"y":262.22},{"x":261,"y":262.23},{"x":262,"y":262.23},{"x":263,"y":262.23},{"x":264,"y":262.22},{"x":265,"y":262.23},{"x":266,"y":262.23},{"x":267,"y":262.23},{"x":268,"y":262.22},{"x":269,"y":262.23},{"x":270,"y":262.23},{"x":271,"y":262.23},{"x":272,"y":262.22},{"x":273,"y":262.23},{"x":274,"y":262.23},{"x":275,"y":262.23},{"x":276,"y":262.22},{"x":277,"y":262.23},{"x":278,"y":262.23},{"x":279,"y":262.23},{"x":280,"y":262.22},{"x":281,"y":262.23},{"x":282,"y":262.23},{"x":283,"y":262.22},{"x":284,"y":262.23},{"x":285,"y":262.23},{"x":286,"y":262.23},{"x":287,"y":262.22},{"x":288,"y":262.23},{"x":289,"y":262.23},{"x":290,"y":262.23},{"x":291,"y":262.22},{"x":292,"y":262.23},{"x":293,"y":262.23},{"x":294,"y":262.23},{"x":295,"y":262.22},{"x":296,"y":262.23},{"x":297,"y":262.23}],[{"x":0,"y":40},{"x":1,"y":80},{"x":2,"y":120},{"x":3,"y":160},{"x":4,"y":200},{"x":5,"y":240},{"x":6,"y":280},{"x":7,"y":320},{"x":8,"y":360},{"x":9,"y":400},{"x":10,"y":402.8},{"x":11,"y":402.8},{"x":12,"y":402.8},{"x":13,"y":402.8},{"x":14,"y":402.8},{"x":15,"y":402.8},{"x":16,"y":402.8},{"x":17,"y":402.8},{"x":18,"y":402.8},{"x":19,"y":402.8},{"x":20,"y":402.8},{"x":21,"y":402.8},{"x":22,"y":402.8},{"x":23,"y":402.8},{"x":24,"y":402.8},{"x":25,"y":402.8},{"x":26,"y":402.8},{"x":27,"y":402.8},{"x":28,"y":402.8},{"x":29,"y":402.8},{"x":30,"y":402.8},{"x":31,"y":402.8},{"x":32,"y":407},{"x":33,"y":407},{"x":34,"y":407},{"x":35,"y":407},{"x":36,"y":407},{"x":37,"y":407},{"x":38,"y":407},{"x":39,"y":407},{"x":40,"y":407},{"x":41,"y":407},{"x":42,"y":407},{"x":43,"y":407},{"x":44,"y":407},{"x":45,"y":407},{"x":46,"y":407},{"x":47,"y":407},{"x":48,"y":407},{"x":49,"y":407},{"x":50,"y":407},{"x":51,"y":407},{"x":52,"y":407},{"x":53,"y":407},{"x":54,"y":407},{"x":55,"y":407},{"x":56,"y":407},{"x":57,"y":407},{"x":58,"y":407},{"x":59,"y":407},{"x":60,"y":407},{"x":61,"y":407},{"x":62,"y":407},{"x":63,"y":407},{"x":64,"y":407},{"x":65,"y":407},{"x":66,"y":407},{"x":67,"y":407},{"x":68,"y":407},{"x":69,"y":407},{"x":70,"y":407},{"x":71,"y":407},{"x":72,"y":407},{"x":73,"y":407},{"x":74,"y":407},{"x":75,"y":407},{"x":76,"y":407},{"x":77,"y":407},{"x":78,"y":407},{"x":79,"y":407},{"x":80,"y":407},{"x":81,"y":407},{"x":82,"y":407},{"x":83,"y":407},{"x":84,"y":407},{"x":85,"y":407},{"x":86,"y":407},{"x":87,"y":407},{"x":88,"y":407},{"x":89,"y":407},{"x":90,"y":407},{"x":91,"y":407},{"x":92,"y":407},{"x":93,"y":407},{"x":94,"y":407},{"x":95,"y":407},{"x":96,"y":407},{"x":97,"y":407},{"x":98,"y":407},{"x":99,"y":407},{"x":100,"y":407},{"x":101,"y":407},{"x":102,"y":407},{"x":103,"y":407},{"x":104,"y":407},{"x":105,"y":407},{"x":106,"y":407},{"x":107,"y":407},{"x":108,"y":407},{"x":109,"y":407},{"x":110,"y":407},{"x":111,"y":407},{"x":112,"y":407},{"x":113,"y":407},{"x":114,"y":407},{"x":115,"y":307},{"x":116,"y":237.4},{"x":117,"y":277.4},{"x":118,"y":216.66},{"x":119,"y":256.66},{"x":120,"y":271.92},{"x":121,"y":262.23},{"x":122,"y":262.23},{"x":123,"y":262.23},{"x":124,"y":262.23},{"x":125,"y":262.22},{"x":126,"y":262.23},{"x":127,"y":262.23},{"x":128,"y":262.23},{"x":129,"y":262.22},{"x":130,"y":262.23},{"x":131,"y":262.23},{"x":132,"y":262.23},{"x":133,"y":262.22},{"x":134,"y":262.23},{"x":135,"y":262.23},{"x":136,"y":262.22},{"x":137,"y":262.23},{"x":138,"y":262.23},{"x":139,"y":262.23},{"x":140,"y":262.22},{"x":141,"y":262.23},{"x":142,"y":262.23},{"x":143,"y":262.23},{"x":144,"y":262.22},{"x":145,"y":262.23},{"x":146,"y":262.23},{"x":147,"y":262.23},{"x":148,"y":262.22},{"x":149,"y":262.23},{"x":150,"y":262.23},{"x":151,"y":262.23},{"x":152,"y":262.22},{"x":153,"y":262.23},{"x":154,"y":262.23},{"x":155,"y":262.23},{"x":156,"y":262.22},{"x":157,"y":262.23},{"x":158,"y":262.23},{"x":159,"y":262.23},{"x":160,"y":262.22},{"x":161,"y":262.23},{"x":162,"y":262.23},{"x":163,"y":262.23},{"x":164,"y":262.22},{"x":165,"y":262.23},{"x":166,"y":262.23},{"x":167,"y":262.22},{"x":168,"y":262.23},{"x":169,"y":262.23},{"x":170,"y":262.23},{"x":171,"y":262.22},{"x":172,"y":262.23},{"x":173,"y":262.23},{"x":174,"y":262.23},{"x":175,"y":262.22},{"x":176,"y":262.23},{"x":177,"y":262.23},{"x":178,"y":262.23},{"x":179,"y":262.22},{"x":180,"y":262.23},{"x":181,"y":262.23},{"x":182,"y":262.23},{"x":183,"y":262.22},{"x":184,"y":262.23},{"x":185,"y":262.23},{"x":186,"y":262.23},{"x":187,"y":262.22},{"x":188,"y":262.23},{"x":189,"y":262.23},{"x":190,"y":262.23},{"x":191,"y":262.22},{"x":192,"y":262.23},{"x":193,"y":262.23},{"x":194,"y":262.22},{"x":195,"y":262.23},{"x":196,"y":262.23},{"x":197,"y":262.23},{"x":198,"y":262.22},{"x":199,"y":262.23},{"x":200,"y":262.23},{"x":201,"y":262.23},{"x":202,"y":262.22},{"x":203,"y":262.23},{"x":204,"y":262.23},{"x":205,"y":262.23},{"x":206,"y":262.22},{"x":207,"y":262.23},{"x":208,"y":262.23},{"x":209,"y":262.23},{"x":210,"y":262.22},{"x":211,"y":262.23},{"x":212,"y":262.23},{"x":213,"y":262.23},{"x":214,"y":262.22},{"x":215,"y":262.23},{"x":216,"y":262.23},{"x":217,"y":262.23},{"x":218,"y":262.22},{"x":219,"y":262.23},{"x":220,"y":262.23},{"x":221,"y":262.23},{"x":222,"y":262.22},{"x":223,"y":262.23},{"x":224,"y":262.23},{"x":225,"y":262.22},{"x":226,"y":262.23},{"x":227,"y":262.23},{"x":228,"y":262.23},{"x":229,"y":262.22},{"x":230,"y":262.23},{"x":231,"y":262.23},{"x":232,"y":262.23},{"x":233,"y":262.22},{"x":234,"y":262.23},{"x":235,"y":262.23},{"x":236,"y":262.23},{"x":237,"y":262.22},{"x":238,"y":262.23},{"x":239,"y":262.23},{"x":240,"y":262.23},{"x":241,"y":262.22},{"x":242,"y":262.23},{"x":243,"y":262.23},{"x":244,"y":262.23},{"x":245,"y":262.22},{"x":246,"y":262.23},{"x":247,"y":262.23},{"x":248,"y":262.23},{"x":249,"y":262.22},{"x":250,"y":262.23},{"x":251,"y":262.23},{"x":252,"y":262.22},{"x":253,"y":262.23},{"x":254,"y":262.23},{"x":255,"y":262.23},{"x":256,"y":262.22},{"x":257,"y":262.23},{"x":258,"y":262.23},{"x":259,"y":262.23},{"x":260,"y":262.22},{"x":261,"y":262.23},{"x":262,"y":262.23},{"x":263,"y":262.23},{"x":264,"y":262.22},{"x":265,"y":262.23},{"x":266,"y":262.23},{"x":267,"y":262.23},{"x":268,"y":262.22},{"x":269,"y":262.23},{"x":270,"y":262.23},{"x":271,"y":262.23},{"x":272,"y":262.22},{"x":273,"y":262.23},{"x":274,"y":262.23},{"x":275,"y":262.23},{"x":276,"y":262.22},{"x":277,"y":262.23},{"x":278,"y":262.23},{"x":279,"y":262.23},{"x":280,"y":262.22},{"x":281,"y":262.23},{"x":282,"y":262.23},{"x":283,"y":262.22},{"x":284,"y":262.23},{"x":285,"y":262.23},{"x":286,"y":262.23},{"x":287,"y":262.22},{"x":288,"y":262.23},{"x":289,"y":262.23},{"x":290,"y":262.23},{"x":291,"y":262.22},{"x":292,"y":262.23},{"x":293,"y":262.23},{"x":294,"y":262.23},{"x":295,"y":262.22},{"x":296,"y":262.23},{"x":297,"y":262.23}]]
+
+first rider only:
+[40,80,120,160,200,240,280,320,360,400,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,402.8,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,407,307,237.4,277.4,217.42,257.42,272.9,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.09,263.1,263.09,263.09]
+
+-- timestep 118 debugging visualizer 
+race_rider.aero_A2 0.1363
+accumulated_effect 1
+failure_level 100
+race_rider.endurance_fatigue_level 0 
+ race_rider.current_power_effort 405.6000329270883
+ target_power 405.6000329270883
+ powerv 383.09
+ settings.power_adjustment_step_size_up 40
+ power_adjustment 22.510032927088332
+ race_rider.velocity 13.570559784575575
+ 
+ 
+ -- hmmmm, need a better way to log/debug this, maybe add a new array with a specific timestep to log 
+ || debug_log_specific_timesteps.contains(race.race_clock) //line 1003 
+ 
+ 
+ VISUALISER 
+  117 | RIDER 3 LEAD | 1565.02m | 47.86 kph | 383.09 / 400 / 1100 watts | -1 m | 0/0(100) |||| (405.6000329270883|383.09|0.1363|0|0|5.040000235193488) 117 | RIDER 1 FOLLOW | 1563.97m | 42.52 kph | 277.4 / 400 / 1100 watts | 1.05 m | 8/37(93) |||| (310.93497059307145|277.4|0.1363|36.71999999999995|17.549999999999947|5.05) 117 | RIDER 2 FOLLOW |F| | 1561.97m | 42.52 kph | 159.26 / 400 / 1100 watts | 2 m | 0/0(100) |||| (159.25803415220346|159.26|0.0682|0|0|5) 117 | RIDER 4 FOLLOW | 1560.27m | 41.81 kph | 148.07 / 400 / 1100 watts | 1.7 m | 0/0(100) |||| (148.06652870721905|148.07|0.0654|0|0|5)
+model3.js:1010  118 | RIDER 3 LEAD | 1578.59m | 48.85 kph | 405.6 / 400 / 1100 watts | -1 m | 0/0(100) |||| (405.6000329270883|405.6|0.1363|0|0|5.040000235193488) 118 | RIDER 1 FOLLOW | 1576.59m | 45.42 kph | 216.66 / 400 / 1100 watts | 2 m | 0/37(93) |||| (216.66053859230348|216.66|0.0818|36.71999999999995|8.354999999999945|5.05) 118 | RIDER 2 FOLLOW |F| | 1574.59m | 45.42 kph | 187.91 / 400 / 1100 watts | 2 m | 0/0(100) |||| (187.90618745186066|187.91|0.0682|0|0|5) 118 | RIDER 4 FOLLOW | 1572.59m | 44.34 kph | 171.35 / 400 / 1100 watts | 2 m | 0/0(100) |||| (171.35452945576762|171.35|0.0654|0|0|5)
+model3.js:1010  119 | RIDER 3 LEAD | 1592.16m | 48.85 kph | 405.6 / 400 / 1100 watts | -1 m | 1/1(100) |||| (405.6000329270883|405.6|0.1363|0.32000000000000134|0.32000000000000134|5.040000235193488) 119 | RIDER 1 FOLLOW | 1590.05m | 48.46 kph | 256.66 / 400 / 1100 watts | 2.11 m | 0/37(93) |||| (262.2278535271377|256.66|0.0818|36.71999999999995|0|5.05) 119 | RIDER 2 FOLLOW |F| | 1588.05m | 48.46 kph | 221.74 / 400 / 1100 watts | 2 m | 0/0(100) |||| (221.74050007712367|221.74|0.0682|0|0|5) 119 | RIDER 4 FOLLOW | 1585.97m | 48.17 kph | 211.35 / 400 / 1100 watts | 2.08 m | 0/0(100) |||| (214.55686957028414|211.35|0.0654|0|0|5)
+model3.js:1060 ** race finish time adjustment *** race_clock 298 second_last_rider.distance_covered 4003.7196223499614 race.distance 4000 second_last_rider.velocity 13.570790830382771
+
+
+GA MODEL
+ 117 | RIDER 3 LEAD | 1565.02m | 47.86 kph | 383.09 / 400 / 1100 watts | -1 m | 0/0 |||| (407.00004115886026|383.09|0.1363|0|0|5.050000293991859) 117 | RIDER 1 FOLLOW | 1563.97m | 42.52 kph | 277.4 / 400 / 1100 watts | 1.05 m | 8/37 |||| (310.93497059307145|277.4|0.1363|36.71999999999995|17.549999999999947|5.05) 117 | RIDER 2 FOLLOW |F| | 1561.97m | 42.52 kph | 159.26 / 400 / 1100 watts | 2 m | 0/0 |||| (159.25803415220346|159.26|0.0682|0|0|6) 117 | RIDER 4 FOLLOW | 1560.27m | 41.81 kph | 148.07 / 400 / 1100 watts | 1.7 m | 0/0 |||| (148.06652870721905|148.07|0.0654|0|0|6)
+js/race_function_no_vis.js:3232  118 | RIDER 3 LEAD | 1578.61m | 48.91 kph | 407 / 400 / 1100 watts | -1 m | 0/0 |||| (407.00004115886026|407|0.1363|0|0|5.050000293991859) 118 | RIDER 1 FOLLOW | 1576.61m | 45.48 kph | 217.42 / 400 / 1100 watts | 2 m | 0/37 |||| (217.41504164599502|217.42|0.0818|36.71999999999995|8.354999999999945|5.05) 118 | RIDER 2 FOLLOW |F| | 1574.61m | 45.48 kph | 188.55 / 400 / 1100 watts | 2 m | 0/0 |||| (188.54962920086174|188.55|0.0682|0|0|6) 118 | RIDER 4 FOLLOW | 1572.61m | 44.4 kph | 171.94 / 400 / 1100 watts | 2 m | 0/0 |||| (171.94456550077737|171.94|0.0654|0|0|6)
+js/race_function_no_vis.js:3232  119 | RIDER 3 LEAD | 1592.19m | 48.91 kph | 407 / 400 / 1100 watts | -1 m | 1/1 |||| (407.00004115886026|407|0.1363|0.4|0.4|5.050000293991859) 119 | RIDER 1 FOLLOW | 1590.08m | 48.51 kph | 257.42 / 400 / 1100 watts | 2.11 m | 0/37 |||| (263.08519809461956|257.42|0.0818|36.71999999999995|0|5.05) 119 | RIDER 2 FOLLOW |F| | 1588.08m | 48.51 kph | 222.39 / 400 / 1100 watts | 2 m | 0/0 |||| (222.38672454448567|222.39|0.0682|0|0|6) 119 | RIDER 4 FOLLOW | 1586m | 48.23 kph | 211.94 / 400 / 1100 watts | 2.08 m | 0/0 |||| (215.1824061662696|211.94|0.0654|0|0|6)
+
+-- lead rider has a lower power target. warum?
+-- need to go back to find when it changes.
+ 
+----------------------------------- GA MODEL -----------------------------------
+
+114 | RIDER 1 LEAD | 1528.75m | 48.91 kph | 407 / 400 / 1100 watts | -1 m | 37/37 |||| (407|407|0.1363|36.31999999999995|36.31999999999995|5.05) 114 | RIDER 3 FOLLOW | 1526.75m | 48.91 kph | 263.09 / 400 / 1100 watts | 2 m | 0/0 |||| (263.09374143562445|263.09|0.0818|0|0|6) 114 | RIDER 2 FOLLOW |F| | 1524.75m | 48.91 kph | 227.18 / 400 / 1100 watts | 2 m | 0/0 |||| (227.1767696255907|227.18|0.0682|0|0|6) 114 | RIDER 4 FOLLOW | 1522.75m | 48.92 kph | 219.79 / 400 / 1100 watts | 2 m | 0/0 |||| (219.78525826872283|219.79|0.0654|0|0|6)
+
+js/race_function_no_vis.js:3232  115 | RIDER 3 LEAD | 1538.95m | 43.93 kph | 303.09 / 400 / 1100 watts | 0.06 m | 0/0 |||| (407.00004115886026|303.09|0.1363|0|0|5.050000293991859) 115 | RIDER 1 DROP | 1541.01m | 44.14 kph | 307 / 400 / 1100 watts | -1 m | 30/37 |||| (303.0908444036498|307|0.1363|36.71999999999995|36.71999999999995|5.05) 115 | RIDER 2 FOLLOW |F| | 1539.01m | 51.34 kph | 257.67 / 400 / 1100 watts | 2 m | 0/0 |||| (257.6747661441314|257.67|0.0682|0|0|6) 115 | RIDER 4 FOLLOW | 1537.01m | 51.34 kph | 249.11 / 400 / 1100 watts | 1.94 m | 0/0 |||| (249.11337604349532|249.11|0.0654|0|0|6)
+js/race_function_no_vis.js:3232  116 | RIDER 3 LEAD | 1551.73m | 45.97 kph | 343.09 / 400 / 1100 watts | 0.43 m | 0/0 |||| (407.00004115886026|343.09|0.1363|0|0|5.050000293991859) 116 | RIDER 1 DROP | 1552.16m | 40.13 kph | 237.4 / 400 / 1100 watts | -1 m | 18/37 |||| (237.3954903531949|237.4|0.1363|36.71999999999995|29.744999999999948|5.05) 116 | RIDER 2 FOLLOW |F| | 1550.16m | 40.13 kph | 157.93 / 400 / 1100 watts | 1.57 m | 0/0 |||| (157.92693137310803|157.93|0.0818|0|0|6) 116 | RIDER 4 FOLLOW | 1548.66m | 41.93 kph | 149.11 / 400 / 1100 watts | 1.5 m | 0/0 |||| (134.01575769490333|149.11|0.0654|0|0|6)
+js/race_function_no_vis.js:3232  117 | RIDER 3 LEAD | 1565.02m | 47.86 kph | 383.09 / 400 / 1100 watts | -1 m | 0/0 |||| (407.00004115886026|383.09|0.1363|0|0|5.050000293991859) 117 | RIDER 1 FOLLOW | 1563.97m | 42.52 kph | 277.4 / 400 / 1100 watts | 1.05 m | 8/37 |||| (310.93497059307145|277.4|0.1363|36.71999999999995|17.549999999999947|5.05) 117 | RIDER 2 FOLLOW |F| | 1561.97m | 42.52 kph | 159.26 / 400 / 1100 watts | 2 m | 0/0 |||| (159.25803415220346|159.26|0.0682|0|0|6) 117 | RIDER 4 FOLLOW | 1560.27m | 41.81 kph | 148.07 / 400 / 1100 watts | 1.7 m | 0/0 |||| (148.06652870721905|148.07|0.0654|0|0|6)
+js/race_function_no_vis.js:3232  118 | RIDER 3 LEAD | 1578.61m | 48.91 kph | 407 / 400 / 1100 watts | -1 m | 0/0 |||| (407.00004115886026|407|0.1363|0|0|5.050000293991859) 118 | RIDER 1 FOLLOW | 1576.61m | 45.48 kph | 217.42 / 400 / 1100 watts | 2 m | 0/37 |||| (217.41504164599502|217.42|0.0818|36.71999999999995|8.354999999999945|5.05) 118 | RIDER 2 FOLLOW |F| | 1574.61m | 45.48 kph | 188.55 / 400 / 1100 watts | 2 m | 0/0 |||| (188.54962920086174|188.55|0.0682|0|0|6) 118 | RIDER 4 FOLLOW | 1572.61m | 44.4 kph | 171.94 / 400 / 1100 watts | 2 m | 0/0 |||| (171.94456550077737|171.94|0.0654|0|0|6)
+js/race_function_no_vis.js:3232  119 | RIDER 3 LEAD | 1592.19m | 48.91 kph | 407 / 400 / 1100 watts | -1 m | 1/1 |||| (407.00004115886026|407|0.1363|0.4|0.4|5.050000293991859) 119 | RIDER 1 FOLLOW | 1590.08m | 48.51 kph | 257.42 / 400 / 1100 watts | 2.11 m | 0/37 |||| (263.08519809461956|257.42|0.0818|36.71999999999995|0|5.05) 119 | RIDER 2 FOLLOW |F| | 1588.08m | 48.51 kph | 222.39 / 400 / 1100 watts | 2 m | 0/0 |||| (222.38672454448567|222.39|0.0682|0|0|6) 119 | RIDER 4 FOLLOW | 1586m | 48.23 kph | 211.94 / 400 / 1100 watts | 2.08 m | 0/0 |||| (215.1824061662696|211.94|0.0654|0|0|6)
+ga.js:77 
+
+----------------------------------- VISUALISER -----------------------------------
+ 114 | RIDER 1 LEAD | 1528.75m | 48.91 kph | 407 / 400 / 1100 watts | -1 m | 37/37(93) |||| (407|407|0.1363|36.31999999999995|36.31999999999995|5.05) 114 | RIDER 3 FOLLOW | 1526.75m | 48.91 kph | 263.09 / 400 / 1100 watts | 2 m | 0/0(100) |||| (263.09374143562445|263.09|0.0818|0|0|5) 114 | RIDER 2 FOLLOW |F| | 1524.75m | 48.91 kph | 227.18 / 400 / 1100 watts | 2 m | 0/0(100) |||| (227.1767696255907|227.18|0.0682|0|0|5) 114 | RIDER 4 FOLLOW | 1522.75m | 48.92 kph | 219.79 / 400 / 1100 watts | 2 m | 0/0(100) |||| (219.78525826872283|219.79|0.0654|0|0|5)
+ 
+model3.js:1010  115 | RIDER 3 LEAD | 1538.95m | 43.93 kph | 303.09 / 400 / 1100 watts | 0.06 m | 0/0(100) |||| (405.6000329270883|303.09|0.1363|0|0|5.040000235193488) 115 | RIDER 1 DROP | 1541.01m | 44.14 kph | 307 / 400 / 1100 watts | -1 m | 30/37(93) |||| (303.0908444036498|307|0.1363|36.71999999999995|36.71999999999995|5.05) 115 | RIDER 2 FOLLOW |F| | 1539.01m | 51.34 kph | 257.67 / 400 / 1100 watts | 2 m | 0/0(100) |||| (257.6747661441314|257.67|0.0682|0|0|5) 115 | RIDER 4 FOLLOW | 1537.01m | 51.34 kph | 249.11 / 400 / 1100 watts | 1.94 m | 0/0(100) |||| (249.11337604349532|249.11|0.0654|0|0|5)
+model3.js:1010  116 | RIDER 3 LEAD | 1551.73m | 45.97 kph | 343.09 / 400 / 1100 watts | 0.43 m | 0/0(100) |||| (405.6000329270883|343.09|0.1363|0|0|5.040000235193488) 116 | RIDER 1 DROP | 1552.16m | 40.13 kph | 237.4 / 400 / 1100 watts | -1 m | 18/37(93) |||| (237.3954903531949|237.4|0.1363|36.71999999999995|29.744999999999948|5.05) 116 | RIDER 2 FOLLOW |F| | 1550.16m | 40.13 kph | 157.93 / 400 / 1100 watts | 1.57 m | 0/0(100) |||| (157.92693137310803|157.93|0.0818|0|0|5) 116 | RIDER 4 FOLLOW | 1548.66m | 41.93 kph | 149.11 / 400 / 1100 watts | 1.5 m | 0/0(100) |||| (134.01575769490333|149.11|0.0654|0|0|5)
+model3.js:1010  117 | RIDER 3 LEAD | 1565.02m | 47.86 kph | 383.09 / 400 / 1100 watts | -1 m | 0/0(100) |||| (405.6000329270883|383.09|0.1363|0|0|5.040000235193488) 117 | RIDER 1 FOLLOW | 1563.97m | 42.52 kph | 277.4 / 400 / 1100 watts | 1.05 m | 8/37(93) |||| (310.93497059307145|277.4|0.1363|36.71999999999995|17.549999999999947|5.05) 117 | RIDER 2 FOLLOW |F| | 1561.97m | 42.52 kph | 159.26 / 400 / 1100 watts | 2 m | 0/0(100) |||| (159.25803415220346|159.26|0.0682|0|0|5) 117 | RIDER 4 FOLLOW | 1560.27m | 41.81 kph | 148.07 / 400 / 1100 watts | 1.7 m | 0/0(100) |||| (148.06652870721905|148.07|0.0654|0|0|5)
+model3.js:1010  118 | RIDER 3 LEAD | 1578.59m | 48.85 kph | 405.6 / 400 / 1100 watts | -1 m | 0/0(100) |||| (405.6000329270883|405.6|0.1363|0|0|5.040000235193488) 118 | RIDER 1 FOLLOW | 1576.59m | 45.42 kph | 216.66 / 400 / 1100 watts | 2 m | 0/37(93) |||| (216.66053859230348|216.66|0.0818|36.71999999999995|8.354999999999945|5.05) 118 | RIDER 2 FOLLOW |F| | 1574.59m | 45.42 kph | 187.91 / 400 / 1100 watts | 2 m | 0/0(100) |||| (187.90618745186066|187.91|0.0682|0|0|5) 118 | RIDER 4 FOLLOW | 1572.59m | 44.34 kph | 171.35 / 400 / 1100 watts | 2 m | 0/0(100) |||| (171.35452945576762|171.35|0.0654|0|0|5)
+model3.js:1010  119 | RIDER 3 LEAD | 1592.16m | 48.85 kph | 405.6 / 400 / 1100 watts | -1 m | 1/1(100) |||| (405.6000329270883|405.6|0.1363|0.32000000000000134|0.32000000000000134|5.040000235193488) 119 | RIDER 1 FOLLOW | 1590.05m | 48.46 kph | 256.66 / 400 / 1100 watts | 2.11 m | 0/37(93) |||| (262.2278535271377|256.66|0.0818|36.71999999999995|0|5.05) 119 | RIDER 2 FOLLOW |F| | 1588.05m | 48.46 kph | 221.74 / 400 / 1100 watts | 2 m | 0/0(100) |||| (221.74050007712367|221.74|0.0682|0|0|5) 119 | RIDER 4 FOLLOW | 1585.97m | 48.17 kph | 211.35 / 400 / 1100 watts | 2.08 m | 0/0(100) |||| (214.55686957028414|211.35|0.0654|0|0|5)
+
+-- seems to be the selection of target power of a rider when it is taking over the lead. seems like the visualise is wrong?
+
+-- this line seems to be updating an effort value to a power value. warum?
+new_leader.current_power_effort = current_leader_power; //line 245 
+
+-- the target effort is different. warum?
+
+-- oh shit, found a 9 instead of the new variable on line 185 of model3.js!
+
+-- fook, that was it, they're now the same.
+
+-- on to the next challenge, need to think about why we are getting tiny instruction sets.
+
+-- can i run a  test with some old settings? 
+	"ga_max_timestep":400,
+	"ga_probability_of_instruction_per_timestep_lower":0.01,
+	"ga_probability_of_instruction_per_timestep_upper":0.03,
+	"ga_probability_of_drop_instruction":0.5,
+	"ga_p_crossover":0.1,
+	"ga_team_size":4,
+	"ga_p_shuffle_start":0.001,
+	"ga_p_add_instruction":0.006,
+	"ga_p_delete_instruction":0.16,
+	"ga_p_change_effort":0.012,
+	"ga_p_change_drop":0.012,
+	"ga_p_move_instruction":0.012,
+	"ga_range_to_move_instruction":10,
+	"ga_range_to_change_effort":2,
+
+-- new 
+	"ga_max_timestep": 700,
+	"ga_probability_of_instruction_per_timestep_lower": 0.01,
+	"ga_probability_of_instruction_per_timestep_upper": 0.08,
+	"ga_probability_of_drop_instruction": 0.6,
+    "ga_selection_type":"tournament_elitist_roulette",
+    "ga_tournament_selection_group_size": 12,
+    "ga_tournament_roulette_exponent_group_size_divisor":4,       
+	"ga_p_crossover": 0.8,
+    "ga_mutation_switch":1,
+	"ga_crossover_length_adjustment_probability": 0.5,
+	"crossover_apply_mutation_probability": 0.8,
+	"ga_team_size": 4,
+	"ga_p_shuffle_start": 0.08,
+	"ga_p_add_instruction": 0.049,
+	"ga_p_delete_instruction": 0.3,
+	"ga_p_change_effort": 0.45,
+	"ga_p_change_drop": 0.45,
+	"ga_p_move_instruction": 0.45,
+	"ga_range_to_move_instruction": 10,
+	"ga_range_to_change_effort": 1.5,
+	
+-- updated 
+	"ga_max_timestep": 400,
+	"ga_probability_of_instruction_per_timestep_lower": 0.01,
+	"ga_probability_of_instruction_per_timestep_upper": 0.03,
+	"ga_probability_of_drop_instruction": 0.5,
+    "ga_selection_type":"tournament_elitist_roulette",
+    "ga_tournament_selection_group_size": 12,
+    "ga_tournament_roulette_exponent_group_size_divisor":4,       
+	"ga_p_crossover": 0.1,
+    "ga_mutation_switch":1,
+	"ga_crossover_length_adjustment_probability": 0.5,
+	"crossover_apply_mutation_probability": 0.8,
+	"ga_team_size": 4,
+	"ga_p_shuffle_start":0.001,
+	"ga_p_add_instruction":0.006,
+	"ga_p_delete_instruction":0.16,
+	"ga_p_change_effort":0.012,
+	"ga_p_change_drop":0.012,
+	"ga_p_move_instruction":0.012,
+	"ga_range_to_move_instruction":10,
+	"ga_range_to_change_effort":2,
+
+- issue with it ending up with minimal instructions might be the default effort 
+"start_output_level": 6,
+
+-- huh, so sum_fitness is sometimes NaN. warum?
+-- ok, so tournament_proportional_fitness is sometimes NaN. christ. warum?
+
+-- issue is if all times in a group are the same, then they sum to zero, so we need a special case for this... in fact it doesn't really matter what value we put in, since will all be equal and normalise to the same value?
+
+-- run it with the old selection type 
+
+- tournament_elitist_winner_takes_all
+- tournament_random_with_replacement
+- tournament_elitist_roulette
+
+-- may need to add another rank-based selection? 
+
+-- weird, getting this message 
+120% done, max_performance_failure_percentage found 0
+
+-- shit, had a rider with a max power of 4000!
+- redo those tests
+
+- need to be able to view the entire settings of a test/race from the results page.
+
+-- maybe the cost of dropping back is too high?
+with no drop: 297.895 seconds
+with one drop [[100,"drop=3"]]: 298.222 seconds
+with two drops [[100,"drop=3"],[200,"drop=3"]]: 298.549 seconds
+
+-- so, this is due to the lack of acceleration? I restrict the increases in power application, to stop riders from going from 0 to max speed instantly.
+
+-- how hard would it be to actually include acceleration? Might not be as bad as ai thought, then I can allow for cost-less lead changes AND have more realistic starting behaviour?
+
+https://www.reddit.com/r/Velo/comments/lt83oz/watts_per_kilo_and_accelerations/
+
+list of params and where to get them...
+power_total								powerv
+C_rr	rolling resistance				settings_r.rollingRes
+mass	rider + bike weight				race_r.riders_r[i].weight + settings_r.bike_weight
+gravity_force							9.8 (constant)
+p_air_density	  						race_r.riders_r[i].air_density
+
+total_resistance = aero_tres
+  load_rider.aero_tres = load_rider.aero_twt * (settings.gradev + settings.rollingRes);
+
+
+air_density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
+- settings.temperaturev 25
+- settings.elevationv 100
+
+so, air density = (1.293 - 0.00426 * 25) * Math.exp(-100 / 7000.0);
+
+- = 1.169670496951128
+
+coefficient_of_drag * frontal_area		settings_r.frontalArea			
+
+current_velocity						race_rider.velocity
+
+
+
+-- used an energy-based calculation for the 0 point 
+
+-- now, need to do the same for the chasing riders, excpet we know their velocity - they aim to chase the rider in front 
+-- but here is also where the sheltering comes into play
+
+-- added new function power_from_velocity_with_acceleration(aero, headwind, total_resistance, transv, target_velocity,current_velocity, mass)
+
+- based on power_from_velocity(aero, headwind, total_resistance, transv, target_velocity)
+
+- now have a few calls, e.g. to this:
+LEAD rider RIDER 1 from 8.569714352187841 to race_rider.velocity 9.595107400271853 accel_method: 8.632194496306289
+race_function_no_vis.js:3074 CHASING rider RIDER 4 from 8.77549944098969 to race_rider.velocity 8.77549944098969 target_power: 109.3179965793543 target_power_with_acceleration 157.7724724307182
+race_function_no_vis.js:3074 CHASING rider RIDER 3 from 8.653187498369842 to race_rider.velocity 8.653187498369842 target_power: 125.85586093216347 target_power_with_acceleration 179.2698484612523
+race_function_no_vis.js:3074 CHASING rider RIDER 2 from 8.431048740811022 to race_rider.velocity 8.431048740811022 target_power: 118.9149439712471 target_power_with_acceleration 174.32618489296846
+
+-- have some other issues such as slowing down, how the heck do I model that? e.g. when dropping back... if new velocity is LESS than old, do you brake? coast? what power is used? 
+
+
+-- hmm, well it will need a switch in the main settings, to use the newton method or the acceleration method 
+
+-- "power_application_include_acceleration": 1,
+
+-- if we want the power application to change, we shouldn't control power increases with settings_r.power_adjustment_step_size_up and settings_r.power_adjustment_step_size_down. these should be pretty BIG
+
+-- take out the newton lookup thing?
+
+=-- doesn't break the model, but now the visualizer times differ
+
+2240
+
+-- Tuesday 22. baurisheen
+
+-- need to figure out how to fix the power calculations of the chasing rider.
+
+-- why is the power rounded to two places? e.g. line 815 in race model? 
+
+- target_velocity 0.16249008065522785
+- target_power 0.5774815936365735
+- powerv = 0.58 
+- velocity_from_power_with_acceleration() 0.09593215176677036
+
+power_from_velocity_with_acceleration(race_rider.aero_A2, settings.headwindv, race_rider.aero_tres, settings.transv, target_velocity, race_rider.velocity, (race_rider.weight + settings.bike_weight));
+power_from_velocity_with_acceleration(0.5774734647799685, 0, 3.2928, 0.95, 0.16249008065522785, 0, 84);
+
+velocity_from_power_with_acceleration(powerv, settings.rollingRes, race_rider.weight + settings.bike_weight, 9.8, race_rider.air_density, settings.frontalArea, current_velocity);
+velocity_from_power_with_acceleration(0.58, 0.004, 75, 9, 9.8, 1.169670496951128, 0.233, 0);
+
+- standard values 
+- p, air density, 1.225 kg/m^3, I use 1.169670496951128 (see above for calculation)
+- Cd(A), drag area of cyclist, 0.3m^3 in chatgpt example, 
+- frontal area, 0.233 in my settings
+- frontalArea
+- Crr, rolling resistance of bike tyres, 0.004 - i have the same.
+- aero_A2_no_shelter = Math.round((0.5 * settings_r.frontalArea * new_leader.air_density)*10000)/10000;
+
+
+
+- 2 changes in power_from_velocity_with_acceleration()
+- changed velocity in call to power_from_velocity to the average, not the target 
+- added mass to the calculation of acceleration power
+
+- now get 
+- target_velocity 0.16249008065522785
+- target_power 1.4489417278606533
+- powerv = 1.45
+- velocity_from_power_with_acceleration() 0.16504611678203426
+
+- o.k this is a lot closer, but not quite there?
+
+- it is mostly in line with the gpt suggested calc.
+
+- maybe make the changes in the GA and see what it does to the model?
+
+-- tried a new run but the behaviour is chaotic
+-- ga time: 322.095 vis time: 322.095
+
+- how far is it off for timestep 1?
+- v_target = 0.16249008065522785
+rolling_resistance - 3.2928000000000006
+- power needed for v - 1.4489417278606533
+- no updated to powerv 
+- velocity from power 0.16504611678203426
+
+-- after a few timesteps 
+- old velocity 6.757005475345615
+-v_target 22.3812748202808
+- power needed 20390.86455504492
+- current power 617.82
+- powerv after adjustment 817.82 (limited to 200 increase)
+- velocity_from_power_with_acceleration for 817.82 = 8.057332042758263
+
+- so they fall far begind?
+
+- by timestep 2 they already have 
+- start velocity 0.16504611678203426
+- target velocity 4.278492416099605  (leading rider at 6.4435385328816395)
+- target_power 816.5795856878715
+-  powerv 201.45
+- velocity from power 10.559802251740084
+
+-- fucnk this is very bad, both models seem way off
+
+
+-- testing the functions
+
+- if the rider+bike weifght > 57.71916, the power is +, but below that, it is -. warum bitte?
+
+call_velocity_from_power_with_acceleration: 2025/4/23 @ 17:23:18
+total_power: 201.456
+rolling_resistance_coefficient: 0.004
+rider_and_bike_mass: 84
+gravity_accel: 9.8
+air_density: 1.1696
+drag_coeffic_times_frontal_area: 0.223
+current_velocity: 0.165
+
+new_velocity: 10.694531041119873
+
+-- gpt gives me 2.11 m/s 
+
+-- why is the drivertrain efficiency not in here??
+
+
+
+

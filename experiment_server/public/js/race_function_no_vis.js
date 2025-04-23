@@ -14,9 +14,11 @@ let GLOBAL_LOG_MESSAGE_LIMIT = 400000;
 let longest_LOG_MESSAGE_found = 0;
 let generation_best_time = Infinity;
 
-let use_lookup_velocity = false;
-
 let count_of_choke_under_pressure_loggings = 0;
+
+let debug_log_specific_timesteps = [114,115,116,117,118,119];
+
+let power_application_include_acceleration = 1;
 
 //store the sequence of normal_distribution_output_inflation_percentage values to check them
 //let normal_distribution_output_inflation_percentage_array = [];
@@ -458,6 +460,9 @@ function randn_bm() {
     //debugger
     //console.log("Creating mutant clones for " + race_r.instructions);
     for(i=0;i<settings_r.robustness_check_population_size;i++){
+      if(race_r.start_order == undefined ){
+        debugger;
+      }
       let new_mutated_clone = mutate_race(race_r,settings_r,1001);
       //console.log("mutant clone " + i + " " + new_mutated_clone.instructions);
       population.push(new_mutated_clone);
@@ -1436,6 +1441,10 @@ function randn_bm() {
       }
       //get adjustment to add
       let adjustment_to_add_to_all_diffs = sum_distance_from_slowest_time * ga_roulette_p_of_diff_sum_to_add;
+      //if all times are the same, this will be zero, a special case where we can assign an arbitrary fixed value.
+      if(adjustment_to_add_to_all_diffs == 0){
+        adjustment_to_add_to_all_diffs = 1;
+      }
 
       //get sum of adjusted diffs with exponent applied
       let sum_adjusted_diff_with_exponent = 0;
@@ -1455,6 +1464,9 @@ function randn_bm() {
         let proportional_improvement_over_slowest = (Math.pow((adjustment_to_add_to_all_diffs + (slowest_race_time - current_population[(i+k2)].time_taken)),ga_selection_fitness_pressure_exponent)/sum_adjusted_diff_with_exponent);
 
         current_population[(i+k2)].tournament_proportional_fitness = proportional_improvement_over_slowest;
+        if(isNaN(current_population[(i+k2)].tournament_proportional_fitness)){
+          debugger;
+        }
         sum_tournament_proportional_fitness += proportional_improvement_over_slowest;
         //console.log((i+k2) + "\t" + current_population[(i+k2)].time_taken + "\t" + current_population[(i+k2)].tournament_proportional_fitness);
       }
@@ -1544,21 +1556,32 @@ function randn_bm() {
               let sum_fitness = 0;
 
               //debugger;
+              //make sure a parent is actually assigned?
+              let parent_1_assigned = 0;
+              let parent_2_assigned = 0;
 
               for(let k2 = 0;k2<group_size;k2++){
                 sum_fitness += current_population[(i+k2)].tournament_proportional_fitness;
+                if(isNaN(sum_fitness)){
+                  debugger;
+                }
 
                 if (parent1_id < 0 && p_roulette1 <  sum_fitness){
                   parent1_id = i+k2;
                   parent1 = current_population[(i+k2)];
+                  parent_1_assigned = 1;
                 }
                 if (parent2_id < 0 && p_roulette2 <  sum_fitness){
                   parent2_id = i+k2;
                   parent2 = current_population[(i+k2)];
+                  parent_2_assigned = 1;
                 }
                 if(parent1_id >= 0 && parent2_id >= 0){
                   break;
                 }
+              }
+              if (parent_1_assigned == 0 || parent_2_assigned == 0){
+                debugger;
               }
             }
             //dk2020: add crossover effect
@@ -1570,6 +1593,11 @@ function randn_bm() {
               //also mutate if the mutate_crossover is set (again, probabilitsic)
               if (typeof(settings_r.crossover_apply_mutation_probability) != "undefined"){
                 if (Math.random() < settings_r.crossover_apply_mutation_probability){
+                  //donalK25: bug where mutate_race crashes due to undefined props
+                  if(new_race.start_order == undefined ){
+                    debugger;
+                  }
+
                   new_race = mutate_race(new_race,settings_r,generation);
                   //console.log("****MUTATING CROSSOVER****");
                 }
@@ -1588,6 +1616,10 @@ function randn_bm() {
             }
             else{
               //can use either parent 1 or 2, apply mutation
+              //donalK25: bug where mutate_race crashes due to undefined props
+              if(parent1.start_order == undefined ){
+                debugger;
+              }
               new_race = mutate_race(parent1,settings_r,generation);
               stats.number_of_mutants_added_total++;
               settings_r.mutant_counter++; //dk2020 this may be doing something just like the line above :-(
@@ -1621,6 +1653,9 @@ function randn_bm() {
             //also mutate if the mutate_crossover is set (again, probabilitsic)
             if (typeof(settings_r.crossover_apply_mutation_probability) != "undefined"){
               if (Math.random() < settings_r.crossover_apply_mutation_probability){
+                if(new_race.start_order == undefined ){
+                  debugger;
+                }
                 new_race = mutate_race(new_race,settings_r,generation);
                 //console.log("****MUTATING CROSSOVER****");
               }
@@ -1638,6 +1673,9 @@ function randn_bm() {
 
           }
           else{
+            if(new_race.start_order == undefined ){
+              debugger;
+            }
             new_race = mutate_race(new_race,settings_r,generation);
             stats.number_of_mutants_added_total++;
             settings_r.mutant_counter++; //dk2020 this may be doing something just like the line above :-(
@@ -1704,6 +1742,11 @@ function randn_bm() {
           let new_race = {};
           if(i==k){
             new_race = current_population[parent_population[i]];
+
+            if(new_race.start_order == undefined ){
+              debugger;
+            }
+
             new_race = mutate_race(new_race,settings_r,generation);
             number_of_direct_copies++;
           }
@@ -1712,6 +1755,9 @@ function randn_bm() {
               new_race = crossover(current_population[parent_population[i]],current_population[parent_population[k]],settings_r,generation,i+k);
               if (typeof(settings_r.crossover_apply_mutation_probability) != "undefined"){
                 if (Math.random() < settings_r.crossover_apply_mutation_probability){
+                  if(new_race.start_order == undefined ){
+                    debugger;
+                  }
                   new_race = mutate_race(new_race,settings_r,generation);
                   //console.log("****MUTATING CROSSOVER 2****");
                 }
@@ -1728,6 +1774,9 @@ function randn_bm() {
             }
             else{
               new_race = current_population[parent_population[i]];
+              if(new_race.start_order == undefined ){
+                debugger;
+              }
               new_race = mutate_race(new_race,settings_r,generation);
               number_of_mutants_added_total++;
             }
@@ -1947,6 +1996,82 @@ function randn_bm() {
     return powerv;
   }
 
+  function power_from_velocity_with_acceleration(aero, headwind, total_resistance, transv, target_velocity,current_velocity, mass){
+    // get the original drag and rolling resistance power, but also need to work in acceleration
+    //if(target_velocity <= current_velocity){
+    //  debugger;
+    //}
+
+    let average_velocity = (current_velocity + target_velocity)/2;
+    let drag_and_rolling_resistance_power = power_from_velocity(aero, headwind, total_resistance, transv, average_velocity);
+    if(drag_and_rolling_resistance_power < 0){
+      drag_and_rolling_resistance_power = 0;
+    }
+    let acceleration_power = (0.5*mass*((target_velocity*target_velocity)-(current_velocity*current_velocity))) / transv;
+    if(acceleration_power < 0){
+      acceleration_power = 0;
+    }
+    let powerv = drag_and_rolling_resistance_power + acceleration_power;
+    return powerv;
+
+  }
+
+  function velocity_from_power_with_acceleration(power_total, C_rr, mass, gravity_force, p_air_density, coefficient_of_drag_x_frontal_area, current_velocity, drivetrain_efficiency){
+    //assumption: no gradient!
+    //assumption: 1 second of time!
+    // 1: get F_rolling_res
+    //debugger;
+    let rolling_resistance = mass * C_rr * gravity_force;
+
+    let new_velocity = current_velocity;
+    //we need a special case for when the current_velocity is 0, i.e., at the very beginning
+    if (current_velocity <= 0){
+        //1: get total power energy
+        let total_energy = power_total; //multiply power by time, which in this case is 1 second
+
+        //2: get speed is if ALL energy is used to produce a velocity
+        // kinetic_energy = 0.5*mass*velocity^2 so v = square_root(2*kinetic_energy/mass)
+        let velocity_all_energy = Math.sqrt((2*total_energy)/mass); // m/s
+
+        //3: get the average speed (over 1 second)
+        let v_average = velocity_all_energy/2; // (start_v + end_v)/2 where start_v = 0
+
+        //4: estimate rolling resistance work over that distance
+        let rolling_resistance_work = rolling_resistance * v_average; //note that this is very much an estimate
+
+        //5: work out the net energy using (total_energy - rolling_resistance_work)
+        let net_energy = (total_energy - rolling_resistance_work);
+        //6: work out the speed again using this net energy
+        new_velocity = Math.sqrt((2*net_energy)/mass);
+    }
+    else {
+      //for lead rider, after the first timestep
+
+      //use a loop to get more accurate drag values (refinement)
+      let velocity_start = current_velocity;
+      let velocity_end = current_velocity;
+      let velocity_estimate = 0;
+
+      for(let i=0;i<4;i++){
+        velocity_estimate = (velocity_start+velocity_end)/2;
+
+        //2: get F_drag (estimate 1)
+        let drag_force_estimate = 0.5*coefficient_of_drag_x_frontal_area*p_air_density*velocity_estimate*velocity_estimate;
+
+        let power_resistance_estimate = (rolling_resistance + drag_force_estimate) * velocity_estimate;
+
+        //3: get acceleration estimate 1
+        let acceleration_estimate = (power_total - power_resistance_estimate)/(mass*velocity_start);
+        //4: get new velocity estimate 1
+        velocity_end = velocity_start + acceleration_estimate;
+      }
+      new_velocity = velocity_end;
+    }
+
+    // return this new velocity
+
+    return new_velocity;
+  }
   var DecimalPrecision = (function() {
     if (Math.sign === undefined) {
       Math.sign = function(x) {
@@ -2109,9 +2234,21 @@ function randn_bm() {
     //note: The version of this in the model3 code has more comments and logging.
     //Changed from using leader power as a target direclty and instead work out what power the new leader will need to produce the same velocity (with no shelter)
     // should aim for power to produce the target speed WITHOUT SHELTER so need to make sure the correct aero_A2 value is used
-    let aero_A2_no_shelter = Math.round((0.5 * settings_r.frontalArea * new_leader.aero_density)*10000)/10000;
+    let aero_A2_no_shelter = Math.round((0.5 * settings_r.frontalArea * new_leader.air_density)*10000)/10000;
     //now work out the power needed for this new leader using that target velocity
-    let target_power = power_from_velocity(aero_A2_no_shelter, settings_r.headwindv, new_leader.aero_tres, settings_r.transv, current_leader_velocity);
+    let target_power = 0;
+
+    //donalK25: apply constant-speed drag calc or acceleration-based calc
+    if(power_application_include_acceleration){
+      target_power = power_from_velocity_with_acceleration(aero_A2_no_shelter, settings_r.headwindv, new_leader.aero_tres, settings_r.transv, current_leader_velocity, new_leader.velocity, (new_leader.weight + settings_r.bike_weight));
+
+      // console.log("switch lead ACCEL method, CHASING rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity + " target_power: " + target_power);
+    }
+    else{
+      target_power = power_from_velocity(aero_A2_no_shelter, settings_r.headwindv, new_leader.aero_tres, settings_r.transv, current_leader_velocity);
+    }
+
+
     //now work out the output level that will transalte to that power (which can take some time to reach)
     new_leader.output_level = mapPowerToEffort(settings_r.threshold_power_effort_level, target_power, new_leader.threshold_power, new_leader.max_power, settings_r.maximum_effort_value)
 
@@ -2140,6 +2277,11 @@ function randn_bm() {
     settings_r.race_bend_distance = Math.PI * settings_r.track_bend_radius;
     race_r.instructions = [];
     race_r.instructions_t = [];
+
+    //donalK25: set the new global for the acceleration calculations (default to OFF/0)
+    if (typeof(settings_r.power_application_include_acceleration) != 'undefined'){
+      power_application_include_acceleration = settings_r.power_application_include_acceleration;
+    }
 
     //dk22: if this is not the first generation, print the best last gen finish timeout
     let enable_pressure_noise = 0;
@@ -2206,6 +2348,7 @@ function randn_bm() {
       load_rider.number_of_riders_in_front=0;
 
       load_rider.output_level=load_rider.start_output_level; //new addition to try address bug
+      // might be better to auto set this to the theshold level? DonalK25
 
       //dk2021 new rider property to add info to the log message
       load_rider.step_info = "";
@@ -2231,9 +2374,12 @@ function randn_bm() {
 
     //set up the aero properties so they don't have to be recalculated
     for(let i=0;i< race_r.riders_r.length;i++){
-      race_r.riders_r[i].aero_density = (1.293 - 0.00426 * settings_r.temperaturev) * Math.exp(-settings_r.elevationv / 7000.0);
+      race_r.riders_r[i].air_density = (1.293 - 0.00426 * settings_r.temperaturev) * Math.exp(-settings_r.elevationv / 7000.0);
       race_r.riders_r[i].aero_twt = Math.round((9.8 * (race_r.riders_r[i].weight + settings_r.bike_weight)*10))/10;  // total weight of rider + bike in newtons, rouded to 1 decimal place
-      race_r.riders_r[i].aero_A2 = Math.round((0.5 * settings_r.frontalArea * race_r.riders_r[i].aero_density)*100)/100;   // full air resistance parameter
+      race_r.riders_r[i].aero_A2 = Math.round((0.5 * settings_r.frontalArea * race_r.riders_r[i].air_density)*100)/100;   // full air resistance parameter
+      //twt = total weight
+      //tres = total total resistance
+
       race_r.riders_r[i].aero_tres = race_r.riders_r[i].aero_twt * (settings_r.gradev + settings_r.rollingRes);
     }
 
@@ -2479,7 +2625,7 @@ function randn_bm() {
         //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
 
         let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
-        race_rider.aero_A2 = Math.round((0.5 * settings_r.frontalArea * race_rider.aero_density)*10000)/10000;   // full air resistance parameter
+        race_rider.aero_A2 = Math.round((0.5 * settings_r.frontalArea * race_rider.air_density)*10000)/10000;   // full air resistance parameter
 
         race_rider.step_info = ""; //dk2021 used to add logging info
 
@@ -2735,8 +2881,6 @@ function randn_bm() {
             }
           }
 
-
-
           //compare power required to previous power and look at how it can increase or decrease
           if (powerv > target_power){ //slowing down
             if((powerv - target_power) > Math.abs(settings_r.power_adjustment_step_size_down)){
@@ -2765,43 +2909,21 @@ function randn_bm() {
           //round power output to 2 decimal places
           powerv = Math.round((powerv)*100)/100;
 
-          //check the lookup table
-          if (use_lookup_velocity)
-          {
-            let lookup_velocity = -1;
-            if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
-              if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
-                lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)];
-              }
-            }
-            if ( lookup_velocity === undefined || lookup_velocity === -1){
-              //does not exist in the lookup so call the function and save it
-              race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
+            let current_velocity = race_rider.velocity;
 
-              if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
-                if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
-                  newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
-                }
-                else{
-                  newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
-                  newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
-                }
-              }
-              else{
-                //add new array for total weight and A2 values
-                newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
-                newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
-                newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
-              }
+            //donalK25: apply constant-speed drag calc or acceleration-based calc
+            //send it transv, the drivetrain efficiency, too.
+            if(power_application_include_acceleration){
+              race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings_r.rollingRes, race_rider.weight + settings_r.bike_weight, 9.8, race_rider.air_density, settings_r.frontalArea, current_velocity, settings_r.transv);
+              //console.log("ACCELL method, LEAD rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity);
             }
             else{
-              race_rider.velocity = lookup_velocity;
+                race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
             }
-          }
-          else {
-            //use_lookup_velocity is turned off, so always call the newton function (slower)
-            race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
-          }
+
+            //velocity_from_power_with_acceleration(C_rr, mass, gravity_force, p_air_density, coefficient_of_drag_x_frontal_area, current_velocity){
+
+
           if(powerv < 0){
             console.log("crap! powerv 2 = " + powerv);
             debugger;
@@ -2939,9 +3061,21 @@ function randn_bm() {
               level_of_shelter = 0;
             }
             //console.log(">> a e r o >>  settings_r.target_rider_gap "+settings_r.target_rider_gap+" settings_r.shelter_max_distance "+settings_r.shelter_max_distance+" distance_from_rider_in_front  " + race_rider.distance_from_rider_in_front + "  level_of_shelter  " + level_of_shelter + " *shelter_effect_strength " + shelter_effect_strength + " " + shelter_effect_strength*level_of_shelter);
-            race_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*(shelter_effect_strength*level_of_shelter))*10000)/10000;
+
+            let target_power = 0;
+            let shelter_effect = (shelter_effect_strength*level_of_shelter);
+            race_rider.aero_A2 = Math.round((race_rider.aero_A2 - race_rider.aero_A2*shelter_effect)*10000)/10000;
             let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
-            let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings_r.transv;
+            let current_velocity = race_rider.velocity;
+
+            if(power_application_include_acceleration){
+              target_power = power_from_velocity_with_acceleration(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, target_velocity, race_rider.velocity, (race_rider.weight + settings_r.bike_weight));
+
+              // console.log("ACCEL method, CHASING rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity + " target_power: " + target_power);
+            }
+            else{
+              let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings_r.transv;
+            }
 
             //target power cannot be <= 0; riders do not stop; need a predefined lowest limit?
             if (target_power <= 0){
@@ -3090,38 +3224,12 @@ function randn_bm() {
             //round power output to 2 decimal places
             powerv = Math.round((powerv)*100)/100;
 
-            if(use_lookup_velocity){
-              let lookup_velocity = -1;
-              if (newton_lookup[parseInt(race_rider.aero_twt*10)]){
-                if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
-                  lookup_velocity = newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)];
-                }
-              }
-              if ( lookup_velocity === undefined || lookup_velocity === -1){
-                //does not exist in the lookup so call the function and save it
-                race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
-                if(newton_lookup[parseInt(race_rider.aero_twt*10)]){
-                  if(newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)]){
-                    newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
-                  }
-                  else{
-                    newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
-                    newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
-                  }
-                }
-                else{
-                  //add new array for total weight and A2 values
-                  newton_lookup[parseInt(race_rider.aero_twt*10)] = [];
-                  newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)] = [];
-                  newton_lookup[parseInt(race_rider.aero_twt*10)][parseInt(race_rider.aero_A2*100)][parseInt(powerv*100)] = race_rider.velocity;
-                }
-              }
-              else{
-                race_rider.velocity = lookup_velocity;
-              }
+            if(power_application_include_acceleration){
+              race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings_r.rollingRes, race_rider.weight + settings_r.bike_weight, 9.8, race_rider.air_density, settings_r.frontalArea, current_velocity, settings_r.transv);
+              // console.log("ACCELL method, LEAD rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity);
             }
             else{
-              race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
+                race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
             }
 
             //if you are dropping back and get back to the rider in front, go back to a follow state
@@ -3222,11 +3330,11 @@ function randn_bm() {
           display_rider.distance_from_rider_in_front = min_distance;
           display_rider.number_of_riders_in_front = number_of_riders_in_front;
 
-          if(global_log_message_now || (settings_r.ga_log_each_step && settings_r.run_type == "single_race")){
+          if(global_log_message_now || ((settings_r.ga_log_each_step || debug_log_specific_timesteps.includes(race_r.race_clock)) && settings_r.run_type == "single_race")){
             logMessage += " " + race_r.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race_r.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| " + display_rider.step_info;
           }
         }
-        if(settings_r.ga_log_each_step && settings_r.run_type == "single_race"){
+        if((settings_r.ga_log_each_step || debug_log_specific_timesteps.includes(race_r.race_clock)) && settings_r.run_type == "single_race"){
           console.log(logMessage);
         }
         else if (global_log_message_now){
