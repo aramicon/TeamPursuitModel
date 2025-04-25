@@ -803,6 +803,265 @@ new_velocity: 10.694531041119873
 
 -- why is the drivertrain efficiency not in here??
 
+-- added drvietrain efficiency 
+call_velocity_from_power_with_acceleration: 2025/4/23 @ 17:33:33
+total_power: 201.456
+rolling_resistance_coefficient: 0.004
+rider_and_bike_mass: 84
+gravity_accel: 9.8
+air_density: 1.1696
+drag_coeffic_times_frontal_area: 0.223
+drivetrain_efficiency: 0.95
+
+velocity after power applied (1 second): 0.165 new_velocity: 10.42479515418546
+
+- change initial estimate to 2.5 m/s and run the loop ONCE 
+
+call_velocity_from_power_with_acceleration: 2025/4/23 @ 17:37:11
+total_power: 201.456
+rolling_resistance_coefficient: 0.004
+rider_and_bike_mass: 84
+gravity_accel: 9.8
+air_density: 1.1696
+drag_coeffic_times_frontal_area: 0.223
+drivetrain_efficiency: 0.95
+
+velocity after power applied (1 second): 0.165 new_velocity: 13.634480684809088
+
+-- after going through formula a fw times
+call_velocity_from_power_with_acceleration: 2025/4/23 @ 17:57:36
+total_power: 201.456
+rolling_resistance_coefficient: 0.004
+rider_and_bike_mass: 84
+gravity_accel: 9.8
+air_density: 1.1696
+drag_coeffic_times_frontal_area: 0.223
+drivetrain_efficiency: 0.95
+
+velocity after power applied (1 second): 0.165 new_velocity: 2.11474670492402
+
+-- try it with a different initial velocity estimate 
+
+- with 6, it matches,
+- with 15, it matches IF i provide an initial estimate of 15, i.e. 15+15/2
+- 
+
+- also need to go back over the other function 
+
+-- thursday.
+- the powers now match
+- need to
+	- backup old versions
+	- port new versions to both ga and vis code 
+	- incorporate shelter as a reduction of the frontal area component (as though the rider gets smaller, and so pushes less air) 
+
+- then re-run tests 
 
 
 
+
+- understanding the newton function a bit better 
+
+  race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);  
+   - tres = load_rider.aero_twt * (settings.gradev + settings.rollingRes); - mass_bike_plus_rider*gravity*grade*coefficient_of_rolling_resistance
+   - areo = Math.round((0.5 * settings_r.frontalArea * new_leader.air_density)*10000)/10000;
+   
+ - added gradient descent version, it works faster, so now clean it up. here's the now-unused gradient descent version with a learnign rate 
+ //gradient descent
+    let minimum_error = 0.01;
+    let max_iterations = 100;
+    let learning_rate = 0.02;
+
+    for(let i=0;i<max_iterations;i++){
+
+      //0: estimate the velocity using an average of start and finish
+      let velocity_average_estimate = (velocity_start+velocity_end_estimate)/2;
+
+      //1: get rolling resistance
+      let rolling_resistance = mass * C_rr * gravity_force * velocity_average_estimate * time;
+
+      //2: get F_drag (estimate 1) aero drag work
+      let drag_force_estimate = 0.5*p_air_density*coefficient_of_drag_x_frontal_area*(velocity_average_estimate**3) * time;
+
+      //estimate acceleration energy
+      let acceleration_energy = 0.5*mass*(velocity_end_estimate**2-velocity_start**2);
+
+      let error = (rolling_resistance + drag_force_estimate + acceleration_energy) - power_after_drivetrain_loss;
+
+      if (Math.abs(error) < minimum_error){
+        //we have a good enough estimate so quit
+        break;
+      }
+      else{
+        //update the velocity
+        //use a clamp to avoid a big overshoot
+        // factor in the velocty to make the learnign rate shrink as starting velocity rises
+        let dv = -learning_rate*error/(1 + velocity_end_estimate**2);
+        let clamped_dv = Math.max(-0.1, Math.min(dv, 0.1));
+        velocity_end_estimate += clamped_dv;
+        console.log(i + " GRADIENT DESCENT velocity_end_estimate " + velocity_end_estimate + " error " + error + " dv " + dv + " clamped_dv " + clamped_dv);
+
+      }
+      //3: get total resistance loss
+      //let total_resistance_loss = rolling_resistance + drag_force_estimate;
+
+      //4: get remaining energy for acceleration
+      //let acceleration_energy = power_after_drivetrain_loss - total_resistance_loss;
+
+      //5: get final speed from kinetic energy,  which is acceleration_energy
+      //velocity_end_estimate = Math.sqrt((velocity_start*velocity_start) + ((2*acceleration_energy)/mass));
+      //let acceleration_estimate = (power_after_drivetrain_loss - power_resistance_estimate)/(mass*velocity_start);
+      //4: get new velocity estimate 1
+      //velocity_end = velocity_start + acceleration_estimate;
+    }
+    new_velocity = velocity_end_estimate;
+	
+	-- OLD version of function in ga file 
+	function power_from_velocity_with_acceleration(aero, headwind, total_resistance, transv, target_velocity,current_velocity, mass){
+    // get the original drag and rolling resistance power, but also need to work in acceleration
+    //if(target_velocity <= current_velocity){
+    //  debugger;
+    //}
+
+    let average_velocity = (current_velocity + target_velocity)/2;
+    let drag_and_rolling_resistance_power = power_from_velocity(aero, headwind, total_resistance, transv, average_velocity);
+    if(drag_and_rolling_resistance_power < 0){
+      drag_and_rolling_resistance_power = 0;
+    }
+    let acceleration_power = (0.5*mass*((target_velocity*target_velocity)-(current_velocity*current_velocity))) / transv;
+    if(acceleration_power < 0){
+      acceleration_power = 0;
+    }
+    let powerv = drag_and_rolling_resistance_power + acceleration_power;
+    return powerv;
+
+  }
+  
+  -- ah shite, it breaks if I want to SLOW down, produces a large negative power
+
+- so, i get negative power, i.e. braking, and need to handle this... this work is being done by the brakes 
+- the drivetrain efficiency should not really apply here? the braking will be done via the brakes? 
+
+-- hmmm, it actually doesn't break the model.... a negative power kinda works in terms of the main calculations, though it might cause unexpected issues elsewhere?
+
+-- e.g., big problem with the limits on how quickly you can slow down, and the calcs for recovery 
+
+-- go through a race beginning 
+2.1065238750470425 ga 2.106562142246736
+
+-- hmmm, is number_of_riders_in_front only updated after each rider has moved? 
+- same with distance_from_rider_in_front? at beginning of race these are both 0 for the chasing riders. shelter gets set to 1 by default for chasers. 
+
+- chaser at first step ends up pushign verrry low number of watts, like 0.6862961805619225 (test says 0.6862961797781776)
+target_velocity = 0.10652387504704253 
+target_velocity after velocity_from_power_with_acceleration is 0.10685977294872026
+0.10652891168149105 new_velocity: 0.10652813576660813
+hmmm, is it not factoring in the shelter in this 2nd calc?
+- very little drag at the beginning. need to step into the functions 
+
+2.1065238750470425
+2.106562090880853
+
+2.126924898488314
+2.126924898488314
+
+1.063462449244157
+1.063462449244157
+
+3.5017691528711605
+3.5017691528711605
+
+0.1638913150051791
+0.15685735298778944 DIFF!
+
+0.5*p_air_density*coefficient_of_drag_x_frontal_area*(velocity_average_estimate**3) * time;
+console.log(" p_air_density " + p_air_density + " coefficient_of_drag_x_frontal_area " + coefficient_of_drag_x_frontal_area + " velocity_average_estimate " + velocity_average_estimate);
+
+
+GA		p_air_density 1.169670496951128 coefficient_of_drag_x_frontal_area 0.233 velocity_average_estimate 1.063462449244157
+TEST	p_air_density 1.169670496951128 coefficient_of_drag_x_frontal_area 0.223 velocity_average_estimate 1.063462449244157
+
+0.5*1.169670496951128*0.223*(1.063462449244157**3) * 1
+
+1.063462449244157
+1.063462449244157
+weird AF -- 
+-- GA --
+velocity_average_estimate* velocity_average_estimate * velocity_average_estimate* coefficient_of_drag_x_frontal_area
+0.2802350156430883
+velocity_average_estimate
+1.063462449244157
+velocity_average_estimate 
+1.063462449244157
+
+
+-- TEST --
+velocity_average_estimate* velocity_average_estimate * velocity_average_estimate* coefficient_of_drag_x_frontal_area
+0.26820776175282696
+velocity_average_estimate
+1.063462449244157
+coefficient_of_drag_x_frontal_area
+0.223
+ahhhhhhh shoot it's the frontal area :-( I blind!
+
+2.1065238750470425
+2.1065238750470425
+
+power from V 
+
+0.6862961805619225
+0.6862961805619225
+
+-- need to keep stepping through... check e.g. if the velocity - power - velocity makes sense for chasing riders 
+- chasing rider target_velocity 0.10652387504704253
+- target power after shelter applied 0.6862961805619225 
+
+- rounded to 0.69 
+- new velocity 0.10685977294872026
+
+- test with TEST func.
+- power 0.69, starting velocity 0, air density frontal area 0.233: new_velocity: 0.10685977294872026
+
+- power 0.68, starting velocity 0, air density frontal area 0.1398: 
+
+-- fixed issue with shelter not factored into velocity_from_power for chaser... but things still not good, look 
+race_function_no_vis.js:3261 Chasing rider target_velocity 0.10652387504704253 original_target_power 0.6862961805619225 powerv 0.6862961805619225 new velocity 0.106528911611338
+race_function_no_vis.js:3261 Chasing rider target_velocity -0.693471088388662 original_target_power 20.055527614697905 powerv 20.055527614697905 new velocity 0.6541603806869382
+race_function_no_vis.js:3261 Chasing rider target_velocity -0.14583961931306189 original_target_power 0.6875411800262559 powerv 0.6875411800262559 new velocity 0.10664048691233416
+race_function_no_vis.js:3261 Chasing rider target_velocity 3.6309119924013786 original_target_power 589.2750475247362 powerv 200.68629618056192 new velocity 2.1122452022435327
+race_function_no_vis.js:3261 Chasing rider target_velocity 1.0931926146132926 original_target_power 37.001501822878566 powerv 37.001501822878566 new velocity 1.09319269878968
+
+power 0.6862961805619225 Crr 0.004 total weight 84gravity 9.8 air density 1.169670496951128 frontal area 0.1398 current velocity 0 drivetrain efficiency 0.95
+
+Chasing rider target_velocity 0.10652387504704253 original_target_power 0.6862961805619225 powerv 0.6862961805619225 new velocity 0.106528911611338
+from test  0.106528911611338
+
+Chasing rider power_from_velocity_with_acceleration()  target velocity 0.10652387504704253 Crr 0.004 total weight 84 gravity 9.8 air density 1.169670496951128 frontal area 0.1398 current velocity 0 drivetrain efficiency 0.95 TARGET POWER 0.6862961805619225
+TEST check:  0.6862961805619225
+
+race_function_no_vis.js:3264 Chasing rider velocity_from_power_with_acceleration() power 0.6862961805619225 Crr 0.004 total weight 84 gravity 9.8 air density 1.169670496951128 frontal area 0.1398 current velocity 0 drivetrain efficiency 0.95 NEW VELOCITY 0.106528911611338
+TEST check: 0.106528911611338
+difference: (0.10652387504704253 - 0.106528911611338) = -0.00000503656. this is way under the newton alg. tolerance.
+
+all goes a bit manky for the next rider 
+Chasing rider power_from_velocity_with_acceleration()  target velocity -0.693471088388662 Crr 0.004 total weight 84 gravity 9.8 air density 1.169670496951128 frontal area 0.1398 current velocity 0 drivetrain efficiency 0.95 TARGET POWER 20.055527614697905
+TEST: 20.055527614697905
+
+race_function_no_vis.js:3264 Chasing rider velocity_from_power_with_acceleration() power 20.055527614697905 Crr 0.004 total weight 84 gravity 9.8 air density 1.169670496951128 frontal area 0.1398 current velocity 0 drivetrain efficiency 0.95 NEW VELOCITY 0.6541603806869382
+
+- is the formula broken or are we just going... backwards?
+- why are we getting a negative? I think the first chaser is not getting far enough ahead? we certainly can't go backwards... could return 0 as power if either v is < 0?
+
+- why is the first chaser distance_to_cover so low?
+
+-- rider simply start a lot slower with the new model... we can try starting them one at a time?
+-- note that EVERY change has to go into the game model. too, so mark them all clearly
+
+-- port across changes to game version 
+
+- ga versin very different time to vis version 
+- rounding of powerv! 
+
+-- ooh wow, that was it, they match now. do i round elsewhere?
+
+- not that effort levels are also rounded.

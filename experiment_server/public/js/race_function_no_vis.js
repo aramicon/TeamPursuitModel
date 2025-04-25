@@ -1971,6 +1971,12 @@ function randn_bm() {
 
     function newton(aero, hw, tr, tran, p) {        /* Newton's method, original is from bikecalculator.com */
     //from http://www.bikecalculator.com/
+    //aero = ath.round((0.5 * settings_r.frontalArea * new_leader.air_density)*10000)/10000; - i.e. 1/2*p*CdA
+    //hw = headwind
+    //tr = total resistance  = load_rider.aero_twt * (settings.gradev + settings.rollingRes); - mass*gravity*grade*coefficient_of_rolling_resistance
+    //tran = drivetrain (transmission) efficiency 0.95
+    //p = power!
+
     let vel = 20;       // Initial guess
     let MAX = 10;       // maximum iterations
     let TOL = 0.05;     // tolerance
@@ -1996,82 +2002,102 @@ function randn_bm() {
     return powerv;
   }
 
-  function power_from_velocity_with_acceleration(aero, headwind, total_resistance, transv, target_velocity,current_velocity, mass){
-    // get the original drag and rolling resistance power, but also need to work in acceleration
-    //if(target_velocity <= current_velocity){
-    //  debugger;
-    //}
+  //power_from_velocity_with_acceleration(aero, headwind, total_resistance, transv, target_velocity,current_velocity, mass)
 
+  function power_from_velocity_with_acceleration(target_velocity, C_rr, mass, gravity_force, p_air_density, coefficient_of_drag_x_frontal_area, current_velocity, drivetrain_efficiency){
+
+    let time = 1; //assumption that this is for ONE second!
+
+    //1: get energy needed for the acceleration
+    let acceleration_energy = 0.5 * mass * (target_velocity**2 - current_velocity**2);
+
+    //2: get the average velocity
     let average_velocity = (current_velocity + target_velocity)/2;
-    let drag_and_rolling_resistance_power = power_from_velocity(aero, headwind, total_resistance, transv, average_velocity);
-    if(drag_and_rolling_resistance_power < 0){
-      drag_and_rolling_resistance_power = 0;
-    }
-    let acceleration_power = (0.5*mass*((target_velocity*target_velocity)-(current_velocity*current_velocity))) / transv;
-    if(acceleration_power < 0){
-      acceleration_power = 0;
-    }
-    let powerv = drag_and_rolling_resistance_power + acceleration_power;
-    return powerv;
 
+    //3: rolling resistance using average speed
+    let rolling_resistance_energy = C_rr * mass * gravity_force * average_velocity * time;
+
+    //4: get the aero energy needed for that average velocity
+    let drag_energy = 0.5 * p_air_density * coefficient_of_drag_x_frontal_area * (average_velocity**3) * time;
+
+    //5: total_energy_needed
+    let total_energy_needed = acceleration_energy + rolling_resistance_energy + drag_energy;
+
+    //6: now get the required power (note that we are using a timestep of 1 second)
+    let total_power_needed = total_energy_needed/time;
+
+    //7: factor in the  drivetrain loss
+    let total_power_needed_in_pedals = total_power_needed/drivetrain_efficiency;
+
+    return total_power_needed_in_pedals;
   }
 
   function velocity_from_power_with_acceleration(power_total, C_rr, mass, gravity_force, p_air_density, coefficient_of_drag_x_frontal_area, current_velocity, drivetrain_efficiency){
-    //assumption: no gradient!
+    //assumption: no gradient(hills)!
     //assumption: 1 second of time!
-    // 1: get F_rolling_res
+
+    let time = 1;
+
     //debugger;
-    let rolling_resistance = mass * C_rr * gravity_force;
-
-    let new_velocity = current_velocity;
-    //we need a special case for when the current_velocity is 0, i.e., at the very beginning
-    if (current_velocity <= 0){
-        //1: get total power energy
-        let total_energy = power_total; //multiply power by time, which in this case is 1 second
-
-        //2: get speed is if ALL energy is used to produce a velocity
-        // kinetic_energy = 0.5*mass*velocity^2 so v = square_root(2*kinetic_energy/mass)
-        let velocity_all_energy = Math.sqrt((2*total_energy)/mass); // m/s
-
-        //3: get the average speed (over 1 second)
-        let v_average = velocity_all_energy/2; // (start_v + end_v)/2 where start_v = 0
-
-        //4: estimate rolling resistance work over that distance
-        let rolling_resistance_work = rolling_resistance * v_average; //note that this is very much an estimate
-
-        //5: work out the net energy using (total_energy - rolling_resistance_work)
-        let net_energy = (total_energy - rolling_resistance_work);
-        //6: work out the speed again using this net energy
-        new_velocity = Math.sqrt((2*net_energy)/mass);
-    }
-    else {
-      //for lead rider, after the first timestep
-
+      let new_velocity = current_velocity;  //this will change, inshallah
       //use a loop to get more accurate drag values (refinement)
       let velocity_start = current_velocity;
-      let velocity_end = current_velocity;
-      let velocity_estimate = 0;
+      //let velocity_end_estimate = velocity_start;    //need to estimate the final speed
 
-      for(let i=0;i<4;i++){
-        velocity_estimate = (velocity_start+velocity_end)/2;
+      let power_after_drivetrain_loss =power_total*drivetrain_efficiency; //factor in the drivetrain loss here
+      //make a conservative estimate of the end velocity
+      let conservative_estimate_of_final_velocity = Math.sqrt((velocity_start**2)+(2*power_after_drivetrain_loss/mass));
+      let velocity_end_estimate = conservative_estimate_of_final_velocity;
+      let minimum_error = 0.01;
+      let max_iterations = 20;
 
-        //2: get F_drag (estimate 1)
-        let drag_force_estimate = 0.5*coefficient_of_drag_x_frontal_area*p_air_density*velocity_estimate*velocity_estimate;
+      for(let i=0;i<max_iterations;i++){
 
-        let power_resistance_estimate = (rolling_resistance + drag_force_estimate) * velocity_estimate;
+        //0: estimate the velocity using an average of start and finish
+        let velocity_average_estimate = (velocity_start+velocity_end_estimate)/2;
 
-        //3: get acceleration estimate 1
-        let acceleration_estimate = (power_total - power_resistance_estimate)/(mass*velocity_start);
-        //4: get new velocity estimate 1
-        velocity_end = velocity_start + acceleration_estimate;
+        //1: get rolling resistance
+        let rolling_resistance = mass * C_rr * gravity_force * velocity_average_estimate * time;
+
+        //2: estimate aero drag work
+        let drag_force_estimate = 0.5*p_air_density*coefficient_of_drag_x_frontal_area*(velocity_average_estimate**3) * time;
+
+        //3: estimate acceleration energy
+        let acceleration_energy = 0.5*mass*(velocity_end_estimate**2-velocity_start**2);
+
+        //need SLOPE, so get derivatives of each
+
+        //4: rolling resistance
+        let derivative_rolling_resistance = mass * C_rr * gravity_force * 0.5 * time;
+
+        //5: aero drag work
+        let derivative_drag_force_estimate = (3/4)*p_air_density*coefficient_of_drag_x_frontal_area*(velocity_average_estimate**2) * time;
+
+        //6: estimate acceleration energy
+        let derivative_acceleration_energy = mass*velocity_end_estimate;
+
+        //7: now get the ERROR and the SLOPE
+        let error = (rolling_resistance + drag_force_estimate + acceleration_energy) - power_after_drivetrain_loss;
+        let slope = derivative_rolling_resistance + derivative_drag_force_estimate + derivative_acceleration_energy;
+
+        //8: and update if needs be
+        if (Math.abs(error) < minimum_error){
+          //we have a good enough estimate, so quit
+          break;
+        }
+        else{
+          //update the velocity using the error divided by the slope, hallmark of Newton Raphson method
+          velocity_end_estimate -= error/slope;
+          //console.log(i + " DERIVATIVE velocity_end_estimate " + velocity_end_estimate + " error " + error + " slope " + slope);
+        }
       }
-      new_velocity = velocity_end;
-    }
-
+      new_velocity = velocity_end_estimate;
     // return this new velocity
 
     return new_velocity;
   }
+
+
   var DecimalPrecision = (function() {
     if (Math.sign === undefined) {
       Math.sign = function(x) {
@@ -2239,8 +2265,11 @@ function randn_bm() {
     let target_power = 0;
 
     //donalK25: apply constant-speed drag calc or acceleration-based calc
+
     if(power_application_include_acceleration){
-      target_power = power_from_velocity_with_acceleration(aero_A2_no_shelter, settings_r.headwindv, new_leader.aero_tres, settings_r.transv, current_leader_velocity, new_leader.velocity, (new_leader.weight + settings_r.bike_weight));
+      //target_power = power_from_velocity_with_acceleration(aero_A2_no_shelter, settings_r.headwindv, new_leader.aero_tres, settings_r.transv, current_leader_velocity, new_leader.velocity, (new_leader.weight + settings_r.bike_weight));
+
+      target_power = power_from_velocity_with_acceleration(current_leader_velocity, settings_r.rollingRes, (new_leader.weight + settings_r.bike_weight), 9.8, new_leader.air_density, settings_r.frontalArea, new_leader.velocity, settings_r.transv);
 
       // console.log("switch lead ACCEL method, CHASING rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity + " target_power: " + target_power);
     }
@@ -2254,8 +2283,8 @@ function randn_bm() {
 
 
     if (new_leader.output_level < 0){
-      console.log("new_leader.output_level < 0");
-      debugger;
+      console.log("switching lead... new_leader.output_level < 0");
+      //debugger;
     }
 
     for(let i=1;i<new_order.length;i++){
@@ -2630,6 +2659,7 @@ function randn_bm() {
         race_rider.step_info = ""; //dk2021 used to add logging info
 
         if (race_rider.current_aim =="lead"){
+
           //LEAD rider: take instructions, and the wind
           //push the pace at the front
           //what's the current effort?
@@ -2907,22 +2937,25 @@ function randn_bm() {
           powerv+=power_adjustment;
 
           //round power output to 2 decimal places
-          powerv = Math.round((powerv)*100)/100;
+          //donalK25 #accel --------------------
+          //powerv = Math.round((powerv)*100)/100;
+          //donalK25 #accel --------------------||
 
             let current_velocity = race_rider.velocity;
-
+            debugger;
             //donalK25: apply constant-speed drag calc or acceleration-based calc
             //send it transv, the drivetrain efficiency, too.
             if(power_application_include_acceleration){
-              race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings_r.rollingRes, race_rider.weight + settings_r.bike_weight, 9.8, race_rider.air_density, settings_r.frontalArea, current_velocity, settings_r.transv);
+              race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings_r.rollingRes, (race_rider.weight + settings_r.bike_weight), 9.8, race_rider.air_density, settings_r.frontalArea, current_velocity, settings_r.transv);
+
+              console.log("Leading rider " + race_r.current_order[i] + " velocity_from_power_with_acceleration() power " + powerv + " Crr " + settings_r.rollingRes + " total weight " +  (race_rider.weight + settings_r.bike_weight) + " gravity " + 9.8 + " air density " + race_rider.air_density + " frontal area " + settings_r.frontalArea + " current velocity " + current_velocity + " drivetrain efficiency " + settings_r.transv + " NEW VELOCITY " + race_rider.velocity);
+
+
               //console.log("ACCELL method, LEAD rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity);
             }
             else{
                 race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);
             }
-
-            //velocity_from_power_with_acceleration(C_rr, mass, gravity_force, p_air_density, coefficient_of_drag_x_frontal_area, current_velocity){
-
 
           if(powerv < 0){
             console.log("crap! powerv 2 = " + powerv);
@@ -3005,10 +3038,18 @@ function randn_bm() {
           // assume we are drafting and try to cover the same distance as the race_rider in front, which will take a certain amount of power
           //need to factor in the original offset
           //let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings_r.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
+
           let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset - settings_r.target_rider_gap) -  (race_rider.distance_covered - race_rider.start_offset);
           //this is your target velocity, but it might not be possible. assuming 1 s - 1 step
           let target_velocity = distance_to_cover;
-          //work out the power needed for this velocity- remember we are drafting
+
+          //donalK25 #accel --------------------
+          if (target_velocity < 0){
+            target_velocity = 0;
+          }
+          //donalK25 #accel -------------------- ||
+
+        //work out the power needed for this velocity- remember we are drafting
 
           //if your velocity is very high and you are approaching the target rider you will speed past, so if within a certain distance and traveling quickly set your target speed to be that of the target rider or very close to it.
           //dk23AUG issue with rider at back applying the following logic when the front rider drops back 2 spaces.
@@ -3016,6 +3057,7 @@ function randn_bm() {
           //if((race_rider.velocity - rider_to_follow.velocity > settings_r.velocity_difference_limit) &&  (distance_to_cover < settings_r.damping_visibility_distance)){
           if((rider_to_follow.current_aim != "drop") && (race_rider.velocity - rider_to_follow.velocity > settings_r.velocity_difference_limit) &&  (distance_to_cover < settings_r.damping_visibility_distance)){
             target_velocity =  rider_to_follow.velocity;//assumption that by the time taken to adjust to the same velocity you will have caught them
+
           }
           else if((race_rider.velocity - target_velocity > 0) && (distance_to_cover < settings_r.damping_visibility_distance)){ //if slowing down and target velocity is low but you are close to the target rider, then only slow a little (dropping back)
             //need to weight the adjustment so that it goes closer to zero as they get closer and closer
@@ -3068,14 +3110,21 @@ function randn_bm() {
             let A2Eff = (tv > 0.0) ? race_rider.aero_A2 : -race_rider.aero_A2; // wind in face, must reverse effect
             let current_velocity = race_rider.velocity;
 
+            let frontal_area_adjusted_for_shelter = Math.round((settings_r.frontalArea - settings_r.frontalArea*shelter_effect)*10000)/10000;
+
+            //debugger;
             if(power_application_include_acceleration){
-              target_power = power_from_velocity_with_acceleration(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, target_velocity, race_rider.velocity, (race_rider.weight + settings_r.bike_weight));
+              //target_power = power_from_velocity_with_acceleration(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, target_velocity, race_rider.velocity, (race_rider.weight + settings_r.bike_weight));
+              target_power = power_from_velocity_with_acceleration(target_velocity, settings_r.rollingRes, (race_rider.weight + settings_r.bike_weight), 9.8, race_rider.air_density, frontal_area_adjusted_for_shelter, race_rider.velocity, settings_r.transv);
+
+              console.log("Chasing rider " + race_r.current_order[i] + " power_from_velocity_with_acceleration() " + " target velocity " + target_velocity + " Crr " + settings_r.rollingRes + " total weight " + (race_rider.weight + settings_r.bike_weight) + " gravity " + 9.8 + " air density " + race_rider.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + race_rider.velocity + " drivetrain efficiency " + settings_r.transv + " TARGET POWER " + target_power);
 
               // console.log("ACCEL method, CHASING rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity + " target_power: " + target_power);
             }
             else{
               let target_power = (target_velocity * race_rider.aero_tres + target_velocity * tv * tv * A2Eff) / settings_r.transv;
             }
+            let original_target_power = target_power;
 
             //target power cannot be <= 0; riders do not stop; need a predefined lowest limit?
             if (target_power <= 0){
@@ -3222,11 +3271,14 @@ function randn_bm() {
 
             powerv+=power_adjustment;
             //round power output to 2 decimal places
-            powerv = Math.round((powerv)*100)/100;
+            //powerv = Math.round((powerv)*100)/100; //donalK25: removing this for now to increase accuracy
 
             if(power_application_include_acceleration){
-              race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings_r.rollingRes, race_rider.weight + settings_r.bike_weight, 9.8, race_rider.air_density, settings_r.frontalArea, current_velocity, settings_r.transv);
-              // console.log("ACCELL method, LEAD rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity);
+
+              race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings_r.rollingRes, race_rider.weight + settings_r.bike_weight, 9.8, race_rider.air_density, frontal_area_adjusted_for_shelter, current_velocity, settings_r.transv);
+              console.log("Chasing rider " + race_r.current_order[i] + " velocity_from_power_with_acceleration() power " + powerv + " Crr " + settings_r.rollingRes + " total weight " +  (race_rider.weight + settings_r.bike_weight) + " gravity " + 9.8 + " air density " + race_rider.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + current_velocity + " drivetrain efficiency " + settings_r.transv + " NEW VELOCITY " + race_rider.velocity);
+              //console.log(" target_velocity " + target_velocity + " original_target_power " + original_target_power + " powerv " + powerv + " new velocity " + race_rider.velocity);
+              // console.log("ACCELL method, CHASING rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity);
             }
             else{
                 race_rider.velocity = newton(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, powerv);

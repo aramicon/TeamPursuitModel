@@ -26,7 +26,6 @@ function power_from_velocity_with_acceleration(target_velocity, C_rr, mass, grav
   let total_power_needed_in_pedals = total_power_needed/drivetrain_efficiency;
 
   return total_power_needed_in_pedals;
-
 }
 
 
@@ -34,28 +33,20 @@ function power_from_velocity_with_acceleration(target_velocity, C_rr, mass, grav
 function velocity_from_power_with_acceleration(power_total, C_rr, mass, gravity_force, p_air_density, coefficient_of_drag_x_frontal_area, current_velocity, drivetrain_efficiency){
   //assumption: no gradient!
   //assumption: 1 second of time!
-  // 1: get F_rolling_res
+  let time = 1;
+
   //debugger;
-
-
-  let new_velocity = current_velocity;
-
-    //for lead rider, after the first timestep
-
+    let new_velocity = current_velocity;  //this will change, inshallah
     //use a loop to get more accurate drag values (refinement)
     let velocity_start = current_velocity;
-  //  let velocity_end_estimate = velocity_start;    //need to estimate the final speed
+    //let velocity_end_estimate = velocity_start;    //need to estimate the final speed
 
-    let power_after_drivetrain_loss =power_total*drivetrain_efficiency;
-
+    let power_after_drivetrain_loss =power_total*drivetrain_efficiency; //factor in the drivetrain loss here
     //make a conservative estimate of the end velocity
     let conservative_estimate_of_final_velocity = Math.sqrt((velocity_start**2)+(2*power_after_drivetrain_loss/mass));
     let velocity_end_estimate = conservative_estimate_of_final_velocity;
-
-    //use Newton-Raphson method; set a number of iterations and an error limit tolerance
-    let minimum_error = 0.1;
-    let max_iterations = 100;
-    let learning_rate = 0.02;
+    let minimum_error = 0.01;
+    let max_iterations = 20;
 
     for(let i=0;i<max_iterations;i++){
 
@@ -63,45 +54,41 @@ function velocity_from_power_with_acceleration(power_total, C_rr, mass, gravity_
       let velocity_average_estimate = (velocity_start+velocity_end_estimate)/2;
 
       //1: get rolling resistance
-      let rolling_resistance = mass * C_rr * gravity_force * velocity_average_estimate;
+      let rolling_resistance = mass * C_rr * gravity_force * velocity_average_estimate * time;
 
-      //2: get F_drag (estimate 1) aero drag work
-      let drag_force_estimate = 0.5*p_air_density*coefficient_of_drag_x_frontal_area*(velocity_average_estimate**3);
+      //2: estimate aero drag work
+      let drag_force_estimate = 0.5*p_air_density*coefficient_of_drag_x_frontal_area*(velocity_average_estimate**3) * time;
 
-      //estimate acceleration energy
+      //3: estimate acceleration energy
       let acceleration_energy = 0.5*mass*(velocity_end_estimate**2-velocity_start**2);
 
-      let error = (rolling_resistance + drag_force_estimate + acceleration_energy) - power_after_drivetrain_loss;
+      //need SLOPE, so get derivatives of each
 
+      //4: rolling resistance
+      let derivative_rolling_resistance = mass * C_rr * gravity_force * 0.5 * time;
+
+      //5: aero drag work
+      let derivative_drag_force_estimate = (3/4)*p_air_density*coefficient_of_drag_x_frontal_area*(velocity_average_estimate**2) * time;
+
+      //6: estimate acceleration energy
+      let derivative_acceleration_energy = mass*velocity_end_estimate;
+
+      //7: now get the ERROR and the SLOPE
+      let error = (rolling_resistance + drag_force_estimate + acceleration_energy) - power_after_drivetrain_loss;
+      let slope = derivative_rolling_resistance + derivative_drag_force_estimate + derivative_acceleration_energy;
+
+      //8: and update if needs be
       if (Math.abs(error) < minimum_error){
-        //we have a good enough estimate so quit
+        //we have a good enough estimate, so quit
         break;
       }
       else{
-        //update the velocity
-        //use a clamp to avoid a big overshoot
-        // factor in the velocty to make the learnign rate shrink as starting velocity rises
-        let dv = -learning_rate*error/(1 + velocity_end_estimate**2);
-        let clamped_dv = Math.max(-0.1, Math.min(dv, 0.1));
-        velocity_end_estimate += clamped_dv;
-        console.log(i + " velocity_end_estimate " + velocity_end_estimate + " error " + error + " dv " + dv + " clamped_dv " + clamped_dv);
-
+        //update the velocity using the error divided by the slope, hallmark of Newton Raphson method
+        velocity_end_estimate -= error/slope;
+        //console.log(i + " DERIVATIVE velocity_end_estimate " + velocity_end_estimate + " error " + error + " slope " + slope);
       }
-      //3: get total resistance loss
-      //let total_resistance_loss = rolling_resistance + drag_force_estimate;
-
-      //4: get remaining energy for acceleration
-      //let acceleration_energy = power_after_drivetrain_loss - total_resistance_loss;
-
-      //5: get final speed from kinetic energy,  which is acceleration_energy
-      //velocity_end_estimate = Math.sqrt((velocity_start*velocity_start) + ((2*acceleration_energy)/mass));
-      //let acceleration_estimate = (power_after_drivetrain_loss - power_resistance_estimate)/(mass*velocity_start);
-      //4: get new velocity estimate 1
-      //velocity_end = velocity_start + acceleration_estimate;
     }
     new_velocity = velocity_end_estimate;
-
-
   // return this new velocity
 
   return new_velocity;
