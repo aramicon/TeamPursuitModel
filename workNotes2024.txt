@@ -1065,3 +1065,36 @@ race_function_no_vis.js:3264 Chasing rider velocity_from_power_with_acceleration
 -- ooh wow, that was it, they match now. do i round elsewhere?
 
 - not that effort levels are also rounded.
+
+//try commenting out the damping :-o 
+
+--oooh, now they stick together, though the back rider is DROPPED... 
+-- need to change the satrt, the chasers can't wait, they all need to start fast then take their position... aero effects are not important until they are moving.
+-- idea, start with the aim to ride 'alongside' of the rider in front, and linearly increase it to the original desired gap over a few timesteps, e.g. 5 seconds.
+-- new global setting 
+
+ "start_steps_to_reach_target_rider_gap":4,
+ 
+ -- hard code it into the visual model to test it... 
+ -- added it, now they generally stay together, maybe port it to the ga race?
+ 
+ -- why does the lead rider's speed keep varying with a fixed power output? should it not quickly reach an equilibrium of accel/rr/drag?
+ - no, it does stabilize, but it takes like 8 laps! 
+ 
+ -- ok, so no great joy in discovering useful instrucitons :-( 
+ -- tiny discrep, too, seems to happen at the very end? if i take out the last instruction they are equal.
+ 
+ - yup, it's ignoring the last instruction in the visualiser. warum?
+ 
+ - i think the shelter effect is very diminished because it only affects the drag, not the acceleration? try increasing its effect?
+ - naw, they;re saving a ton 
+ - step 82.
+ leader - 	432.4
+ chaser 1	288.24	0.66% of leader
+ chaser 2	252.19	0.58% of leader
+ chaser 3	244.92	0.57% of leader
+ 
+ -- hmmmm, so why are we not getting many instruction sets?
+
+- maybe it is punishing stuff that i can't see? 
+- need to spend some time testing by just making up instructions?

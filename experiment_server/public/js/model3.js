@@ -306,6 +306,7 @@ function switchLeadInstruction(){
 }
 
 function switchLead(positions_to_drop_back){
+
   if (positions_to_drop_back >= (race.current_order.length-1)){
     positions_to_drop_back = (race.current_order.length-1);
   }
@@ -324,6 +325,10 @@ function switchLead(positions_to_drop_back){
   race.riders[current_leader].current_aim = "drop"; //separate status whilst dropping back
   let current_leader_power = race.riders[current_leader].power_out; //try to get the new leader to match this power
   let current_leader_velocity = race.riders[current_leader].velocity;
+  //need to get the theoretical velocity of the current leader for this timestep and use that as the target
+  //donalK25 #accel ------------
+  let current_leader_theoretical_velocity = velocity_from_power_with_acceleration(current_leader_power, settings.rollingRes, (race.riders[current_leader].weight + settings.bike_weight), 9.8, race.riders[current_leader].air_density, settings.frontalArea, current_leader_velocity, settings.transv);
+  //donalK25 #accel ------------ ||
 
   let new_order = race.current_order.slice(1,positions_to_drop_back+1);
   new_order.push(race.current_order[0]);
@@ -351,9 +356,9 @@ function switchLead(positions_to_drop_back){
   //console.log("power_from_velocity returns " + target_power + " watts");
   //donalK25: apply constant-speed drag calc or acceleration-based calc
   if(power_application_include_acceleration){
-    target_power = power_from_velocity_with_acceleration(current_leader_velocity, settings.rollingRes, (new_leader.weight + settings.bike_weight), 9.8, new_leader.air_density, settings.frontalArea, new_leader.velocity, settings.transv);
+    target_power = power_from_velocity_with_acceleration(current_leader_theoretical_velocity, settings.rollingRes, (new_leader.weight + settings.bike_weight), 9.8, new_leader.air_density, settings.frontalArea, new_leader.velocity, settings.transv);
 
-      console.log("Change Lead rider " + race.current_order[i] + " power_from_velocity_with_acceleration() " + " target velocity " + current_leader_velocity + " Crr " + settings.rollingRes + " total weight " + (new_leader.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + new_leader.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + new_leader.velocity + " drivetrain efficiency " + settings.transv + " TARGET POWER " + target_power);
+      //console.log("Change Lead rider " + race.current_order[i] + " power_from_velocity_with_acceleration() " + " target velocity " + current_leader_velocity + " Crr " + settings.rollingRes + " total weight " + (new_leader.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + new_leader.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + new_leader.velocity + " drivetrain efficiency " + settings.transv + " TARGET POWER " + target_power);
 
   }
   else{
@@ -478,6 +483,7 @@ function moveRace(){
   while (race.live_instructions.length > 0){
     let instruction = race.live_instructions.pop();
     if(instruction[0]=="effort"){
+
       //dk: check for invalid values
       if(instruction[1] < settings.minimum_power_output){
         console.log("WARNING! effort instruction < 1, updating to minimum 1");
@@ -588,13 +594,22 @@ function moveRace(){
         target_power = target_power - (target_power * failure_p);
       }
 
+
       //compare power required to previous power and look at how it can increase or decrease
       if (powerv > target_power){ //slowing down
         if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
-          power_adjustment = settings.power_adjustment_step_size_down;
+          //DonalK25 #accel
+            if(power_application_include_acceleration){ //note the NOT
+              power_adjustment = (target_power - powerv);
+            }
+            else{
+                power_adjustment = settings.power_adjustment_step_size_down;
+            }
+        //DonalK25 #accel ||
+
         }
         else{
-          power_adjustment = (target_power - powerv);
+            power_adjustment = (target_power - powerv);
         }
       }
       else if(powerv < target_power){ //speeding up
@@ -620,7 +635,7 @@ function moveRace(){
 
         race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings.rollingRes, (race_rider.weight + settings.bike_weight), 9.8, race_rider.air_density, settings.frontalArea, current_velocity, settings.transv);
 
-          console.log("Leading rider " + race.current_order[i] + " velocity_from_power_with_acceleration() power " + powerv + " Crr " + settings.rollingRes + " total weight " +  (race_rider.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + race_rider.air_density + " frontal area " + settings.frontalArea + " current velocity " + current_velocity + " drivetrain efficiency " + settings.transv + " NEW VELOCITY " + race_rider.velocity);
+          //console.log("Leading rider " + race.current_order[i] + " velocity_from_power_with_acceleration() power " + powerv + " Crr " + settings.rollingRes + " total weight " +  (race_rider.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + race_rider.air_density + " frontal area " + settings.frontalArea + " current velocity " + current_velocity + " drivetrain efficiency " + settings.transv + " NEW VELOCITY " + race_rider.velocity);
 
         //console.log("ACCELL method, LEAD rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity);
       }
@@ -702,7 +717,22 @@ function moveRace(){
       // assume we are drafting and try to cover the same distance as the race_rider in front, which will take a certain amount of power
       //need to factor in the original offset
       //let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
-      let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset - settings.target_rider_gap) -  (race_rider.distance_covered - race_rider.start_offset);
+
+      //donalK25 #accel. -------- need to gradually increase the target_rider_gap from 0 to 2m over a number of steps
+      let start_steps_to_reach_target_rider_gap = 0;
+      if(power_application_include_acceleration){
+        start_steps_to_reach_target_rider_gap = 6;
+        if (typeof(settings.start_steps_to_reach_target_rider_gap) != 'undefined'){
+            start_steps_to_reach_target_rider_gap = settings.start_steps_to_reach_target_rider_gap;
+        }
+      }
+
+      let adjusted_target_rider_gap = settings.target_rider_gap;
+      if(race.race_clock<=start_steps_to_reach_target_rider_gap){
+        adjusted_target_rider_gap = 0+(adjusted_target_rider_gap*(race.race_clock/start_steps_to_reach_target_rider_gap));
+      }
+      let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset - adjusted_target_rider_gap) -  (race_rider.distance_covered - race_rider.start_offset);
+      //donalK25 #accel. -------- ||
       //this is your target velocity, but it might not be possible. assuming 1 s - 1 step
       let target_velocity = distance_to_cover;
 
@@ -775,7 +805,7 @@ function moveRace(){
         if(power_application_include_acceleration){
           target_power = power_from_velocity_with_acceleration(target_velocity, settings.rollingRes, (race_rider.weight + settings.bike_weight), 9.8, race_rider.air_density, frontal_area_adjusted_for_shelter, race_rider.velocity, settings.transv);
 
-          console.log("Chasing rider " + race.current_order[i] + " power_from_velocity_with_acceleration() " + " target velocity " + target_velocity + " Crr " + settings.rollingRes + " total weight " + (race_rider.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + race_rider.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + race_rider.velocity + " drivetrain efficiency " + settings.transv + " TARGET POWER " + target_power);
+          //console.log("Chasing rider " + race.current_order[i] + " power_from_velocity_with_acceleration() " + " target velocity " + target_velocity + " Crr " + settings.rollingRes + " total weight " + (race_rider.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + race_rider.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + race_rider.velocity + " drivetrain efficiency " + settings.transv + " TARGET POWER " + target_power);
 
           // console.log("ACCEL method, CHASING rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity + " target_power: " + target_power);
         }
@@ -823,7 +853,15 @@ function moveRace(){
       let damping = 1;
       if (powerv > target_power){//slowing down
         if((powerv - target_power) > Math.abs(settings.power_adjustment_step_size_down)){
-          power_adjustment = settings.power_adjustment_step_size_down * damping;
+          //DonalK25 #accel
+
+            if(power_application_include_acceleration){ //note the NOT
+                power_adjustment = (target_power - powerv);
+            }
+            else{
+              power_adjustment = settings.power_adjustment_step_size_down * damping;
+            }
+        //DonalK25 #accel ||
         }
         else{
           power_adjustment = (target_power - powerv);
@@ -851,7 +889,7 @@ function moveRace(){
 
         race_rider.velocity = velocity_from_power_with_acceleration(powerv, settings.rollingRes, (race_rider.weight + settings.bike_weight), 9.8, race_rider.air_density, frontal_area_adjusted_for_shelter, current_velocity, settings.transv);
 
-        console.log("Chasing rider " + race.current_order[i] + " velocity_from_power_with_acceleration() power " + powerv + " Crr " + settings.rollingRes + " total weight " +  (race_rider.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + race_rider.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + current_velocity + " drivetrain efficiency " + settings.transv + " NEW VELOCITY " + race_rider.velocity);
+        //console.log("Chasing rider " + race.current_order[i] + " velocity_from_power_with_acceleration() power " + powerv + " Crr " + settings.rollingRes + " total weight " +  (race_rider.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + race_rider.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + current_velocity + " drivetrain efficiency " + settings.transv + " NEW VELOCITY " + race_rider.velocity);
 
         // console.log("ACCELL method, LEAD rider " + race_rider.name + " from " +  current_velocity + " to race_rider.velocity " + race_rider.velocity);
       }
