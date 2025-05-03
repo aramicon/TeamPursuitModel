@@ -1098,3 +1098,249 @@ race_function_no_vis.js:3264 Chasing rider velocity_from_power_with_acceleration
 
 - maybe it is punishing stuff that i can't see? 
 - need to spend some time testing by just making up instructions?
+
+- need to check the whole idea I did this- if I do a switch is the race slowed down??
+
+- woah, one drop slows it down by THREE seconds!!
+
+- looks like the switchlead() has an issue where it sets a LOWER power than it should... step through it with a race with one drop instruction 
+
+[[40,"drop=3"]]
+
+- yep, it's getting a lower power 
+- the target velocity needs to be the velocity that the leader
+
+-- need to get the velocity_from_power of the current leader and use that as the target velocity for the new leader
+
+- time with 1 drop=3 306.179
+- time with no drop 306.031
+
+- so, it still has a cost, albeit small. 0.148 secnds. does that make sense?
+how about with more than 1 drop?
+- with 4 drops: 306.623, (306.623-306.031)/4 per drop, i.e., 0.148. so, it is consistent at least. that's a LOT smaller than 3 seconds. i wonder what causes it though?
+
+-- maybe the slowdown is purely from the rider dropping back? 
+
+- port changes to ga model 
+- same times, but still no drop=3 used in winning strats. causes too much fatigue?
+- what happens if fatigue is really low?
+- could improve the dropping back routine, the riders are sprinting back on
+- what happens if there is no fatigue at all?
+
+306.179
+306.031
+
+tusday 29th.
+- need to work out why instruction set sizes are still so low... why are sequences of drops not emerging?
+
+- last rider being 
+
+-- made changes to the ga file.
+
+-- done. now it has many drops but it really doesn't like that last position, i think they catch too much fatigue when other drops are made?
+- test 
+[[40,"drop=2"]]
+
+-- try updating the procedure when a rider is dropping back.
+
+IF rider_to_follow is dropping back AND rider_in_front <> rider_to_follow,
+stay behind the rider_in_front.
+
+- ooh that seems to work, a much smoother transition.
+
+- the rider droppign back though has a spike in power, maybe because it slows too quickly? 
+-maybe it should not be allowed to brake? or only brake by a tiny amount?
+- is it braking?
+
+- witu 50 watts of brakign allowed 305.731 
+- with 120 watts of braking allowed 305.731
+- with no brakign allowed 305.731 
+
+it has no effect since the lead never changes again. bvut it does have an affect. 
+
+- whar happens with unlimited braking?
+- not good, rier at back totally halts and rider dropping back has to sprin back on... braking at all may be a bad idea?
+- does the version with the small amount happen faster?
+
+- with 0 braking allowed 
+
+model3.js:856 ||----- Timestep 49 Drop rider braking, target_power target_power -983.1132242660154 braking_power_allowed 0
+model3.js:856 ||----- Timestep 50 Drop rider braking, target_power target_power -536.2927051451104 braking_power_allowed 0
+model3.js:856 ||----- Timestep 51 Drop rider braking, target_power target_power -41.09456540855957 braking_power_allowed 0
+model3.js:856 ||----- Timestep 55 Drop rider braking, target_power target_power -220.14805756737945 braking_power_allowed 0
+
+fatigue for rider: 0/4(99)
+
+- with 50 braking allowed 
+
+model3.js:856 ||----- Timestep 49 Drop rider braking, target_power target_power -983.1132242660154 braking_power_allowed 50
+model3.js:856 ||----- Timestep 50 Drop rider braking, target_power target_power -480.0104630866953 braking_power_allowed 50
+model3.js:856 ||----- Timestep 55 Drop rider braking, target_power target_power -213.56747819519842 braking_power_allowed 50
+fatigue for rider:  0/3(99) 
+
+- with 120 braking allowed 
+
+model3.js:856 ||----- Timestep 49 Drop rider braking, target_power target_power -983.1132242660154 braking_power_allowed 120
+model3.js:856 ||----- Timestep 50 Drop rider braking, target_power target_power -401.15556226976025 braking_power_allowed 120
+model3.js:856 ||----- Timestep 54 Drop rider braking, target_power target_power -402.16583923648545 braking_power_allowed 120
+
+fatigue for rider:  0/2(100)
+
+- with 250 braking allowed 
+
+model3.js:856 ||----- Timestep 49 Drop rider braking, target_power target_power -983.1132242660154 braking_power_allowed 250
+model3.js:856 ||----- Timestep 50 Drop rider braking, target_power target_power -254.52277043345345 braking_power_allowed 250
+model3.js:856 ||----- Timestep 53 Drop rider braking, target_power target_power -293.0308771050716 braking_power_allowed 250
+
+fatigue for rider:  0/15(97)
+
+
+
+- with 2000 braking allowed 
+
+||----- Timestep 51 Drop rider braking, target_power target_power -2376.5449040595804 braking_power_allowed 2000
+
+fatigue for rider: 0/500(0) - wy too much fatigue
+
+make it 120 brakign and port it to the GA, will need to add a setting... 
+"braking_power_allowed":120,
+
+- ok, so an issue... if a rider in 2nd is accelerating when a drop happens, they will end up with a different effort, i.e., it's the same as an effort instruct.
+- need in this case to match what? the actual power? 
+- current: use the power that it takes to have the same velocity that the current leader WOULD have if it didn't drop back.
+- hoes does a new leader set its output level?
+
+- maybe i can -
+1- get the old leader power from their output level
+2- get the output level for the new leader for that power
+- if the riders are identical, the new output level will be the same. 
+
+-- huh, that seemed to work for this example. port it acros to the GA version 
+
+- seems like dropping back 3 places is still too expensive... maybe takes too long? or the rider dropping back takes too big a hit... what happens if I relly reduce the accumulating fatigue?
+
+- wednesday 30th may 25.
+- dropping rider has to do too bog of a burst to join back on, it should be more fluid. what settings can i experiment with to test/improve? 
+
+- this test has all 3 kinds of drop :
+[[0,"effort=5.85"],[22,"effort=6.35"],[65,"drop=3"],[72,"drop=2"],[114,"drop=1"],[182,"drop=3"],[206,"drop=2"],[268,"effort=9.86"]]
+
+- setting braking_power_allowed = 0 actually sped it up a little 
+- what if it's more dynamic, i.e. as we get closer we try to match the target velocity?
+- oh shit, that's exactly what I'm already doing!
+- could try make it a % of the target velocity?
+
+[[40,"drop=3"]]
+
+let's try just apply the power that it would take to ride behind the target rider given its shelter... but surely this will take way too long?
+
+49 rider dopping back ::  rider_to_follow.velocity 13.210684742476316 current_distance_from_target 7.999999661386369 rider_to_follow_proximity_weighting 0.6399999458218201 target_velocity 12.186684829161404
+model3.js:829 target_velocity 5.633870891346987
+model3.js:850 50 rider dopping back ::  rider_to_follow.velocity 13.230138283095691 current_distance_from_target 7.596267391748711 rider_to_follow_proximity_weighting 0.5770327828694477 target_velocity 12.306885830504575
+model3.js:829 target_velocity 6.444551845232809
+model3.js:850 51 rider dopping back ::  rider_to_follow.velocity 13.248298485939223 current_distance_from_target 6.803746640706436 rider_to_follow_proximity_weighting 0.4629096835092411 target_velocity 12.507642992324438
+model3.js:829 target_velocity 7.271383520746781
+model3.js:850 52 rider dopping back ::  rider_to_follow.velocity 13.265251538626147 current_distance_from_target 5.993868017879322 rider_to_follow_proximity_weighting 0.3592645381575659 target_velocity 12.690428277574043
+model3.js:829 target_velocity 7.862032973627379
+model3.js:850 53 rider dopping back ::  rider_to_follow.velocity 13.281077855151022 current_distance_from_target 5.419044881523632 rider_to_follow_proximity_weighting 0.2936604742796748 target_velocity 12.811221096303543
+model3.js:829 target_velocity 8.346664208476
+model3.js:850 54 rider dopping back ::  rider_to_follow.velocity 13.295852467306615 current_distance_from_target 4.949188258830645 rider_to_follow_proximity_weighting 0.24494464421347115 target_velocity 12.903941036565062
+model3.js:829 target_velocity 8.752368419388972
+model3.js:850 55 rider dopping back ::  rider_to_follow.velocity 13.309645388823277 current_distance_from_target 4.55727696943427 rider_to_follow_proximity_weighting 0.20768773376136 target_velocity 12.9773450148051
+model3.js:829 target_velocity 9.097545213433023
+model3.js:850 56 rider dopping back ::  rider_to_follow.velocity 13.322521954251695 current_distance_from_target 4.224976740818647 rider_to_follow_proximity_weighting 0.1785042846045856 target_velocity 13.036915098884357
+model3.js:829 target_velocity 9.395173165170263
+model3.js:850 57 rider dopping back ::  rider_to_follow.velocity 13.33454319927957 current_distance_from_target 3.939370034109288 rider_to_follow_proximity_weighting 0.15518636265638214 target_velocity 13.08624501902936
+model3.js:829 target_velocity 9.654693884713424
+model3.js:850 58 rider dopping back ::  rider_to_follow.velocity 13.345765830557903 current_distance_from_target 3.691071945844442 rider_to_follow_proximity_weighting 0.13624012109399875 target_velocity 13.127781636807505
+model3.js:829 target_velocity 9.883155301374927
+model3.js:850 59 rider dopping back ::  rider_to_follow.velocity 13.35624314675352 current_distance_from_target 3.4730878453785863 rider_to_follow_proximity_weighting 0.12062339181716471 target_velocity 13.163245719846056
+model3.js:829 target_velocity 10.085934133714886
+model3.js:850 60 rider dopping back ::  rider_to_follow.velocity 13.36602464657078 current_distance_from_target 3.2800905128558497 rider_to_follow_proximity_weighting 0.10758993772526951 target_velocity 13.193880746210349
+model3.js:829 target_velocity 10.267209881687222
+
+
+came right back to where i was this mornign :-( 
+test a few versions of the properties... 
+damping_exponent and velocity_adjustment_dropping_back and braking_power_allowed
+[[40,"drop=3"]]
+
+damping_exponent 1
+velocity_adjustment_dropping_back 2
+braking_power_allowed 0
+
+- fatigue of dropping rider (at end of race): 0/4(993)
+
+damping_exponent 2
+velocity_adjustment_dropping_back 1
+braking_power_allowed 0
+
+- fatigue of dropping rider (at end of race): 0/3(994)
+
+damping_exponent 3
+velocity_adjustment_dropping_back 1
+braking_power_allowed 50
+
+- fatigue of dropping rider (at end of race): 0/3(994) - RIDER NEVER LEAVES DROP STATE 
+
+
+damping_exponent 2
+velocity_adjustment_dropping_back 3
+braking_power_allowed 120
+
+- fatigue of dropping rider (at end of race): 0/16(967)
+
+
+-- how about a special rule for drop rider where they simply coast until they are very close to where they need to be?
+
+
+-- thursday.
+- waitttt, it looks like the drop rider is getting shelter! whatttt? son of a bean! 
+- where can I add the fix? 
+
+
+- i guess we need rto store the shelter each rider has
+
+
+-- friday?
+
+- maybe ask if i apply threshold power rather than accelerating until the maximum?
+- how do I know my threshold power?
+
+
+-- ok, so now it is verrry complex but still, weird :-( 
+
+- the dropping rider estimates how far it must travel at a hard-ish pace to match the velocity of the target rider, and if by then it is behind them, it aims for that hard-ish pace.
+- once it is behind them it swithces to FOLLOW mode and thus new rules apply.
+
+
+-- wooooah, i finally got it to catch back on with ZERO fatigue accumulated.
+
+- drop = 2 takes longer 
+- drop = 1 causes something nasty altogether, the back 2 riders drop off, not sure why, does rider 3 chase the dropper?
+
+- need to tes  tthis, rider 2 at timestep 50, what's going on?
+damping_exponent and velocity_adjustment_dropping_back and braking_power_allowed
+[[40,"drop=1"]]
+- bug when getting closest rider in front of you, it doesn't do the IN FRONT part :-) 
+- how do i tune it for the drop=2 slowness?
+
+-- now [[40,"drop=3"]] is off :-(
+[[40,"drop=3"]]
+
+
+--- hmmm, so now if i run the original race.... if a drop begins while another rider is dropping back, all hell breaks loose and the first dropping rider shoots tot the front.
+
+-- could BAR two drops from happening at once? simply ignore it. 
+
+- rider 3, step 79, what's going on?
+- there was a bug with the code where a rider can pick a different rider to follow if their original targey it dropping back 
+
+- there's a spike for non-leaders when the start-phase ends at timestep 8, where they have a 2m gap BUT they are going too slow and have to accelerate... ideally they would accelerate more gradually rather than spike up?
+- not sure there's much I can do there? 
+
+
+[[40,"drop=1"],[100,"drop=2"],[200,"drop=3"]]
+
+let's leave it at   let target_power_dr = race_rider.threshold_power + race_rider.threshold_power*0.1;
+and PORT it all across, though I'm not too sure how, it's a lot of changes :-( 
