@@ -16,7 +16,7 @@ let generation_best_time = Infinity;
 
 let count_of_choke_under_pressure_loggings = 0;
 
-let debug_log_specific_timesteps = [114,115,116,117,118,119];
+let debug_log_specific_timesteps = [];
 
 let power_application_include_acceleration = 1;
 
@@ -29,6 +29,7 @@ let max_fatigue_rise = 0;
 let max_endurance_fatigue_level = 0;
 //let max_endurance_fatigue_level_instructions = []; //save these to be able to re-run odd results
 //let max_endurance_fatigue_level_start_order = [];
+
 
 //temp counter to see if we get a lot of zero cals for cup
 let zero_cup_count = 0;
@@ -2417,6 +2418,10 @@ function randn_bm() {
       //tres = total total resistance
 
       race_r.riders_r[i].aero_tres = race_r.riders_r[i].aero_twt * (settings_r.gradev + settings_r.rollingRes);
+
+      //donalK25 also set up and zero the recovery props
+      race_r.riders_r[i].recovery_mode = 0;
+      race_r.riders_r[i].recovery_mode_recovery_so_far = 0;
     }
 
     let continue_racing = true;
@@ -2681,7 +2686,13 @@ function randn_bm() {
           }
           let failure_level = settings_r.fatigue_failure_level*accumulated_effect;
 
-          if(race_rider.endurance_fatigue_level >= failure_level){
+          if(race_rider.endurance_fatigue_level >= failure_level || race_rider.recovery_mode == 1){
+
+            if(race_rider.endurance_fatigue_level >= failure_level && race_rider.recovery_mode == 0){
+              race_rider.recovery_mode = 1;
+              race_rider.recovery_mode_recovery_so_far = 0; //this counts the recovering done, needed to exit this mode
+            }
+
             race_rider.output_level = (settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction);
           }
 
@@ -3002,9 +3013,20 @@ function randn_bm() {
                 recovery_power_rate = settings_r.recovery_power_rate;
               }
 
-              race_rider.endurance_fatigue_level -= race_rider.recovery_rate * Math.pow(( (race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
-              //race_rider.endurance_fatigue_level -= race_rider.recovery_rate * ( (race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power);
+              let recovery_amount = race_rider.recovery_rate * Math.pow(( (race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
 
+              race_rider.endurance_fatigue_level -= recovery_amount;
+              //race_rider.endurance_fatigue_level -= race_rider.recovery_rate * ( (race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power);
+              //donalK25: update the recovery_mode_recovery_so_far amount
+              let recovery_amount_required_after_fatigue = 12; //default
+              if (typeof(race_rider.recovery_amount_required_after_fatigue) != 'undefined'){
+                recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
+              }
+              race_rider.recovery_mode_recovery_so_far += recovery_amount;
+              if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue){
+                race_rider.recovery_mode = 0; //should exit the fatigue cycle
+                race_rider.recovery_mode_recovery_so_far = 0;
+              }
               if (  race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
             }
           }
@@ -3119,19 +3141,90 @@ function randn_bm() {
             target_velocity =  rider_to_follow.velocity;//assumption that by the time taken to adjust to the same velocity you will have caught them
 
           }
-          else if((race_rider.velocity - target_velocity > 0) && (distance_to_cover < settings_r.damping_visibility_distance)){ //if slowing down and target velocity is low but you are close to the target rider, then only slow a little (dropping back)
-            //need to weight the adjustment so that it goes closer to zero as they get closer and closer
-            let rider_to_follow_proximity_weighting = 1;
-            let current_distance_from_target = Math.abs((race_rider.distance_covered-race_rider.start_offset) - (rider_to_follow.distance_covered-rider_to_follow.velocity-rider_to_follow.start_offset-settings_r.target_rider_gap));
-            let velocity_adjustment_dropping_back = 2;
-            if (typeof(settings_r.velocity_adjustment_dropping_back) != 'undefined'){
-              velocity_adjustment_dropping_back = settings_r.velocity_adjustment_dropping_back;
+          else if((race_rider.velocity > target_velocity) && (distance_to_cover < settings_r.damping_visibility_distance)){
+
+            //dropping back if slowing down and target velocity is low but you are close to the target rider, then only slow a little (dropping back)
+              //need to weight the adjustment so that it goes closer to zero as they get closer and closer
+            //IF dropping we apply a different idea, where the dropping rider tries to match the speed of the target rider and not just slow until beind them, otherwise they will then have to sprint back on
+            if (race_rider.current_aim == "drop") {
+              //if our velocity is higher than the target, just coast, i.e. zero power... we have to get below their velocity
+              if(race_rider.velocity >= rider_to_follow.velocity ){
+                  target_velocity = velocity_from_power_with_acceleration(0, settings_r.rollingRes, (race_rider.weight + settings_r.bike_weight), 9.8, race_rider.air_density, settings_r.frontalArea, race_rider.velocity, settings_r.transv);
+
+                  //console.log(race.race_clock + " rider " + race_rider.name + " dopping back (coast!!):: " + " rider_to_follow.velocity " + " distance_to_cover " + distance_to_cover + " rider_to_follow.velocity "+ rider_to_follow.velocity + " target_velocity " + target_velocity);
+              }
+              else{
+                //otherwise, at some point we need to accelerate to try and ideally match the target rider velocity right as we reach 2m behind them
+                //if we accelerate now until we reach the target rider's velocity, and we estimate that we will still be more than 2m behind them by then, then accelerate!
+                let timestep_count = 0;
+                let power_step_up = settings_r.power_adjustment_step_size_up;
+                let estimated_velocity = race_rider.velocity;
+                let estimated_distance_after_accel = race_rider.distance_covered;
+                let target_rider_estimated_velocity = rider_to_follow.velocity; //can also estimate their accel, but how do we know their shelter??
+                let target_rider_estimated_distance_after_accel = rider_to_follow.distance_covered;
+                let target_power_dr = race_rider.threshold_power + race_rider.threshold_power*0.1; //key value, have tried many variants here
+                let current_power_est_dr = race_rider.power_out;
+                let tries_limit = 20;
+                while(estimated_velocity < target_rider_estimated_velocity && timestep_count < tries_limit ){
+                  if ((target_power_dr - current_power_est_dr) > settings_r.power_adjustment_step_size_up ){
+                    current_power_est_dr += settings_r.power_adjustment_step_size_up;
+                  }
+                  else {
+                    current_power_est_dr = target_power_dr;
+                  }
+                    estimated_velocity =  velocity_from_power_with_acceleration(current_power_est_dr, settings_r.rollingRes, (race_rider.weight + settings_r.bike_weight), 9.8, race_rider.air_density, settings_r.frontalArea, estimated_velocity, settings_r.transv);
+                    estimated_distance_after_accel +=  estimated_velocity;
+                    //also estimate the progress and velocity change of the target rider (with constant current power)
+                    if(typeof(rider_to_follow.frontal_area_adjusted_for_shelter) == "undefined"){
+                      rider_to_follow.frontal_area_adjusted_for_shelter =  settings_r.frontalArea;
+                    }
+                    if(timestep_count > 0){
+                      target_rider_estimated_velocity = velocity_from_power_with_acceleration(rider_to_follow.power_out, settings_r.rollingRes, (rider_to_follow.weight + settings_r.bike_weight), 9.8, rider_to_follow.air_density, rider_to_follow.frontal_area_adjusted_for_shelter, target_rider_estimated_velocity, settings_r.transv);
+                      target_rider_estimated_distance_after_accel += target_rider_estimated_velocity;
+                    }
+                      timestep_count++;
+                }
+                //let target_rider_estimate_distance = rider_to_follow.distance_covered + rider_to_follow.velocity*(timestep_count-1) ;
+                if (estimated_distance_after_accel < (target_rider_estimated_distance_after_accel + 1.5)){
+                  //accelerate now
+                  if ((target_power_dr - race_rider.power_out) > settings_r.power_adjustment_step_size_up ){
+                    target_power_dr = settings_r.power_adjustment_step_size_up;
+                  }
+                  target_velocity = velocity_from_power_with_acceleration(target_power_dr, settings_r.rollingRes, (race_rider.weight + settings_r.bike_weight), 9.8, race_rider.air_density, settings_r.frontalArea, race_rider.velocity, settings_r.transv);
+
+                  //if this target velocity is >= rider_to_follow.velocity, then we should reduce it, as we can get stuck in a loop here
+                  if(target_velocity >= rider_to_follow.velocity){
+                    target_velocity = rider_to_follow.velocity-0.3; //a fixed value to stop it from going past the rider again.
+                  }
+
+                }
+                else{
+                  //if we accelerate now we think we will still be ahead of them when we get up to their speed, so chill the beans for now.
+                  target_velocity = velocity_from_power_with_acceleration(0, settings_r.rollingRes, (race_rider.weight + settings_r.bike_weight), 9.8, race_rider.air_density, settings_r.frontalArea, race_rider.velocity, settings_r.transv);
+                }
+            }
+          }
+            else{
+              //idea 2 (old version), we aim to match the target rider's speed more and more as we get close to it.
+              let rider_to_follow_proximity_weighting = 1;
+              let current_distance_from_target = Math.abs((race_rider.distance_covered-race_rider.start_offset) - (rider_to_follow.distance_covered-rider_to_follow.velocity-rider_to_follow.start_offset-settings_r.target_rider_gap));
+
+               let velocity_adjustment_dropping_back = 2;
+               if (typeof(settings_r.velocity_adjustment_dropping_back) != 'undefined'){
+                 velocity_adjustment_dropping_back = settings_r.velocity_adjustment_dropping_back;
+               }
+               //if the target velocity is too far from the current velocity we need to dampen, otherwise we can aim for the exact distance to cover.
+               let damping_deceleration_distance = 10;
+               if (current_distance_from_target < damping_deceleration_distance){
+                 let damping_exponent = 0.8; //hardcoded a value here
+                 rider_to_follow_proximity_weighting = ((current_distance_from_target**damping_exponent)/(damping_deceleration_distance**damping_exponent));
+               }
+              target_velocity =  (rider_to_follow.velocity - (velocity_adjustment_dropping_back*rider_to_follow_proximity_weighting));
+
+              //console.log(race.race_clock + " rider " + race_rider.name + " dopping back :: " + " rider_to_follow.velocity " + rider_to_follow.velocity + " current_distance_from_target " + current_distance_from_target + " rider_to_follow_proximity_weighting " + rider_to_follow_proximity_weighting + " target_velocity " + target_velocity);
             }
 
-            if (current_distance_from_target < settings_r.damping_deceleration_distance){
-              rider_to_follow_proximity_weighting = (current_distance_from_target/settings_r.damping_deceleration_distance);
-            }
-            target_velocity =  (rider_to_follow.velocity - (settings_r.velocity_adjustment_dropping_back*rider_to_follow_proximity_weighting));      }
+          }
 
             let tv = target_velocity + settings_r.headwindv;
             //to work out the shelter, distance from the rider in front is needed
@@ -3184,6 +3277,9 @@ function randn_bm() {
 
             let frontal_area_adjusted_for_shelter = Math.round((settings_r.frontalArea - settings_r.frontalArea*shelter_effect)*10000)/10000;
 
+            //donalK25: storing this to use in dropping back calculations
+            race_rider.frontal_area_adjusted_for_shelter = frontal_area_adjusted_for_shelter;
+
             //debugger;
             if(power_application_include_acceleration){
               //target_power = power_from_velocity_with_acceleration(race_rider.aero_A2, settings_r.headwindv, race_rider.aero_tres, settings_r.transv, target_velocity, race_rider.velocity, (race_rider.weight + settings_r.bike_weight));
@@ -3202,7 +3298,7 @@ function randn_bm() {
             //donalK -- accel can't go below zero? : or allow some braking??
             if (target_power < 0){
                 if(power_application_include_acceleration){
-                  let braking_power_allowed = 120;
+                  let braking_power_allowed = 0; // 0 means no braking
                   if (typeof(settings_r.braking_power_allowed) != 'undefined'){
                     braking_power_allowed  = settings_r.braking_power_allowed;
                   }
@@ -3226,8 +3322,21 @@ function randn_bm() {
               accumulated_effect = (settings_r.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings_r.accumulated_fatigue_maximum;
             }
             let failure_level = settings_r.fatigue_failure_level*accumulated_effect;
-            if(race_rider.endurance_fatigue_level >= failure_level){
-              current_max_power = (race_rider.threshold_power*((settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction)/10));
+
+            if(race_rider.endurance_fatigue_level >= failure_level || race_rider.recovery_mode == 1){
+
+              //turn on recovery mode it's not already on
+              if(race_rider.endurance_fatigue_level >= failure_level && race_rider.recovery_mode == 0){
+                race_rider.recovery_mode = 1;
+                race_rider.recovery_mode_recovery_so_far = 0; //this counts the recovering done, needed to exit this mode
+              }
+
+              //donalK25: align this with the mapping-effort level-to-power used by the leader
+              let recovery_output_level = (settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction);
+              current_max_power = mapEffortToPower(settings_r.threshold_power_effort_level, recovery_output_level, race_rider.threshold_power, race_rider.max_power, settings_r.maximum_effort_value);
+
+              //current_max_power = (race_rider.threshold_power*((settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction)/10));
+
             }
             //can't go over the max power
             if (target_power > current_max_power){
@@ -3388,7 +3497,9 @@ function randn_bm() {
 
             //if you are dropping back and get back to the rider in front, go back to a follow state
             if(race_rider.current_aim =="drop"){ //once you are behind the rider_to_follow, you 'follow' again
-              if((race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= (rider_to_follow.distance_covered-rider_to_follow.start_offset - (settings_r.target_rider_gap-0.5))){ //idea is that you are dropping back so long as you are goign slower than the rider you want to follow
+              if((race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= (rider_to_follow.distance_covered-rider_to_follow.start_offset))
+              {
+                  //idea is that you are dropping back so long as you are in front of the rider you should be behind
                 race_rider.current_aim = "follow";
               }
             }
@@ -3424,9 +3535,20 @@ function randn_bm() {
                 if (settings_r.recovery_power_rate){
                   recovery_power_rate = settings_r.recovery_power_rate;
                 }
-
-                race_rider.endurance_fatigue_level -= race_rider.recovery_rate * Math.pow(((race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
-                //  race_rider.endurance_fatigue_level -= race_rider.recovery_rate * ((race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power);
+                let recovery_amount = race_rider.recovery_rate * Math.pow(((race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
+                race_rider.endurance_fatigue_level -= recovery_amount;
+                // race_rider.endurance_fatigue_level -= race_rider.recovery_rate * ((race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power);
+                //donalK25: update the recovery_mode_recovery_so_far amount
+                let recovery_amount_required_after_fatigue = 12; //default
+                if (typeof(race_rider.recovery_amount_required_after_fatigue) != 'undefined'){
+                  recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
+                }
+                race_rider.recovery_mode_recovery_so_far += recovery_amount;
+                if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue){
+                  
+                  race_rider.recovery_mode = 0; //should exit the fatigue cycle
+                  race_rider.recovery_mode_recovery_so_far = 0;
+                }
 
                 if ( race_rider.endurance_fatigue_level < 0){
                   race_rider.endurance_fatigue_level = 0;

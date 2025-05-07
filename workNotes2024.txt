@@ -1344,3 +1344,171 @@ damping_exponent and velocity_adjustment_dropping_back and braking_power_allowed
 
 let's leave it at   let target_power_dr = race_rider.threshold_power + race_rider.threshold_power*0.1;
 and PORT it all across, though I'm not too sure how, it's a lot of changes :-( 
+
+
+- ah shit, ported it all across but there's a discrepancy... 
+ga time 	276.659
+vis time 	276.078
+
+ga is doing sprints back on... some setting differs, but which? 
+
+- try run a simpler test and check for the difference
+- hmmm, smae time for basic drops, but need the graph as this time isn't affected by drops
+
+- need to debug, step through and compare... 
+
+- timesteps 43-48 GA 
+  43 | RIDER 1 LEAD | 505.33m | 51.45 kph | 505.6 / 400 / 1000 watts | -1 m | 73/73 |||| (505.6|505.6|0.1363|70.45370690058688|70.45370690058688|5.88) 43 | RIDER 3 FOLLOW | 503.33m | 51.45 kph | 380.39 / 400 / 1000 watts | 2 m | 3/24 |||| (380.38992619181204|380.38992619181204|0.0954|24.048841616194412|3.30120155383011|5) 43 | RIDER 4 FOLLOW |F| | 501.33m | 51.45 kph | 330.23 / 400 / 1000 watts | 0.87 m | 0/29 |||| (330.2341471486771|330.2341471486771|0.0791|29.259474961649573|0|5) 43 | RIDER 2 DROP | 502.2m | 49.62 kph | 440 / 400 / 1000 watts | 1.13 m | 82/82 |||| (440.00078746777433|440.00078746777433|0.1363|81.00027706056544|81.00027706056544|5.88)
+  44 | RIDER 1 LEAD | 519.65m | 51.55 kph | 505.6 / 400 / 1000 watts | -1 m | 76/76 |||| (505.6|505.6|0.1363|73.09370690058688|73.09370690058688|5.88) 44 | RIDER 3 FOLLOW | 517.65m | 51.55 kph | 379.61 / 400 / 1000 watts | 2 m | 2/24 |||| (379.60971523337656|379.60971523337656|0.0954|24.048841616194412|2.8109497086254107|5) 44 | RIDER 4 FOLLOW |F| | 515.65m | 51.55 kph | 329.14 / 400 / 1000 watts | 0.35 m | 0/29 |||| (329.14136323201984|329.14136323201984|0.0791|29.259474961649573|0|5) 44 | RIDER 2 DROP | 516m | 49.67 kph | 440 / 400 / 1000 watts | 1.65 m | 83/83 |||| (440.0007915616816|440.0007915616816|0.1363|82.0002967472598|82.0002967472598|5.88)
+  45 | RIDER 1 LEAD | 534m | 51.65 kph | 505.6 / 400 / 1000 watts | -1 m | 78/78 |||| (505.6|505.6|0.1363|75.73370690058688|75.73370690058688|5.88) 45 | RIDER 3 FOLLOW | 532m | 51.65 kph | 378.88 / 400 / 1000 watts | 2 m | 2/24 |||| (378.8824470098548|378.8824470098548|0.0954|24.048841616194412|2.301192589459825|5) 45 | RIDER 4 FOLLOW |F| | 530m | 51.65 kph | 328.12 / 400 / 1000 watts | 2 m | 0/29 |||| (328.12277001739716|328.12277001739716|0.0791|29.259474961649573|0|5) 45 | RIDER 2 DROP | 529.81m | 49.72 kph | 440 / 400 / 1000 watts | 0.19 m | 84/84 |||| (440.00079539163323|440.00079539163323|0.1363|83.00031653630184|83.00031653630184|5.88)
+  46 | RIDER 1 LEAD | 548.37m | 51.74 kph | 505.6 / 400 / 1000 watts | -1 m | 81/81 |||| (505.6|505.6|0.1363|78.37370690058688|78.37370690058688|5.88) 46 | RIDER 3 FOLLOW | 546.37m | 51.74 kph | 378.2 / 400 / 1000 watts | 2 m | 1/24 |||| (378.20480415361703|378.20480415361703|0.0954|24.048841616194412|1.7732537647061946|5) 46 | RIDER 4 FOLLOW |F| | 544.37m | 51.74 kph | 335.74 / 400 / 1000 watts | 2 m | 0/29 |||| (335.7396414028813|335.7396414028813|0.0818|29.259474961649573|0|5) 46 | RIDER 2 DROP | 543.63m | 49.76 kph | 440 / 400 / 1000 watts | 0.74 m | 85/85 |||| (440.0007989736081|440.0007989736081|0.1363|84.00033642109267|84.00033642109267|5.88)
+  47 | RIDER 1 LEAD | 562.76m | 51.82 kph | 505.6 / 400 / 1000 watts | -1 m | 84/84 |||| (505.6|505.6|0.1363|81.01370690058688|81.01370690058688|5.88) 47 | RIDER 3 FOLLOW | 560.76m | 51.82 kph | 377.57 / 400 / 1000 watts | 2 m | 1/24 |||| (377.57356135801444|377.57356135801444|0.0954|24.048841616194412|1.2283738685466203|5) 47 | RIDER 4 FOLLOW |F| | 558.76m | 51.82 kph | 334.9 / 400 / 1000 watts | 2 m | 0/29 |||| (334.8979483973752|334.8979483973752|0.0818|29.259474961649573|0|5) 47 | RIDER 2 DROP | 557.46m | 49.79 kph | 440 / 400 / 1000 watts | 1.3 m | 86/86 |||| (440.0008023227581|440.0008023227581|0.1363|85.00035639543287|85.00035639543287|5.88)
+  48 | RIDER 1 LEAD | 577.18m | 51.89 kph | 505.6 / 400 / 1000 watts | -1 m | 86/86 |||| (505.6|505.6|0.1363|83.65370690058688|83.65370690058688|5.88) 48 | RIDER 3 FOLLOW | 575.18m | 51.89 kph | 376.99 / 400 / 1000 watts | 2 m | 0/24 |||| (376.9856803310703|376.9856803310703|0.0954|24.048841616194412|0.6677129024969815|5) 48 | RIDER 4 FOLLOW |F| | 573.18m | 51.89 kph | 334.11 / 400 / 1000 watts | 2 m | 0/29 |||| (334.11412300252624|334.11412300252624|0.0818|29.259474961649573|0|5) 48 | RIDER 2 FOLLOW | 571.3m | 49.83 kph | 440 / 400 / 1000 watts | 1.87 m | 87/87 |||| (440.0008054534334|440.0008054534334|0.1363|86.00037645350183|86.00037645350183|5.88)
+
+
+- VIS game
+ 43 | RIDER 1 LEAD | 505.33m | 51.45 kph | 505.6 / 400 / 1000 watts | -1 m | 73/73(859) |||| (505.6|505.6|0.1363|70.45370690058688|70.45370690058688|5.88) 43 | RIDER 3 FOLLOW | 503.33m | 51.45 kph | 380.39 / 400 / 1000 watts | 2 m | 3/24(952) |||| (380.38992619181204|380.38992619181204|0.0954|24.048841616194412|3.30120155383011|5) 43 | RIDER 4 FOLLOW |F| | 501.33m | 51.45 kph | 330.23 / 400 / 1000 watts | 0.87 m | 0/29(941) |||| (330.2341471486771|330.2341471486771|0.0791|29.259474961649573|0|5) 43 | RIDER 2 DROP | 502.2m | 49.62 kph | 440 / 400 / 1000 watts | 1.13 m | 82/82(838) |||| (440.00078746777433|440.00078746777433|0.1363|81.00027706056544|81.00027706056544|5.88)
+ 44 | RIDER 1 LEAD | 519.65m | 51.55 kph | 505.6 / 400 / 1000 watts | -1 m | 76/76(854) |||| (505.6|505.6|0.1363|73.09370690058688|73.09370690058688|5.88) 44 | RIDER 3 FOLLOW | 517.65m | 51.55 kph | 379.61 / 400 / 1000 watts | 2 m | 2/24(952) |||| (379.60971523337656|379.60971523337656|0.0954|24.048841616194412|2.8109497086254107|5) 44 | RIDER 4 FOLLOW |F| | 515.65m | 51.55 kph | 329.14 / 400 / 1000 watts | 0.35 m | 0/29(941) |||| (329.14136323201984|329.14136323201984|0.0791|29.259474961649573|0|5) 44 | RIDER 2 DROP | 516m | 49.67 kph | 440 / 400 / 1000 watts | 1.65 m | 83/83(836) |||| (440.0007915616816|440.0007915616816|0.1363|82.0002967472598|82.0002967472598|5.88)
+ 45 | RIDER 1 LEAD | 534m | 51.65 kph | 505.6 / 400 / 1000 watts | -1 m | 78/78(849) |||| (505.6|505.6|0.1363|75.73370690058688|75.73370690058688|5.88) 45 | RIDER 3 FOLLOW | 532m | 51.65 kph | 378.88 / 400 / 1000 watts | 2 m | 2/24(952) |||| (378.8824470098548|378.8824470098548|0.0954|24.048841616194412|2.301192589459825|5) 45 | RIDER 4 FOLLOW |F| | 530m | 51.65 kph | 328.12 / 400 / 1000 watts | 2 m | 0/29(941) |||| (328.12277001739716|328.12277001739716|0.0791|29.259474961649573|0|5) 45 | RIDER 2 FOLLOW | 529.81m | 49.72 kph | 440 / 400 / 1000 watts | 0.19 m | 84/84(834) |||| (440.00079539163323|440.00079539163323|0.1363|83.00031653630184|83.00031653630184|5.88)
+ 46 | RIDER 1 LEAD | 548.37m | 51.74 kph | 505.6 / 400 / 1000 watts | -1 m | 81/81(843) |||| (505.6|505.6|0.1363|78.37370690058688|78.37370690058688|5.88) 46 | RIDER 3 FOLLOW | 546.37m | 51.74 kph | 378.2 / 400 / 1000 watts | 2 m | 1/24(952) |||| (378.20480415361703|378.20480415361703|0.0954|24.048841616194412|1.7732537647061946|5) 46 | RIDER 4 FOLLOW |F| | 544.37m | 51.74 kph | 335.74 / 400 / 1000 watts | 2 m | 0/29(941) |||| (335.7396414028813|335.7396414028813|0.0818|29.259474961649573|0|5) 46 | RIDER 2 FOLLOW | 543.67m | 49.9 kph | 331.12 / 400 / 1000 watts | 0.7 m | 82/84(832) |||| (331.1157300553893|331.1157300553893|0.0791|84.00033642109267|84.00033642109267|5.88)
+ 47 | RIDER 1 LEAD | 562.76m | 51.82 kph | 505.6 / 400 / 1000 watts | -1 m | 84/84(838) |||| (505.6|505.6|0.1363|81.01370690058688|81.01370690058688|5.88) 47 | RIDER 3 FOLLOW | 560.76m | 51.82 kph | 377.57 / 400 / 1000 watts | 2 m | 1/24(952) |||| (377.57356135801444|377.57356135801444|0.0954|24.048841616194412|1.2283738685466203|5) 47 | RIDER 4 FOLLOW |F| | 558.76m | 51.82 kph | 334.9 / 400 / 1000 watts | 2 m | 0/29(941) |||| (334.8979483973752|334.8979483973752|0.0818|29.259474961649573|0|5) 47 | RIDER 2 FOLLOW | 557.67m | 50.41 kph | 447.25 / 400 / 1000 watts | 1.09 m | 83/85(832) |||| (447.25238768743054|447.25238768743054|0.0791|84.00033642109267|82.27822967247741|5.88)
+ 48 | RIDER 1 LEAD | 577.18m | 51.89 kph | 505.6 / 400 / 1000 watts | -1 m | 86/86(833) |||| (505.6|505.6|0.1363|83.65370690058688|83.65370690058688|5.88) 48 | RIDER 3 FOLLOW | 575.18m | 51.89 kph | 376.99 / 400 / 1000 watts | 2 m | 0/24(952) |||| (376.9856803310703|376.9856803310703|0.0954|24.048841616194412|0.6677129024969815|5) 48 | RIDER 4 FOLLOW |F| | 573.18m | 51.89 kph | 334.11 / 400 / 1000 watts | 2 m | 0/29(941) |||| (334.11412300252624|334.11412300252624|0.0818|29.259474961649573|0|5) 48 | RIDER 2 FOLLOW | 571.79m | 50.84 kph | 427.44 / 400 / 1000 watts | 1.38 m | 84/86(830) |||| (427.43850804627965|427.43850804627965|0.0791|85.18164611327843|83.45953936466317|5.88)
+ 
+ -- ooh, the game version stops dropping sooner, maybe that line that sets drop to follow??
+ 
+ - ok, this does have an effect BUT damn things are still off. 
+ 
+GA: 276.085
+VIS 276.078
+
+- timesteps 43-48 GA 
+43 | RIDER 1 LEAD | 505.33m | 51.45 kph | 505.6 / 400 / 1000 watts | -1 m | 73/73(859) |||| (505.6|505.6|0.1363|70.45370690058688|70.45370690058688|5.88) 43 | RIDER 3 FOLLOW | 503.33m | 51.45 kph | 380.39 / 400 / 1000 watts | 2 m | 3/24(952) |||| (380.38992619181204|380.38992619181204|0.0954|24.048841616194412|3.30120155383011|5) 43 | RIDER 4 FOLLOW |F| | 501.33m | 51.45 kph | 330.23 / 400 / 1000 watts | 0.87 m | 0/29(941) |||| (330.2341471486771|330.2341471486771|0.0791|29.259474961649573|0|5) 43 | RIDER 2 DROP | 502.2m | 49.62 kph | 440 / 400 / 1000 watts | 1.13 m | 82/82(838) |||| (440.00078746777433|440.00078746777433|0.1363|81.00027706056544|81.00027706056544|5.88)
+ 44 | RIDER 1 LEAD | 519.65m | 51.55 kph | 505.6 / 400 / 1000 watts | -1 m | 76/76(854) |||| (505.6|505.6|0.1363|73.09370690058688|73.09370690058688|5.88) 44 | RIDER 3 FOLLOW | 517.65m | 51.55 kph | 379.61 / 400 / 1000 watts | 2 m | 2/24(952) |||| (379.60971523337656|379.60971523337656|0.0954|24.048841616194412|2.8109497086254107|5) 44 | RIDER 4 FOLLOW |F| | 515.65m | 51.55 kph | 329.14 / 400 / 1000 watts | 0.35 m | 0/29(941) |||| (329.14136323201984|329.14136323201984|0.0791|29.259474961649573|0|5) 44 | RIDER 2 DROP | 516m | 49.67 kph | 440 / 400 / 1000 watts | 1.65 m | 83/83(836) |||| (440.0007915616816|440.0007915616816|0.1363|82.0002967472598|82.0002967472598|5.88)
+ 45 | RIDER 1 LEAD | 534m | 51.65 kph | 505.6 / 400 / 1000 watts | -1 m | 78/78(849) |||| (505.6|505.6|0.1363|75.73370690058688|75.73370690058688|5.88) 45 | RIDER 3 FOLLOW | 532m | 51.65 kph | 378.88 / 400 / 1000 watts | 2 m | 2/24(952) |||| (378.8824470098548|378.8824470098548|0.0954|24.048841616194412|2.301192589459825|5) 45 | RIDER 4 FOLLOW |F| | 530m | 51.65 kph | 328.12 / 400 / 1000 watts | 2 m | 0/29(941) |||| (328.12277001739716|328.12277001739716|0.0791|29.259474961649573|0|5) 45 | RIDER 2 FOLLOW | 529.81m | 49.72 kph | 440 / 400 / 1000 watts | 0.19 m | 84/84(834) |||| (440.00079539163323|440.00079539163323|0.1363|83.00031653630184|83.00031653630184|5.88)
+ 46 | RIDER 1 LEAD | 548.37m | 51.74 kph | 505.6 / 400 / 1000 watts | -1 m | 81/81(843) |||| (505.6|505.6|0.1363|78.37370690058688|78.37370690058688|5.88) 46 | RIDER 3 FOLLOW | 546.37m | 51.74 kph | 378.2 / 400 / 1000 watts | 2 m | 1/24(952) |||| (378.20480415361703|378.20480415361703|0.0954|24.048841616194412|1.7732537647061946|5) 46 | RIDER 4 FOLLOW |F| | 544.37m | 51.74 kph | 335.74 / 400 / 1000 watts | 2 m | 0/29(941) |||| (335.7396414028813|335.7396414028813|0.0818|29.259474961649573|0|5) 46 | RIDER 2 FOLLOW | 543.67m | 49.9 kph | 331.12 / 400 / 1000 watts | 0.7 m | 82/84(832) |||| (331.1157300553893|331.1157300553893|0.0791|84.00033642109267|84.00033642109267|5.88)
+ 47 | RIDER 1 LEAD | 562.76m | 51.82 kph | 505.6 / 400 / 1000 watts | -1 m | 84/84(838) |||| (505.6|505.6|0.1363|81.01370690058688|81.01370690058688|5.88) 47 | RIDER 3 FOLLOW | 560.76m | 51.82 kph | 377.57 / 400 / 1000 watts | 2 m | 1/24(952) |||| (377.57356135801444|377.57356135801444|0.0954|24.048841616194412|1.2283738685466203|5) 47 | RIDER 4 FOLLOW |F| | 558.76m | 51.82 kph | 334.9 / 400 / 1000 watts | 2 m | 0/29(941) |||| (334.8979483973752|334.8979483973752|0.0818|29.259474961649573|0|5) 47 | RIDER 2 FOLLOW | 557.67m | 50.41 kph | 447.25 / 400 / 1000 watts | 1.09 m | 83/85(832) |||| (447.25238768743054|447.25238768743054|0.0791|84.00033642109267|82.27822967247741|5.88)
+ 48 | RIDER 1 LEAD | 577.18m | 51.89 kph | 505.6 / 400 / 1000 watts | -1 m | 86/86(833) |||| (505.6|505.6|0.1363|83.65370690058688|83.65370690058688|5.88) 48 | RIDER 3 FOLLOW | 575.18m | 51.89 kph | 376.99 / 400 / 1000 watts | 2 m | 0/24(952) |||| (376.9856803310703|376.9856803310703|0.0954|24.048841616194412|0.6677129024969815|5) 48 | RIDER 4 FOLLOW |F| | 573.18m | 51.89 kph | 334.11 / 400 / 1000 watts | 2 m | 0/29(941) |||| (334.11412300252624|334.11412300252624|0.0818|29.259474961649573|0|5) 48 | RIDER 2 FOLLOW | 571.79m | 50.84 kph | 427.44 / 400 / 1000 watts | 1.38 m | 84/86(830) |||| (427.43850804627965|427.43850804627965|0.0791|85.18164611327843|83.45953936466317|5.88)
+
+- VIS game (same)
+ 43 | RIDER 1 LEAD | 505.33m | 51.45 kph | 505.6 / 400 / 1000 watts | -1 m | 73/73(859) |||| (505.6|505.6|0.1363|70.45370690058688|70.45370690058688|5.88) 43 | RIDER 3 FOLLOW | 503.33m | 51.45 kph | 380.39 / 400 / 1000 watts | 2 m | 3/24(952) |||| (380.38992619181204|380.38992619181204|0.0954|24.048841616194412|3.30120155383011|5) 43 | RIDER 4 FOLLOW |F| | 501.33m | 51.45 kph | 330.23 / 400 / 1000 watts | 0.87 m | 0/29(941) |||| (330.2341471486771|330.2341471486771|0.0791|29.259474961649573|0|5) 43 | RIDER 2 DROP | 502.2m | 49.62 kph | 440 / 400 / 1000 watts | 1.13 m | 82/82(838) |||| (440.00078746777433|440.00078746777433|0.1363|81.00027706056544|81.00027706056544|5.88)
+ 44 | RIDER 1 LEAD | 519.65m | 51.55 kph | 505.6 / 400 / 1000 watts | -1 m | 76/76(854) |||| (505.6|505.6|0.1363|73.09370690058688|73.09370690058688|5.88) 44 | RIDER 3 FOLLOW | 517.65m | 51.55 kph | 379.61 / 400 / 1000 watts | 2 m | 2/24(952) |||| (379.60971523337656|379.60971523337656|0.0954|24.048841616194412|2.8109497086254107|5) 44 | RIDER 4 FOLLOW |F| | 515.65m | 51.55 kph | 329.14 / 400 / 1000 watts | 0.35 m | 0/29(941) |||| (329.14136323201984|329.14136323201984|0.0791|29.259474961649573|0|5) 44 | RIDER 2 DROP | 516m | 49.67 kph | 440 / 400 / 1000 watts | 1.65 m | 83/83(836) |||| (440.0007915616816|440.0007915616816|0.1363|82.0002967472598|82.0002967472598|5.88)
+ 45 | RIDER 1 LEAD | 534m | 51.65 kph | 505.6 / 400 / 1000 watts | -1 m | 78/78(849) |||| (505.6|505.6|0.1363|75.73370690058688|75.73370690058688|5.88) 45 | RIDER 3 FOLLOW | 532m | 51.65 kph | 378.88 / 400 / 1000 watts | 2 m | 2/24(952) |||| (378.8824470098548|378.8824470098548|0.0954|24.048841616194412|2.301192589459825|5) 45 | RIDER 4 FOLLOW |F| | 530m | 51.65 kph | 328.12 / 400 / 1000 watts | 2 m | 0/29(941) |||| (328.12277001739716|328.12277001739716|0.0791|29.259474961649573|0|5) 45 | RIDER 2 FOLLOW | 529.81m | 49.72 kph | 440 / 400 / 1000 watts | 0.19 m | 84/84(834) |||| (440.00079539163323|440.00079539163323|0.1363|83.00031653630184|83.00031653630184|5.88)
+ 46 | RIDER 1 LEAD | 548.37m | 51.74 kph | 505.6 / 400 / 1000 watts | -1 m | 81/81(843) |||| (505.6|505.6|0.1363|78.37370690058688|78.37370690058688|5.88) 46 | RIDER 3 FOLLOW | 546.37m | 51.74 kph | 378.2 / 400 / 1000 watts | 2 m | 1/24(952) |||| (378.20480415361703|378.20480415361703|0.0954|24.048841616194412|1.7732537647061946|5) 46 | RIDER 4 FOLLOW |F| | 544.37m | 51.74 kph | 335.74 / 400 / 1000 watts | 2 m | 0/29(941) |||| (335.7396414028813|335.7396414028813|0.0818|29.259474961649573|0|5) 46 | RIDER 2 FOLLOW | 543.67m | 49.9 kph | 331.12 / 400 / 1000 watts | 0.7 m | 82/84(832) |||| (331.1157300553893|331.1157300553893|0.0791|84.00033642109267|84.00033642109267|5.88)
+ 47 | RIDER 1 LEAD | 562.76m | 51.82 kph | 505.6 / 400 / 1000 watts | -1 m | 84/84(838) |||| (505.6|505.6|0.1363|81.01370690058688|81.01370690058688|5.88) 47 | RIDER 3 FOLLOW | 560.76m | 51.82 kph | 377.57 / 400 / 1000 watts | 2 m | 1/24(952) |||| (377.57356135801444|377.57356135801444|0.0954|24.048841616194412|1.2283738685466203|5) 47 | RIDER 4 FOLLOW |F| | 558.76m | 51.82 kph | 334.9 / 400 / 1000 watts | 2 m | 0/29(941) |||| (334.8979483973752|334.8979483973752|0.0818|29.259474961649573|0|5) 47 | RIDER 2 FOLLOW | 557.67m | 50.41 kph | 447.25 / 400 / 1000 watts | 1.09 m | 83/85(832) |||| (447.25238768743054|447.25238768743054|0.0791|84.00033642109267|82.27822967247741|5.88)
+ 48 | RIDER 1 LEAD | 577.18m | 51.89 kph | 505.6 / 400 / 1000 watts | -1 m | 86/86(833) |||| (505.6|505.6|0.1363|83.65370690058688|83.65370690058688|5.88) 48 | RIDER 3 FOLLOW | 575.18m | 51.89 kph | 376.99 / 400 / 1000 watts | 2 m | 0/24(952) |||| (376.9856803310703|376.9856803310703|0.0954|24.048841616194412|0.6677129024969815|5) 48 | RIDER 4 FOLLOW |F| | 573.18m | 51.89 kph | 334.11 / 400 / 1000 watts | 2 m | 0/29(941) |||| (334.11412300252624|334.11412300252624|0.0818|29.259474961649573|0|5) 48 | RIDER 2 FOLLOW | 571.79m | 50.84 kph | 427.44 / 400 / 1000 watts | 1.38 m | 84/86(830) |||| (427.43850804627965|427.43850804627965|0.0791|85.18164611327843|83.45953936466317|5.88)
+ 
+- hmm, identical here, so i wonder where things are going awry?
+
+- huh, right at the end the power goes to < 0 for a follower in GAME but to 0 in GA. Must still have some 0 check??
+
+- Got it!
+
+- application of braking power allowed in GAME was set to 0, and 120 in the GA. strange that it didn't make a more dramatic difference?
+- also weird that it is quicker setting it to 0?
+
+- ooh, now we have a high early effort, a rider beign dropped, and a 275.29 finish time... this is progress?
+
+- what happens if I run it again?
+
+- same idea, high start effort, high effort at end, a rider is dropped. slightly faster time.
+
+- try it with a high fatgiue rate. 
+
+- much slower time and not as much happening, maybe high fatgiue restricts things?
+
+- try it with high fatigue and very high recovery?
+
+- not a huge chainge what happens if recovery is way higher than fatigue? would it encourage more changes?
+
+
+hmmm, found a bug in the slowest race, where a rider dropping back seems to get stuck, oscillating from power 0 to 400- output levels are very low
+
+[[7,"effort=1.09"],[44,"drop=3"]]
+
+- don't ever want to accelerate to >= target velocity while still ahead of the target rider? 
+
+- maybe after checking to see if you can accelerate, IF this would make you faster than the target, then reduce your velocity to a point a little below the target rider's?
+
+-- worked with slowest version but now need to port that across...
+
+-- what happens if we make the bike VERY heavy, like 50kg?
+
+- found another issue, drop 3 seems to be run as drop 2, i think something is broken in the contiguous group calcs?
+
+-- ooh good, it's not a bug, it was one inst. being overwritten by another in the queuw though I don't know if i trust the contiguous mech
+- how can i test this? desing a strat where a rider is dropped then do a drop=3 after that...
+
+- make riders all equal, then put it to the back after it has been dropped but before it can recover.
+[[0,"effort=7"],[80,"drop=3"],[120,"drop=3"],[150,"drop=3"],[200,"drop=3"],[250,"drop=3"]]
+
+ok, so a rider is clearly dropped and never gets back on, indeed gets lapped a few times.
+- why does the dropped rider have spikes back to their max, surely this is limited by the fatigue mechanism? is this working?
+
+- why does the purple rider's fatigue level drop so low, or is this a good thing, since they are going well above threshold. is that fatgiue effect in need of change?
+
+confused about this line:
+current_max_power = (race_rider.threshold_power*((settings.threshold_power_effort_level-settings.recovery_effort_level_reduction)/10));
+
+
+--ooh for the leader we use something a biteen different 
+ race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
+ 
+ - then we map that to a power using 
+ race_rider.current_power_effort = mapEffortToPower(settings.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power, settings.maximum_effort_value);
+ 
+ do we get the same value? 240 here, 120 from the first method. 
+ - NOPE. fook. an inconsistency. another godamned inconsistency :-( 
+
+- ok, so maybe fatigue is ok.
+
+1 - if failing, max power is set to a percentage below the threshold 
+2 - the fatgiue limit is reduced over time using this:
+	accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
+	let failure_level = settings.fatigue_failure_level*accumulated_effect;
+	- higher accumulated_fatigue = faster reduction of failure_level. equivalent to lowering the fatigue_failure_level?
+3 - rider accumulates fatigue if over threshold 
+4 - rider recovers if under the threshold 
+5 - their max power is not affected but if trying to go all out all the time they will cycle to max power/recovery level over and over until accumulated_effect ends up being zero. 
+
+- how to cause a rider to go at level 10 all the time?
+
+build a set of effort=10 instructions
+
+1 step [[0,"effort=10"]]
+
+400 steps using https://pinetools.com/generate-list-numbers
+
+[[0,"effort=10"],[1,"effort=10"],[2,"effort=10"],[3,"effort=10"],[4,"effort=10"],[5,"effort=10"],[6,"effort=10"],[7,"effort=10"],[8,"effort=10"],[9,"effort=10"],[10,"effort=10"],[11,"effort=10"],[12,"effort=10"],[13,"effort=10"],[14,"effort=10"],[15,"effort=10"],[16,"effort=10"],[17,"effort=10"],[18,"effort=10"],[19,"effort=10"],[20,"effort=10"],[21,"effort=10"],[22,"effort=10"],[23,"effort=10"],[24,"effort=10"],[25,"effort=10"],[26,"effort=10"],[27,"effort=10"],[28,"effort=10"],[29,"effort=10"],[30,"effort=10"],[31,"effort=10"],[32,"effort=10"],[33,"effort=10"],[34,"effort=10"],[35,"effort=10"],[36,"effort=10"],[37,"effort=10"],[38,"effort=10"],[39,"effort=10"],[40,"effort=10"],[41,"effort=10"],[42,"effort=10"],[43,"effort=10"],[44,"effort=10"],[45,"effort=10"],[46,"effort=10"],[47,"effort=10"],[48,"effort=10"],[49,"effort=10"],[50,"effort=10"],[51,"effort=10"],[52,"effort=10"],[53,"effort=10"],[54,"effort=10"],[55,"effort=10"],[56,"effort=10"],[57,"effort=10"],[58,"effort=10"],[59,"effort=10"],[60,"effort=10"],[61,"effort=10"],[62,"effort=10"],[63,"effort=10"],[64,"effort=10"],[65,"effort=10"],[66,"effort=10"],[67,"effort=10"],[68,"effort=10"],[69,"effort=10"],[70,"effort=10"],[71,"effort=10"],[72,"effort=10"],[73,"effort=10"],[74,"effort=10"],[75,"effort=10"],[76,"effort=10"],[77,"effort=10"],[78,"effort=10"],[79,"effort=10"],[80,"effort=10"],[81,"effort=10"],[82,"effort=10"],[83,"effort=10"],[84,"effort=10"],[85,"effort=10"],[86,"effort=10"],[87,"effort=10"],[88,"effort=10"],[89,"effort=10"],[90,"effort=10"],[91,"effort=10"],[92,"effort=10"],[93,"effort=10"],[94,"effort=10"],[95,"effort=10"],[96,"effort=10"],[97,"effort=10"],[98,"effort=10"],[99,"effort=10"],[100,"effort=10"],[101,"effort=10"],[102,"effort=10"],[103,"effort=10"],[104,"effort=10"],[105,"effort=10"],[106,"effort=10"],[107,"effort=10"],[108,"effort=10"],[109,"effort=10"],[110,"effort=10"],[111,"effort=10"],[112,"effort=10"],[113,"effort=10"],[114,"effort=10"],[115,"effort=10"],[116,"effort=10"],[117,"effort=10"],[118,"effort=10"],[119,"effort=10"],[120,"effort=10"],[121,"effort=10"],[122,"effort=10"],[123,"effort=10"],[124,"effort=10"],[125,"effort=10"],[126,"effort=10"],[127,"effort=10"],[128,"effort=10"],[129,"effort=10"],[130,"effort=10"],[131,"effort=10"],[132,"effort=10"],[133,"effort=10"],[134,"effort=10"],[135,"effort=10"],[136,"effort=10"],[137,"effort=10"],[138,"effort=10"],[139,"effort=10"],[140,"effort=10"],[141,"effort=10"],[142,"effort=10"],[143,"effort=10"],[144,"effort=10"],[145,"effort=10"],[146,"effort=10"],[147,"effort=10"],[148,"effort=10"],[149,"effort=10"],[150,"effort=10"],[151,"effort=10"],[152,"effort=10"],[153,"effort=10"],[154,"effort=10"],[155,"effort=10"],[156,"effort=10"],[157,"effort=10"],[158,"effort=10"],[159,"effort=10"],[160,"effort=10"],[161,"effort=10"],[162,"effort=10"],[163,"effort=10"],[164,"effort=10"],[165,"effort=10"],[166,"effort=10"],[167,"effort=10"],[168,"effort=10"],[169,"effort=10"],[170,"effort=10"],[171,"effort=10"],[172,"effort=10"],[173,"effort=10"],[174,"effort=10"],[175,"effort=10"],[176,"effort=10"],[177,"effort=10"],[178,"effort=10"],[179,"effort=10"],[180,"effort=10"],[181,"effort=10"],[182,"effort=10"],[183,"effort=10"],[184,"effort=10"],[185,"effort=10"],[186,"effort=10"],[187,"effort=10"],[188,"effort=10"],[189,"effort=10"],[190,"effort=10"],[191,"effort=10"],[192,"effort=10"],[193,"effort=10"],[194,"effort=10"],[195,"effort=10"],[196,"effort=10"],[197,"effort=10"],[198,"effort=10"],[199,"effort=10"],[200,"effort=10"],[201,"effort=10"],[202,"effort=10"],[203,"effort=10"],[204,"effort=10"],[205,"effort=10"],[206,"effort=10"],[207,"effort=10"],[208,"effort=10"],[209,"effort=10"],[210,"effort=10"],[211,"effort=10"],[212,"effort=10"],[213,"effort=10"],[214,"effort=10"],[215,"effort=10"],[216,"effort=10"],[217,"effort=10"],[218,"effort=10"],[219,"effort=10"],[220,"effort=10"],[221,"effort=10"],[222,"effort=10"],[223,"effort=10"],[224,"effort=10"],[225,"effort=10"],[226,"effort=10"],[227,"effort=10"],[228,"effort=10"],[229,"effort=10"],[230,"effort=10"],[231,"effort=10"],[232,"effort=10"],[233,"effort=10"],[234,"effort=10"],[235,"effort=10"],[236,"effort=10"],[237,"effort=10"],[238,"effort=10"],[239,"effort=10"],[240,"effort=10"],[241,"effort=10"],[242,"effort=10"],[243,"effort=10"],[244,"effort=10"],[245,"effort=10"],[246,"effort=10"],[247,"effort=10"],[248,"effort=10"],[249,"effort=10"],[250,"effort=10"],[251,"effort=10"],[252,"effort=10"],[253,"effort=10"],[254,"effort=10"],[255,"effort=10"],[256,"effort=10"],[257,"effort=10"],[258,"effort=10"],[259,"effort=10"],[260,"effort=10"],[261,"effort=10"],[262,"effort=10"],[263,"effort=10"],[264,"effort=10"],[265,"effort=10"],[266,"effort=10"],[267,"effort=10"],[268,"effort=10"],[269,"effort=10"],[270,"effort=10"],[271,"effort=10"],[272,"effort=10"],[273,"effort=10"],[274,"effort=10"],[275,"effort=10"],[276,"effort=10"],[277,"effort=10"],[278,"effort=10"],[279,"effort=10"],[280,"effort=10"],[281,"effort=10"],[282,"effort=10"],[283,"effort=10"],[284,"effort=10"],[285,"effort=10"],[286,"effort=10"],[287,"effort=10"],[288,"effort=10"],[289,"effort=10"],[290,"effort=10"],[291,"effort=10"],[292,"effort=10"],[293,"effort=10"],[294,"effort=10"],[295,"effort=10"],[296,"effort=10"],[297,"effort=10"],[298,"effort=10"],[299,"effort=10"],[300,"effort=10"],[301,"effort=10"],[302,"effort=10"],[303,"effort=10"],[304,"effort=10"],[305,"effort=10"],[306,"effort=10"],[307,"effort=10"],[308,"effort=10"],[309,"effort=10"],[310,"effort=10"],[311,"effort=10"],[312,"effort=10"],[313,"effort=10"],[314,"effort=10"],[315,"effort=10"],[316,"effort=10"],[317,"effort=10"],[318,"effort=10"],[319,"effort=10"],[320,"effort=10"],[321,"effort=10"],[322,"effort=10"],[323,"effort=10"],[324,"effort=10"],[325,"effort=10"],[326,"effort=10"],[327,"effort=10"],[328,"effort=10"],[329,"effort=10"],[330,"effort=10"],[331,"effort=10"],[332,"effort=10"],[333,"effort=10"],[334,"effort=10"],[335,"effort=10"],[336,"effort=10"],[337,"effort=10"],[338,"effort=10"],[339,"effort=10"],[340,"effort=10"],[341,"effort=10"],[342,"effort=10"],[343,"effort=10"],[344,"effort=10"],[345,"effort=10"],[346,"effort=10"],[347,"effort=10"],[348,"effort=10"],[349,"effort=10"],[350,"effort=10"],[351,"effort=10"],[352,"effort=10"],[353,"effort=10"],[354,"effort=10"],[355,"effort=10"],[356,"effort=10"],[357,"effort=10"],[358,"effort=10"],[359,"effort=10"],[360,"effort=10"],[361,"effort=10"],[362,"effort=10"],[363,"effort=10"],[364,"effort=10"],[365,"effort=10"],[366,"effort=10"],[367,"effort=10"],[368,"effort=10"],[369,"effort=10"],[370,"effort=10"],[371,"effort=10"],[372,"effort=10"],[373,"effort=10"],[374,"effort=10"],[375,"effort=10"],[376,"effort=10"],[377,"effort=10"],[378,"effort=10"],[379,"effort=10"],[380,"effort=10"],[381,"effort=10"],[382,"effort=10"],[383,"effort=10"],[384,"effort=10"],[385,"effort=10"],[386,"effort=10"],[387,"effort=10"],[388,"effort=10"],[389,"effort=10"],[390,"effort=10"],[391,"effort=10"],[392,"effort=10"],[393,"effort=10"],[394,"effort=10"],[395,"effort=10"],[396,"effort=10"],[397,"effort=10"],[398,"effort=10"],[399,"effort=10"],[400,"effort=10"]]
+
+ooh god, hard to explain. works, jagged line consistent height then flatlines.
+
+- why is it brakign below zero? 
+- it's not, but the other riders are 
+- ok, ao it oscillates above and below a reducing failure level until that reaches zero, then it flatlines 
+- there's nothing to tell it to recover for a longer period. was this ever in the code? why does the original image showing the effects of fatigue have flat sections?
+
+- how do I want it to behave now?
+
+-- add a new rider setting
+ "recovery_amount_required_after_fatigue":40,
+ 
+ now we need to recover by (at least ) this much to exit recovery mode...
+ - when the rider first enters recovery we need to note this....
+ use a switch property e.g.,
+ race_rider.recovery_mode = 1;
+ and then also need to actually track how much recovering happens and then set the recovery_mode back to 0 after 
+ race_rider.recovery_mode_recovery_so_far = 0;
+ 
+ if (typeof(race_rider.recovery_mode) != 'undefined'){
+        race_rider.recovery_mode = 0;
+      }
+      if (typeof(race_rider.recovery_mode_recovery_so_far) != 'undefined'){
+        race_rider.recovery_mode_recovery_so_far = 0;
+      }
+ 
+ - needs to be for both lead and chaser... 
+ 
+ ported it across and fook, the ga does not agree with the game AND it it getting short strats :-( 
+ something broken.
+ GA doesn't even agree with the one-off-race times :-( 
+ 
