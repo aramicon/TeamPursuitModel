@@ -13,23 +13,19 @@ let global_log_message_now = false;
 let GLOBAL_LOG_MESSAGE_LIMIT = 400000;
 let longest_LOG_MESSAGE_found = 0;
 let generation_best_time = Infinity;
-
 let count_of_choke_under_pressure_loggings = 0;
-
 let debug_log_specific_timesteps = [];
-
 let power_application_include_acceleration = 1;
+let DEFAULT_RECOVERY_AMOUNT_AFTER_FATIGUE = 12;
 
 //store the sequence of normal_distribution_output_inflation_percentage values to check them
 //let normal_distribution_output_inflation_percentage_array = [];
-
 // ** var to check the max performance failure
 let max_performance_failure_percentage = 0;
 let max_fatigue_rise = 0;
 let max_endurance_fatigue_level = 0;
 //let max_endurance_fatigue_level_instructions = []; //save these to be able to re-run odd results
 //let max_endurance_fatigue_level_start_order = [];
-
 
 //temp counter to see if we get a lot of zero cals for cup
 let zero_cup_count = 0;
@@ -288,6 +284,7 @@ function randn_bm() {
         let current_instruction = [...r.instructions.filter(a => a[0] == i)[0]];
         let is_effort_instruction = current_instruction[1].indexOf("effort");
 
+
         if(Math.random() > p_delete_instruction){//if deleting, just ignore it
           if(is_effort_instruction != -1){
             if((Math.random() < p_change_effort)){
@@ -425,6 +422,7 @@ function randn_bm() {
       new_instruction[1] = "effort="+rand_effort;
     }else{
       new_instruction[1] = "drop="+(1 + Math.floor(Math.random()*(settings_r.ga_team_size-1)));
+      //new_instruction[1] = "drop=3";
     }
     return new_instruction;
   }
@@ -662,11 +660,60 @@ function randn_bm() {
     return consistency_result;
   }
 
+  function create_new_race(settings_r, p){
+    //create a random new race with start order and instreuctions
+    let new_race = {};
+    let start_order = [];
+    let team_size = settings_r.ga_team_size;
+    let max_timestep = settings_r.ga_max_timestep;
+    const probability_of_instruction_per_timestep_lower = settings_r.ga_probability_of_instruction_per_timestep_lower;
+    const probability_of_instruction_per_timestep_upper =settings_r.ga_probability_of_instruction_per_timestep_upper;
+    let probability_of_instruction_per_timestep = probability_of_instruction_per_timestep_lower + Math.random()*(probability_of_instruction_per_timestep_upper-probability_of_instruction_per_timestep_lower);
+
+    //create a random starting order
+    for(let i = 0;i<team_size;i++){
+      start_order.push(i);
+    }
+    shuffleArray(start_order);
+    new_race.start_order =[...start_order];
+    let instructions = [];
+    //create a set of random instructions
+    let add_zero_instruction = 0;
+    if (typeof(settings_r.include_timestep_zero_starting_effort_instruction) != "undefined"){
+      if(settings_r.include_timestep_zero_starting_effort_instruction == 1){
+        add_zero_instruction = 1;
+      }
+    }
+
+    for(let i=0;i<max_timestep;i++){
+      //in the first timestep, add a default effort instruction
+      let default_zero_instruction_added = 0;
+      if(i==0 && add_zero_instruction == 1){
+        let default_zero_instruction = [0,"effort="+settings_r.threshold_power_effort_level];
+        instructions.push(default_zero_instruction);
+      }
+      else{
+        //add a new instruction, maybe
+        let rand = Math.random();
+        if(rand <= probability_of_instruction_per_timestep){
+          //add an insruction, but whaich type?
+          instructions.push(new_random_instruction(i,settings_r));
+        }
+      }
+    }
+    new_race.instructions = instructions;
+    new_race.variant_id = p;
+    new_race.id_generation = 0;
+    new_race.id_type = 0;
+    new_race.id_mutant_counter = 0;
+
+    return new_race;
+  }
+
   function run_track_race_ga(settings_r, race_r, riders_r){
     //generate a set of instructions
     const max_timestep = settings_r.ga_max_timestep;
-    const probability_of_instruction_per_timestep_lower = settings_r.ga_probability_of_instruction_per_timestep_lower;
-    const probability_of_instruction_per_timestep_upper =settings_r.ga_probability_of_instruction_per_timestep_upper;
+
     const population_size = settings_r.ga_population_size;
     const ga_population_size_first_generation = settings_r.ga_population_size_first_generation;
     const settings_id = settings_r._id;
@@ -687,32 +734,10 @@ function randn_bm() {
 
     //create a starting population: use ga_population_size_first_generation so that a larger set can be used to create the initial set: this will not work with tournament selection!
     for (let p=0;p<settings_r.ga_population_size;p++){
-      //create a random starting order
-      let new_race = {};
-      let start_order = [];
-      let probability_of_instruction_per_timestep = probability_of_instruction_per_timestep_lower + Math.random()*(probability_of_instruction_per_timestep_upper-probability_of_instruction_per_timestep_lower);
 
-      for(let i = 0;i<team_size;i++){
-        start_order.push(i);
-      }
-      shuffleArray(start_order);
-      new_race.start_order =[...start_order];
-      let instructions = [];
-      //create a set of random instructions
-      for(let i=0;i<max_timestep;i++){
-        //add a new instruction, maybe
-        let rand = Math.random();
-        if(rand <= probability_of_instruction_per_timestep){
-          //add an insruction, but whaich type?
-          instructions.push(new_random_instruction(i,settings_r));
-        }
-      }
-      new_race.instructions = instructions;
-      new_race.variant_id = p;
-      new_race.id_generation = 0;
-      new_race.id_type = 0;
-      new_race.id_mutant_counter = 0;
+      let new_race = create_new_race(settings_r, p);
       population.push(new_race);
+
     }
 
     let segment_size = 20; //just to log % of gens done
@@ -791,7 +816,8 @@ function randn_bm() {
 
       //print % progress every segment
       if (g % one_segment == 0){
-        console.log(one_segment_count*(100/segment_size) + "% done, max_performance_failure_percentage found " + max_performance_failure_percentage);
+
+        console.log(Math.floor((g/number_of_generations)*100) + "% done, max_performance_failure_percentage found " + max_performance_failure_percentage);
         one_segment_count++;
       }
       //d22: we want to send the best race time of the last gen to each race?
@@ -890,6 +916,7 @@ function randn_bm() {
         }
         else{
           settings_r.best_race_time_found_thus_far = best_race_time_found_thus_far;
+
           race_results = run_race(settings_r,race_r,riders_r);
           average_time_taken = race_results.time_taken;
         }
@@ -948,9 +975,10 @@ function randn_bm() {
             //create a new array up to the trim point and assign this to the original
             let trim_array = [];
             let i_trim = 0;
+
             while(i_trim < load_race_properties.instructions.length){
               if(load_race_properties.instructions[i_trim]){
-                if(load_race_properties.instructions[i_trim][0]){
+                if(typeof(load_race_properties.instructions[i_trim][0]) != "undefined"){
                   if(load_race_properties.instructions[i_trim][0] <= Math.floor(load_race_properties.time_taken)){
                     trim_array.push(load_race_properties.instructions[i_trim]);
                   }
@@ -1009,8 +1037,8 @@ function randn_bm() {
         //console.log("race " + i + " time taken " + load_race_properties.time_taken + " instructions " + JSON.stringify(race_r.race_instructions_r));
       } //end of population loop
       if(log_generation_instructions_info){
-        console.log("[[[[[[[[ Log log_generation_instructions_info after updates ]]]]]]]]");
-        console.log(JSON.stringify(generation_instructions_info));
+        //console.log("[[[[[[[[ Log log_generation_instructions_info after updates ]]]]]]]]");
+        //console.log(JSON.stringify(generation_instructions_info));
       }
 
       if (global_log_message && g == (number_of_generations-1) ){
@@ -1133,8 +1161,6 @@ function randn_bm() {
         generation_results.generation_instructions_info = generation_instructions_info;
       }
 
-
-
       // create a new population based on the fitness
 
       if(g<(number_of_generations-1)){ //don't create a new population for the last generation
@@ -1154,7 +1180,8 @@ function randn_bm() {
         stats.number_of_direct_copies = 0;
 
         // population = new_population_best_squares(settings_r,population, stats,g);
-        settings_r.mutant_counter = 0
+        settings_r.mutant_counter = 0;
+
         population = new_population_tournament_selection(settings_r,population, stats,g+1);
 
         for(let j = 0; j< population.length;j++){
@@ -1373,6 +1400,9 @@ function randn_bm() {
 
     //debugger;
     //return a new population based on mini-tournaments in current population.
+
+    let  count_of_random_new_races_injected = 0;
+
     for(let i = 0;i< (current_population.length-remainder);i+=group_size){
       //get the best race from the group
 
@@ -1420,7 +1450,7 @@ function randn_bm() {
     //  }
 
       //dynamic version, based on group size
-        let ga_roulette_p_of_diff_sum_to_add = (1/group_size);
+      let ga_roulette_p_of_diff_sum_to_add = (1/group_size);
 
       //remember that SMALLER is better, i.e., the fastest solution is the fittest
       //debugger;
@@ -1474,8 +1504,11 @@ function randn_bm() {
       // tournament_proportional_fitness should sum to 1 - but does it?
       //console.log(" >>>>>>>>>> sum of " + group_size + " values of tournament_proportional_fitness " + sum_tournament_proportional_fitness);
 
+
       for(let k = 0;k<group_size;k++){
         let new_race = {};
+        let elite_race = 0; //switch to mark a race as an elite- these aren't replaced by the randomly-injected ones
+
 
         //donalK25: added a new switch to use random selections from each group (with replacement)
         let ga_selection_type = "tournament_elitist_winner_takes_all";
@@ -1489,6 +1522,12 @@ function randn_bm() {
             let rand1 = Math.floor(i + Math.random()*(k-i));
 
             new_race = current_population[rand1];
+            if(new_race.instructions.length == 0){
+              //debugger;
+            }
+
+            //donalK25- adding mutation to this approach
+            new_race = mutate_race(new_race,settings_r,generation);
             new_race.stats = {};
             new_race.stats.number_of_instructions_added = 0;
             new_race.stats.number_of_instructions_removed = 0;
@@ -1503,6 +1542,7 @@ function randn_bm() {
           //console.log("----------------- ga_selection_type tournament_elitist_roulette -----------------")
           if((i+k) == best_time_index){
             //add self without mutations at all - this is elitism at work
+            elite_race = 1;
             new_race = current_population[(i+k)];
             new_race.stats = {};
             new_race.stats.number_of_instructions_added = 0;
@@ -1631,6 +1671,7 @@ function randn_bm() {
 
         if((i+k) == best_time_index){
           //add self without mutations at all - this is elitism at work
+          elite_race = 1;
           new_race = current_population[(i+k)];
           new_race.stats = {};
           new_race.stats.number_of_instructions_added = 0;
@@ -1685,11 +1726,42 @@ function randn_bm() {
         }//end of loop for selection type for elitist
         else {
           console.log("******************** WARNING! ISSUE WITH SELECTION TYPE " + ga_selection_type); + " ********************";
+        }
+
+        //might inject a random new strategy
+
+        let ga_percentage_of_random_new_strategies_to_inject_each_gen = 0;
+        if (typeof(settings_r.crossover_apply_mutation_probability) != "undefined"){
+            ga_percentage_of_random_new_strategies_to_inject_each_gen = settings_r.ga_percentage_of_random_new_strategies_to_inject_each_gen;
+        }
+        let inject_r = Math.random();
+
+        if(elite_race != 1 && inject_r < ga_percentage_of_random_new_strategies_to_inject_each_gen)
+        {
+          new_race =  create_new_race(settings_r, 999);
+          new_race.stats = {};
+          new_race.stats.number_of_instructions_added = 0;
+          new_race.stats.number_of_instructions_removed = 0;
+          new_race.stats.number_of_instructions_moved = 0;
+          new_race.stats.number_of_effort_instructions_changed = 0;
+          new_race.stats.number_of_drop_instructions_changed = 0;
+          new_race.stats.number_of_start_order_shuffles = 0;
+          new_race.stats.number_of_drop_instructions = 0;
+
+          //need to count the drop instructs?
+          for(r_i = 0; r_i < new_race.instructions.length; r_i++){
+
+            if(new_race.instructions[r_i][1].substring(0,4) == "drop"){
+              new_race.stats.number_of_drop_instructions++;
+            }
           }
-          //console.log("New pop race id group " + i + " (of size "+ group_size + ") best race in group ("+best_time_player.variant_id + "_" + best_time_player.id_generation + "_" + best_time_player.id_type + "_" + best_time_player.id_mutant_counter+") " + new_race.variant_id + "_" + new_race.id_generation + "_" + new_race.id_type + "_" + new_race.id_mutant_counter);
-          new_population.push(new_race);
+          count_of_random_new_races_injected++;
+        }
+        //console.log("New pop race id group " + i + " (of size "+ group_size + ") best race in group ("+best_time_player.variant_id + "_" + best_time_player.id_generation + "_" + best_time_player.id_type + "_" + best_time_player.id_mutant_counter+") " + new_race.variant_id + "_" + new_race.id_generation + "_" + new_race.id_type + "_" + new_race.id_mutant_counter);
+        new_population.push(new_race);
         }
       }
+      //console.log("------>  count_of_random_new_races_injected " +   count_of_random_new_races_injected);
 
       //shuffle the array to stop the same groups from simply repeating
 
@@ -2379,13 +2451,21 @@ function randn_bm() {
       load_rider.endurance_fatigue_level = 0;
       load_rider.burst_fatigue_level = 0;
       load_rider.accumulated_fatigue = 0;
+      //donalK25: set the failure ceiling, May 25
+      load_rider.rider_fatigue_failure_level = settings_r.fatigue_failure_level;
       load_rider.output_level=settings_r.threshold_power_effort_level;
+      //donalK25: use the default_starting_power_effort_level value, if it exists
+      //this will puunish empty instruction sets
+      if (typeof(settings_r.default_starting_effort_level) != 'undefined'){
+        load_rider.output_level = settings_r.default_starting_effort_level;
+      }
 
       load_rider.distance_from_rider_in_front=0;
       load_rider.number_of_riders_in_front=0;
 
-      load_rider.output_level=load_rider.start_output_level; //new addition to try address bug
+    //  load_rider.output_level=load_rider.start_output_level; //new addition to try address bug
       // might be better to auto set this to the theshold level? DonalK25
+      //see that I added a new setting above, but also need to add an actual instruction to timestep 0.
 
       //dk2021 new rider property to add info to the log message
       load_rider.step_info = "";
@@ -2665,7 +2745,6 @@ function randn_bm() {
         //work out how far the race_rider can go in this time step
         //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
 
-        let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
         race_rider.aero_A2 = Math.round((0.5 * settings_r.frontalArea * race_rider.air_density)*10000)/10000;   // full air resistance parameter
 
         race_rider.step_info = ""; //dk2021 used to add logging info
@@ -2678,19 +2757,27 @@ function randn_bm() {
           //consider fatigue
           //update the accumulated fatigue. as this rises, the failure rate lowers.
 
-          if (race_rider.accumulated_fatigue > settings_r.accumulated_fatigue_maximum ){
-            accumulated_effect = 0;
-          }
-          else{
-            accumulated_effect = (settings_r.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings_r.accumulated_fatigue_maximum;
-          }
-          let failure_level = settings_r.fatigue_failure_level*accumulated_effect;
+          let fatigue_failure_level_to_use = settings_r.fatigue_failure_level;
 
-          if(race_rider.endurance_fatigue_level >= failure_level || race_rider.recovery_mode == 1){
+          //make sure the rider has rider_fatigue_failure_level prop
+          if (typeof(race_rider.rider_fatigue_failure_level) == 'undefined'){
+            race_rider.rider_fatigue_failure_level = fatigue_failure_level_to_use;
+          }
 
-            if(race_rider.endurance_fatigue_level >= failure_level && race_rider.recovery_mode == 0){
+          if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level || race_rider.recovery_mode == 1){
+
+            if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level && race_rider.recovery_mode == 0){
               race_rider.recovery_mode = 1;
               race_rider.recovery_mode_recovery_so_far = 0; //this counts the recovering done, needed to exit this mode
+              //at the point of failure, update the fatigue ceiling
+              let accumulated_effect = 1; // for accumulated fatigue effect on rider. 1 means no effect, 0 means total effect, so no more non-sustainable effort is possible
+              if (race_rider.accumulated_fatigue > settings_r.accumulated_fatigue_maximum ){
+                accumulated_effect = 0;
+              }
+              else{
+                accumulated_effect = (settings_r.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings_r.accumulated_fatigue_maximum;
+              }
+              race_rider.rider_fatigue_failure_level = settings_r.fatigue_failure_level*accumulated_effect;
             }
 
             race_rider.output_level = (settings_r.threshold_power_effort_level-settings_r.recovery_effort_level_reduction);
@@ -3018,12 +3105,12 @@ function randn_bm() {
               race_rider.endurance_fatigue_level -= recovery_amount;
               //race_rider.endurance_fatigue_level -= race_rider.recovery_rate * ( (race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power);
               //donalK25: update the recovery_mode_recovery_so_far amount
-              let recovery_amount_required_after_fatigue = 12; //default
+              let recovery_amount_required_after_fatigue = DEFAULT_RECOVERY_AMOUNT_AFTER_FATIGUE; //default
               if (typeof(race_rider.recovery_amount_required_after_fatigue) != 'undefined'){
                 recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
               }
               race_rider.recovery_mode_recovery_so_far += recovery_amount;
-              if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue){
+              if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue  || race_rider.endurance_fatigue_level <= 0){
                 race_rider.recovery_mode = 0; //should exit the fatigue cycle
                 race_rider.recovery_mode_recovery_so_far = 0;
               }
@@ -3315,20 +3402,30 @@ function randn_bm() {
 
             //What is the max power that this rider can do for now? Need to consider fatigue
             let current_max_power = race_rider.max_power;
-            if (race_rider.accumulated_fatigue > settings_r.accumulated_fatigue_maximum ){
-              accumulated_effect = 0;
-            }
-            else{
-              accumulated_effect = (settings_r.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings_r.accumulated_fatigue_maximum;
-            }
-            let failure_level = settings_r.fatigue_failure_level*accumulated_effect;
 
-            if(race_rider.endurance_fatigue_level >= failure_level || race_rider.recovery_mode == 1){
+
+            let fatigue_failure_level_to_use = settings_r.fatigue_failure_level;
+
+            //make sure the rider has rider_fatigue_failure_level prop
+            if (typeof(race_rider.rider_fatigue_failure_level) == 'undefined'){
+               race_rider.rider_fatigue_failure_level = fatigue_failure_level_to_use;
+            }
+
+            if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level || race_rider.recovery_mode == 1){
 
               //turn on recovery mode it's not already on
-              if(race_rider.endurance_fatigue_level >= failure_level && race_rider.recovery_mode == 0){
+              if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level && race_rider.recovery_mode == 0){
                 race_rider.recovery_mode = 1;
                 race_rider.recovery_mode_recovery_so_far = 0; //this counts the recovering done, needed to exit this mode
+
+                if (race_rider.accumulated_fatigue > settings_r.accumulated_fatigue_maximum ){
+                  accumulated_effect = 0;
+                }
+                else{
+                  accumulated_effect = (settings_r.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings_r.accumulated_fatigue_maximum;
+                }
+
+                race_rider.rider_fatigue_failure_level = settings_r.fatigue_failure_level*accumulated_effect;
               }
 
               //donalK25: align this with the mapping-effort level-to-power used by the leader
@@ -3539,13 +3636,13 @@ function randn_bm() {
                 race_rider.endurance_fatigue_level -= recovery_amount;
                 // race_rider.endurance_fatigue_level -= race_rider.recovery_rate * ((race_rider.threshold_power - race_rider.power_out)/race_rider.threshold_power);
                 //donalK25: update the recovery_mode_recovery_so_far amount
-                let recovery_amount_required_after_fatigue = 12; //default
+                let recovery_amount_required_after_fatigue = DEFAULT_RECOVERY_AMOUNT_AFTER_FATIGUE; //default
                 if (typeof(race_rider.recovery_amount_required_after_fatigue) != 'undefined'){
                   recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
                 }
                 race_rider.recovery_mode_recovery_so_far += recovery_amount;
-                if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue){
-                  
+                if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue  || race_rider.endurance_fatigue_level <= 0){
+
                   race_rider.recovery_mode = 0; //should exit the fatigue cycle
                   race_rider.recovery_mode_recovery_so_far = 0;
                 }

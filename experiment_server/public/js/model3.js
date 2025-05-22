@@ -9,12 +9,31 @@ import {race_template} from './race_settings_template.js';
 import {riders_template} from './riders_template.js';
 
 //dk23Aug allow for targeted debugging of a rider and a timestep
-let targeted_debugging = 1;
-let targeted_debugging_rider_no = 2;
-let targeted_debugging_timestep_range_start = 114;
-let targeted_debugging_timestep_range_end = 115;
+let targeted_debugging = 0;
+let targeted_debugging_rider_no = 0;
+let targeted_debugging_timestep_range_start = 0;
+let targeted_debugging_timestep_range_end = 1;
 
 let LOG_EACH_STEP_OVERRIDE = 0;
+
+let DEFAULT_recovery_amount_required_after_fatigue = 12;
+
+// switch test values on/off
+let USE_TEST_recovery_amount_required_after_fatigue = 1;
+let USE_TEST_fatigue_rate = 1;
+let USE_TEST_recovery_rate = 1;
+let USE_TEST_fatigue_failure_level = 1;
+let USE_TEST_accumulated_fatigue_maximum = 1;
+
+//set test values
+
+let TEST_recovery_amount_required_after_fatigue = 80;
+let TEST_fatigue_rate = 12;
+let TEST_recovery_rate = 55;
+let TEST_fatigue_failure_level =  300;
+let TEST_accumulated_fatigue_maximum = 770;
+
+
 
 //donalK25: april, add array to log for specific timesteps
 let debug_log_specific_timesteps = [];
@@ -115,8 +134,6 @@ var DecimalPrecision = (function() {
 })();
 
 
-
-
 function addRiderDisplay(){
   $("#riders_info" ).empty();
   $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column' style='height:50px'>Rider <i class='fas fa-biking'></i></div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph (m/s)</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div><div class='info_column'>Fatigue</div><div class='info_column'>Time On Front</div></div>");
@@ -192,7 +209,6 @@ function velocity_from_power_with_acceleration(power_total, C_rr, mass, gravity_
   //assumption: 1 second of time!
   let time = 1;
 
-  //debugger;
     let new_velocity = current_velocity;  //this will change, inshallah
     //use a loop to get more accurate drag values (refinement)
     let velocity_start = current_velocity;
@@ -378,7 +394,7 @@ function switchLead(positions_to_drop_back){
 
 
   //now figure out what effort level will equate to this power, and aim for that
-  //debugger;
+
 
   //console.log("Maps to output_level " + new_leader.output_level);
 
@@ -483,9 +499,6 @@ function moveRace(){
           console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
         }
         else if(inst[0]=="drop"){
-          if(race.race_clock == 218){
-            debugger;
-          }
           race.drop_instruction = parseInt(inst[1]);
           console.log(race.race_clock + " **FOUND INSTRUCTION** DROP: " + parseInt(inst[1]));
 
@@ -551,28 +564,47 @@ function moveRace(){
 
       if(targeted_debugging && race.race_clock >= targeted_debugging_timestep_range_start && race.race_clock <= targeted_debugging_timestep_range_end &&  race.current_order[i] == targeted_debugging_rider_no){
         console.log("targeted debugging rider " + race.current_order[i] + " timestep " + race.race_clock + " LEAD ");
-        debugger
+        debugger;
       }
       //LEAD rider. do what yer told!
-      //push the pace at the front
+      //push the pace at the front as instructed
       //what's the current effort?
       //consider fatigue
       //update the accumulated fatigue. as this rises, the failure rate lowers.
 
-      if (race_rider.accumulated_fatigue > settings.accumulated_fatigue_maximum ){
-        accumulated_effect = 0;
-      }
-      else{
-        accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
-      }
-      let failure_level = settings.fatigue_failure_level*accumulated_effect;
-      race_rider.rider_fatigue_failure_level = failure_level;
+      //make sure the race rider has a rider_fatigue_failure_level; it shoudl begin at settings.fatigue_failure_level
 
-      if(race_rider.endurance_fatigue_level >= failure_level || race_rider.recovery_mode == 1){
+      let fatigue_failure_level_to_use = settings.fatigue_failure_level;
+      if(USE_TEST_fatigue_failure_level == 1){
+        fatigue_failure_level_to_use = TEST_fatigue_failure_level;
+      }
+
+      if (typeof(race_rider.rider_fatigue_failure_level) == 'undefined'){
+        race_rider.rider_fatigue_failure_level = fatigue_failure_level_to_use;
+      }
+
+      if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level || race_rider.recovery_mode == 1){
         //turn on recovery mode it's not already on
-        if(race_rider.endurance_fatigue_level >= failure_level && race_rider.recovery_mode == 0){
+        if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level && race_rider.recovery_mode == 0){
           race_rider.recovery_mode = 1;
           race_rider.recovery_mode_recovery_so_far = 0; //this counts the recovering done, needed to exit this mode
+
+          //donalK25- May 19 - reset the rider's failure point (at the point of failure)
+          let accumulated_effect_on_fatigue = 1;
+          let accumulated_fatigue_maximum_to_use = settings.accumulated_fatigue_maximum;
+          if(USE_TEST_accumulated_fatigue_maximum == 1){
+            accumulated_fatigue_maximum_to_use = TEST_accumulated_fatigue_maximum;
+          }
+
+          if (race_rider.accumulated_fatigue > accumulated_fatigue_maximum_to_use ){
+            accumulated_effect_on_fatigue = 0; //permanent fail mode
+          }
+          else{
+            accumulated_effect_on_fatigue = (accumulated_fatigue_maximum_to_use - race_rider.accumulated_fatigue)/accumulated_fatigue_maximum_to_use;
+          }
+          let failure_level = fatigue_failure_level_to_use*accumulated_effect_on_fatigue;
+          race_rider.rider_fatigue_failure_level = failure_level;
+
         }
 
         race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
@@ -691,26 +723,48 @@ function moveRace(){
           if (settings.recovery_power_rate){
             recovery_power_rate = settings.recovery_power_rate;
           }
-          let recovery_amount = race_rider.recovery_rate*Math.pow(((race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
+
+          let recovery_rate_to_use = race_rider.recovery_rate;
+          if(USE_TEST_recovery_rate == 1){
+            recovery_rate_to_use = TEST_recovery_rate;
+          }
+
+          let recovery_amount = recovery_rate_to_use*Math.pow(((race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
+
           race_rider.endurance_fatigue_level -= recovery_amount;
           //donalK25: update the recovery_mode_recovery_so_far amount
-          let recovery_amount_required_after_fatigue = 120; //default
+
+          let recovery_amount_required_after_fatigue = DEFAULT_recovery_amount_required_after_fatigue;
           if (typeof(race_rider.recovery_amount_required_after_fatigue) != 'undefined'){
-            //recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
+            recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
           }
+
+          let recovery_amount_required_after_fatigue_to_use = recovery_amount_required_after_fatigue;
+          if(USE_TEST_recovery_amount_required_after_fatigue == 1){
+            recovery_amount_required_after_fatigue_to_use = TEST_recovery_amount_required_after_fatigue;
+          }
+
           race_rider.recovery_mode_recovery_so_far += recovery_amount;
-          if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue){
+          if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue_to_use || race_rider.endurance_fatigue_level <= 0){
             race_rider.recovery_mode = 0; //should exit the fatigue cycle
             race_rider.recovery_mode_recovery_so_far = 0;
           }
 
 
-          if (race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;}; //just in case it goes below zero
+          if (race_rider.endurance_fatigue_level < 0){
+            race_rider.endurance_fatigue_level = 0;
+          }; //just in case it goes below zero
         }
       }
       else if(race_rider.power_out > race_rider.threshold_power){
         //let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
-          let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings.fatigue_power_rate);
+        let fatigue_rate_to_use = race_rider.fatigue_rate;
+        if(USE_TEST_fatigue_rate == 1){
+          fatigue_rate_to_use = TEST_fatigue_rate;
+        }
+
+        let fatigue_rise = fatigue_rate_to_use*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings.fatigue_power_rate);
+
         race_rider.endurance_fatigue_level += fatigue_rise;
         race_rider.accumulated_fatigue += fatigue_rise;
       }
@@ -917,7 +971,7 @@ function moveRace(){
         //between 0 and shelter_max_distance metres need to drop off - try a linear model
         //donalK25: seeing a major issue with   level_of_shelter = (1-(level_of_shelter/settings.shelter_max_distance));
         // why is the distance_from_rider_in_front not in there?
-        //debugger;
+
         //level_of_shelter = (1-(level_of_shelter/settings.shelter_max_distance));
         //new version march 2025
         if (race_rider.distance_from_rider_in_front < settings.target_rider_gap) { //provide no benefit if too close
@@ -972,25 +1026,45 @@ function moveRace(){
           }
       }
 
-      //What is the max power that this rider can do for now? Need to consider fatigue
-      let current_max_power = race_rider.max_power;
-      if (race_rider.accumulated_fatigue > settings.accumulated_fatigue_maximum ){
-        accumulated_effect = 0; //permanent fail mode
-      }
-      else{
-        accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
-      }
-
-      let failure_level = settings.fatigue_failure_level*accumulated_effect;
-      race_rider.rider_fatigue_failure_level = failure_level;
       //fail if over the failure level, and remain there while in failure mode
+      //fail mode limits the rider's max power
+      let current_max_power = race_rider.max_power;
 
-      if(race_rider.endurance_fatigue_level >= failure_level || race_rider.recovery_mode == 1 ){
+      //ensure the rider has a failure level (adjusted for accumulated fatigue)
+
+      let fatigue_failure_level_to_use = settings.fatigue_failure_level;
+      if(USE_TEST_fatigue_failure_level == 1){
+        fatigue_failure_level_to_use = TEST_fatigue_failure_level;
+      }
+
+      if (typeof(race_rider.rider_fatigue_failure_level) == 'undefined'){
+        race_rider.rider_fatigue_failure_level = fatigue_failure_level_to_use;
+      }
+
+      if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level || race_rider.recovery_mode == 1 ){
 
         //turn on recovery mode it's not already on
-        if(race_rider.endurance_fatigue_level >= failure_level && race_rider.recovery_mode == 0){
+        if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level && race_rider.recovery_mode == 0){
           race_rider.recovery_mode = 1;
           race_rider.recovery_mode_recovery_so_far = 0; //this counts the recovering done, needed to exit this mode
+
+          //donalK25- May 19 - reset the rider's failure point (at the point of failure)
+          let accumulated_effect_on_fatigue = 1;
+
+          let accumulated_fatigue_maximum_to_use = settings.accumulated_fatigue_maximum;
+          if(USE_TEST_accumulated_fatigue_maximum == 1){
+            accumulated_fatigue_maximum_to_use = TEST_accumulated_fatigue_maximum;
+          }
+
+          if (race_rider.accumulated_fatigue > accumulated_fatigue_maximum_to_use ){
+            accumulated_effect_on_fatigue = 0; //permanent fail mode
+          }
+          else{
+            accumulated_effect_on_fatigue = (accumulated_fatigue_maximum_to_use - race_rider.accumulated_fatigue)/accumulated_fatigue_maximum_to_use;
+          }
+          let failure_level = fatigue_failure_level_to_use*accumulated_effect_on_fatigue;
+          race_rider.rider_fatigue_failure_level = failure_level;
+
         }
         //donalK25: align this with the mapping-effort level-to-power used by the leader
         let recovery_output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
@@ -1098,26 +1172,42 @@ function moveRace(){
           if (settings.recovery_power_rate){
             recovery_power_rate = settings.recovery_power_rate;
           }
-          let recovery_amount = race_rider.recovery_rate* Math.pow(( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
+          let recovery_rate_to_use = race_rider.recovery_rate;
+          if(USE_TEST_recovery_rate == 1){
+            recovery_rate_to_use = TEST_recovery_rate;
+          }
+          let recovery_amount = recovery_rate_to_use* Math.pow(( (race_rider.threshold_power- race_rider.power_out)/race_rider.threshold_power),recovery_power_rate);
+
            race_rider.endurance_fatigue_level -= recovery_amount
           //donalK25: update the recovery_mode_recovery_so_far amount
-          let recovery_amount_required_after_fatigue = 120; //default
+          let recovery_amount_required_after_fatigue = DEFAULT_recovery_amount_required_after_fatigue; //default
           if (typeof(race_rider.recovery_amount_required_after_fatigue) != 'undefined'){
-            //recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
+            recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
           }
+
+          let recovery_amount_required_after_fatigue_to_use = recovery_amount_required_after_fatigue;
+          if(USE_TEST_recovery_amount_required_after_fatigue == 1){
+            recovery_amount_required_after_fatigue_to_use = TEST_recovery_amount_required_after_fatigue;
+          }
+
           race_rider.recovery_mode_recovery_so_far += recovery_amount;
-          if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue){
+          if(race_rider.recovery_mode_recovery_so_far >= recovery_amount_required_after_fatigue_to_use  || race_rider.endurance_fatigue_level <= 0){
             race_rider.recovery_mode = 0; //should exit the fatigue cycle
             race_rider.recovery_mode_recovery_so_far = 0;
           }
-
           if (race_rider.endurance_fatigue_level < 0){ race_rider.endurance_fatigue_level = 0;};
         }
       }
       else{
         //add fatigue if going harder than the threshold
       //  let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/race_rider.max_power),settings.fatigue_power_rate);
-        let fatigue_rise = race_rider.fatigue_rate*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings.fatigue_power_rate);
+        let fatigue_rate_to_use = race_rider.fatigue_rate;
+        if(USE_TEST_fatigue_rate == 1){
+          fatigue_rate_to_use = TEST_fatigue_rate;
+        }
+
+        let fatigue_rise = fatigue_rate_to_use*Math.pow(( (race_rider.power_out- race_rider.threshold_power)/(race_rider.max_power-race_rider.threshold_power)),settings.fatigue_power_rate);
+
         race_rider.endurance_fatigue_level += fatigue_rise
         race_rider.accumulated_fatigue += fatigue_rise;
       }
@@ -1464,6 +1554,17 @@ function load_race(){
     load_rider.burst_fatigue_level = 0;
     load_rider.accumulated_fatigue = 0;
     load_rider.output_level=settings.threshold_power_effort_level;
+    //donalK25: set the failure ceiling, May 25
+    load_rider.rider_fatigue_failure_level = settings.fatigue_failure_level;
+    if(USE_TEST_fatigue_failure_level == 1){
+      load_rider.rider_fatigue_failure_level = TEST_fatigue_failure_level;
+    }
+
+    if (typeof(settings.default_starting_effort_level) != 'undefined'){
+      load_rider.output_level = settings.default_starting_effort_level;
+    }
+
+    load_rider.recovery_mode = 0;
 
     //set up the aero properties so they don't have to be recalculated
     load_rider.air_density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
@@ -1664,6 +1765,10 @@ function load_details_from_url(){
           settings = JSON.parse(data[0].global_settings);
           riders = JSON.parse(data[0].rider_settings);
 
+          $("#global_settings").val(data[0].global_settings);
+          $("#race_settings").val(data[0].race_settings);
+          $("#rider_settings").val(data[0].rider_settings);
+
           $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id);
           $("#new_settings_name").val(data[0].name);
 
@@ -1744,9 +1849,13 @@ function load_details_from_url(){
         //  console.log('data ' + JSON.stringify(data));
           //console.log('data ' + JSON.stringify(data[0].global_settings) );
           console.log(data);
-          race = JSON.parse(data[0].race_settings);
           settings = JSON.parse(data[0].global_settings);
+          race = JSON.parse(data[0].race_settings);
           riders = JSON.parse(data[0].rider_settings);
+
+          $("#global_settings").val(data[0].global_settings);
+          $("#race_settings").val(data[0].race_settings);
+          $("#rider_settings").val(data[0].rider_settings);
 
           $("#database_connection_label").html("<strong>Loaded Settings From Results"+data[0].settings_name+"</strong> + [ "+ data[0].notes +" ] | _id | <span id = 'settings_id'>"+data[0]._id);
           $("#new_settings_name").val(data[0].settings_name);
@@ -1949,9 +2058,9 @@ function draw_line_graph(graph_name_opt){
 
       //add data to a raw data output arrayFilters
       raw_data.push(graph_data_1.data);
-      raw_data.push(graph_data_1.data);
-      raw_data.push(graph_data_1.data);
-      raw_data.push(graph_data_1.data);
+      raw_data.push(graph_data_2.data);
+      raw_data.push(graph_data_3.data);
+      raw_data.push(graph_data_4.data);
 
       //display the raw data
       $('#data_display').val(JSON.stringify(raw_data));

@@ -1410,3 +1410,305 @@ VIS 276.078
 
 - what happens if I run it again?
 
+- same idea, high start effort, high effort at end, a rider is dropped. slightly faster time.
+
+- try it with a high fatgiue rate. 
+
+- much slower time and not as much happening, maybe high fatgiue restricts things?
+
+- try it with high fatigue and very high recovery?
+
+- not a huge chainge what happens if recovery is way higher than fatigue? would it encourage more changes?
+
+
+hmmm, found a bug in the slowest race, where a rider dropping back seems to get stuck, oscillating from power 0 to 400- output levels are very low
+
+[[7,"effort=1.09"],[44,"drop=3"]]
+
+- don't ever want to accelerate to >= target velocity while still ahead of the target rider? 
+
+- maybe after checking to see if you can accelerate, IF this would make you faster than the target, then reduce your velocity to a point a little below the target rider's?
+
+-- worked with slowest version but now need to port that across...
+
+-- what happens if we make the bike VERY heavy, like 50kg?
+
+- found another issue, drop 3 seems to be run as drop 2, i think something is broken in the contiguous group calcs?
+
+-- ooh good, it's not a bug, it was one inst. being overwritten by another in the queuw though I don't know if i trust the contiguous mech
+- how can i test this? desing a strat where a rider is dropped then do a drop=3 after that...
+
+- make riders all equal, then put it to the back after it has been dropped but before it can recover.
+[[0,"effort=7"],[80,"drop=3"],[120,"drop=3"],[150,"drop=3"],[200,"drop=3"],[250,"drop=3"]]
+
+ok, so a rider is clearly dropped and never gets back on, indeed gets lapped a few times.
+- why does the dropped rider have spikes back to their max, surely this is limited by the fatigue mechanism? is this working?
+
+- why does the purple rider's fatigue level drop so low, or is this a good thing, since they are going well above threshold. is that fatgiue effect in need of change?
+
+confused about this line:
+current_max_power = (race_rider.threshold_power*((settings.threshold_power_effort_level-settings.recovery_effort_level_reduction)/10));
+
+
+--ooh for the leader we use something a biteen different 
+ race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
+ 
+ - then we map that to a power using 
+ race_rider.current_power_effort = mapEffortToPower(settings.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power, settings.maximum_effort_value);
+ 
+ do we get the same value? 240 here, 120 from the first method. 
+ - NOPE. fook. an inconsistency. another godamned inconsistency :-( 
+
+- ok, so maybe fatigue is ok.
+
+1 - if failing, max power is set to a percentage below the threshold 
+2 - the fatgiue limit is reduced over time using this:
+	accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
+	let failure_level = settings.fatigue_failure_level*accumulated_effect;
+	- higher accumulated_fatigue = faster reduction of failure_level. equivalent to lowering the fatigue_failure_level?
+3 - rider accumulates fatigue if over threshold 
+4 - rider recovers if under the threshold 
+5 - their max power is not affected but if trying to go all out all the time they will cycle to max power/recovery level over and over until accumulated_effect ends up being zero. 
+
+- how to cause a rider to go at level 10 all the time?
+
+build a set of effort=10 instructions
+
+1 step [[0,"effort=10"]]
+
+400 steps using https://pinetools.com/generate-list-numbers
+
+[[0,"effort=10"],[1,"effort=10"],[2,"effort=10"],[3,"effort=10"],[4,"effort=10"],[5,"effort=10"],[6,"effort=10"],[7,"effort=10"],[8,"effort=10"],[9,"effort=10"],[10,"effort=10"],[11,"effort=10"],[12,"effort=10"],[13,"effort=10"],[14,"effort=10"],[15,"effort=10"],[16,"effort=10"],[17,"effort=10"],[18,"effort=10"],[19,"effort=10"],[20,"effort=10"],[21,"effort=10"],[22,"effort=10"],[23,"effort=10"],[24,"effort=10"],[25,"effort=10"],[26,"effort=10"],[27,"effort=10"],[28,"effort=10"],[29,"effort=10"],[30,"effort=10"],[31,"effort=10"],[32,"effort=10"],[33,"effort=10"],[34,"effort=10"],[35,"effort=10"],[36,"effort=10"],[37,"effort=10"],[38,"effort=10"],[39,"effort=10"],[40,"effort=10"],[41,"effort=10"],[42,"effort=10"],[43,"effort=10"],[44,"effort=10"],[45,"effort=10"],[46,"effort=10"],[47,"effort=10"],[48,"effort=10"],[49,"effort=10"],[50,"effort=10"],[51,"effort=10"],[52,"effort=10"],[53,"effort=10"],[54,"effort=10"],[55,"effort=10"],[56,"effort=10"],[57,"effort=10"],[58,"effort=10"],[59,"effort=10"],[60,"effort=10"],[61,"effort=10"],[62,"effort=10"],[63,"effort=10"],[64,"effort=10"],[65,"effort=10"],[66,"effort=10"],[67,"effort=10"],[68,"effort=10"],[69,"effort=10"],[70,"effort=10"],[71,"effort=10"],[72,"effort=10"],[73,"effort=10"],[74,"effort=10"],[75,"effort=10"],[76,"effort=10"],[77,"effort=10"],[78,"effort=10"],[79,"effort=10"],[80,"effort=10"],[81,"effort=10"],[82,"effort=10"],[83,"effort=10"],[84,"effort=10"],[85,"effort=10"],[86,"effort=10"],[87,"effort=10"],[88,"effort=10"],[89,"effort=10"],[90,"effort=10"],[91,"effort=10"],[92,"effort=10"],[93,"effort=10"],[94,"effort=10"],[95,"effort=10"],[96,"effort=10"],[97,"effort=10"],[98,"effort=10"],[99,"effort=10"],[100,"effort=10"],[101,"effort=10"],[102,"effort=10"],[103,"effort=10"],[104,"effort=10"],[105,"effort=10"],[106,"effort=10"],[107,"effort=10"],[108,"effort=10"],[109,"effort=10"],[110,"effort=10"],[111,"effort=10"],[112,"effort=10"],[113,"effort=10"],[114,"effort=10"],[115,"effort=10"],[116,"effort=10"],[117,"effort=10"],[118,"effort=10"],[119,"effort=10"],[120,"effort=10"],[121,"effort=10"],[122,"effort=10"],[123,"effort=10"],[124,"effort=10"],[125,"effort=10"],[126,"effort=10"],[127,"effort=10"],[128,"effort=10"],[129,"effort=10"],[130,"effort=10"],[131,"effort=10"],[132,"effort=10"],[133,"effort=10"],[134,"effort=10"],[135,"effort=10"],[136,"effort=10"],[137,"effort=10"],[138,"effort=10"],[139,"effort=10"],[140,"effort=10"],[141,"effort=10"],[142,"effort=10"],[143,"effort=10"],[144,"effort=10"],[145,"effort=10"],[146,"effort=10"],[147,"effort=10"],[148,"effort=10"],[149,"effort=10"],[150,"effort=10"],[151,"effort=10"],[152,"effort=10"],[153,"effort=10"],[154,"effort=10"],[155,"effort=10"],[156,"effort=10"],[157,"effort=10"],[158,"effort=10"],[159,"effort=10"],[160,"effort=10"],[161,"effort=10"],[162,"effort=10"],[163,"effort=10"],[164,"effort=10"],[165,"effort=10"],[166,"effort=10"],[167,"effort=10"],[168,"effort=10"],[169,"effort=10"],[170,"effort=10"],[171,"effort=10"],[172,"effort=10"],[173,"effort=10"],[174,"effort=10"],[175,"effort=10"],[176,"effort=10"],[177,"effort=10"],[178,"effort=10"],[179,"effort=10"],[180,"effort=10"],[181,"effort=10"],[182,"effort=10"],[183,"effort=10"],[184,"effort=10"],[185,"effort=10"],[186,"effort=10"],[187,"effort=10"],[188,"effort=10"],[189,"effort=10"],[190,"effort=10"],[191,"effort=10"],[192,"effort=10"],[193,"effort=10"],[194,"effort=10"],[195,"effort=10"],[196,"effort=10"],[197,"effort=10"],[198,"effort=10"],[199,"effort=10"],[200,"effort=10"],[201,"effort=10"],[202,"effort=10"],[203,"effort=10"],[204,"effort=10"],[205,"effort=10"],[206,"effort=10"],[207,"effort=10"],[208,"effort=10"],[209,"effort=10"],[210,"effort=10"],[211,"effort=10"],[212,"effort=10"],[213,"effort=10"],[214,"effort=10"],[215,"effort=10"],[216,"effort=10"],[217,"effort=10"],[218,"effort=10"],[219,"effort=10"],[220,"effort=10"],[221,"effort=10"],[222,"effort=10"],[223,"effort=10"],[224,"effort=10"],[225,"effort=10"],[226,"effort=10"],[227,"effort=10"],[228,"effort=10"],[229,"effort=10"],[230,"effort=10"],[231,"effort=10"],[232,"effort=10"],[233,"effort=10"],[234,"effort=10"],[235,"effort=10"],[236,"effort=10"],[237,"effort=10"],[238,"effort=10"],[239,"effort=10"],[240,"effort=10"],[241,"effort=10"],[242,"effort=10"],[243,"effort=10"],[244,"effort=10"],[245,"effort=10"],[246,"effort=10"],[247,"effort=10"],[248,"effort=10"],[249,"effort=10"],[250,"effort=10"],[251,"effort=10"],[252,"effort=10"],[253,"effort=10"],[254,"effort=10"],[255,"effort=10"],[256,"effort=10"],[257,"effort=10"],[258,"effort=10"],[259,"effort=10"],[260,"effort=10"],[261,"effort=10"],[262,"effort=10"],[263,"effort=10"],[264,"effort=10"],[265,"effort=10"],[266,"effort=10"],[267,"effort=10"],[268,"effort=10"],[269,"effort=10"],[270,"effort=10"],[271,"effort=10"],[272,"effort=10"],[273,"effort=10"],[274,"effort=10"],[275,"effort=10"],[276,"effort=10"],[277,"effort=10"],[278,"effort=10"],[279,"effort=10"],[280,"effort=10"],[281,"effort=10"],[282,"effort=10"],[283,"effort=10"],[284,"effort=10"],[285,"effort=10"],[286,"effort=10"],[287,"effort=10"],[288,"effort=10"],[289,"effort=10"],[290,"effort=10"],[291,"effort=10"],[292,"effort=10"],[293,"effort=10"],[294,"effort=10"],[295,"effort=10"],[296,"effort=10"],[297,"effort=10"],[298,"effort=10"],[299,"effort=10"],[300,"effort=10"],[301,"effort=10"],[302,"effort=10"],[303,"effort=10"],[304,"effort=10"],[305,"effort=10"],[306,"effort=10"],[307,"effort=10"],[308,"effort=10"],[309,"effort=10"],[310,"effort=10"],[311,"effort=10"],[312,"effort=10"],[313,"effort=10"],[314,"effort=10"],[315,"effort=10"],[316,"effort=10"],[317,"effort=10"],[318,"effort=10"],[319,"effort=10"],[320,"effort=10"],[321,"effort=10"],[322,"effort=10"],[323,"effort=10"],[324,"effort=10"],[325,"effort=10"],[326,"effort=10"],[327,"effort=10"],[328,"effort=10"],[329,"effort=10"],[330,"effort=10"],[331,"effort=10"],[332,"effort=10"],[333,"effort=10"],[334,"effort=10"],[335,"effort=10"],[336,"effort=10"],[337,"effort=10"],[338,"effort=10"],[339,"effort=10"],[340,"effort=10"],[341,"effort=10"],[342,"effort=10"],[343,"effort=10"],[344,"effort=10"],[345,"effort=10"],[346,"effort=10"],[347,"effort=10"],[348,"effort=10"],[349,"effort=10"],[350,"effort=10"],[351,"effort=10"],[352,"effort=10"],[353,"effort=10"],[354,"effort=10"],[355,"effort=10"],[356,"effort=10"],[357,"effort=10"],[358,"effort=10"],[359,"effort=10"],[360,"effort=10"],[361,"effort=10"],[362,"effort=10"],[363,"effort=10"],[364,"effort=10"],[365,"effort=10"],[366,"effort=10"],[367,"effort=10"],[368,"effort=10"],[369,"effort=10"],[370,"effort=10"],[371,"effort=10"],[372,"effort=10"],[373,"effort=10"],[374,"effort=10"],[375,"effort=10"],[376,"effort=10"],[377,"effort=10"],[378,"effort=10"],[379,"effort=10"],[380,"effort=10"],[381,"effort=10"],[382,"effort=10"],[383,"effort=10"],[384,"effort=10"],[385,"effort=10"],[386,"effort=10"],[387,"effort=10"],[388,"effort=10"],[389,"effort=10"],[390,"effort=10"],[391,"effort=10"],[392,"effort=10"],[393,"effort=10"],[394,"effort=10"],[395,"effort=10"],[396,"effort=10"],[397,"effort=10"],[398,"effort=10"],[399,"effort=10"],[400,"effort=10"]]
+
+ooh god, hard to explain. works, jagged line consistent height then flatlines.
+
+- why is it brakign below zero? 
+- it's not, but the other riders are 
+- ok, ao it oscillates above and below a reducing failure level until that reaches zero, then it flatlines 
+- there's nothing to tell it to recover for a longer period. was this ever in the code? why does the original image showing the effects of fatigue have flat sections?
+
+- how do I want it to behave now?
+
+-- add a new rider setting
+ "recovery_amount_required_after_fatigue":40,
+ 
+ now we need to recover by (at least ) this much to exit recovery mode...
+ - when the rider first enters recovery we need to note this....
+ use a switch property e.g.,
+ race_rider.recovery_mode = 1;
+ and then also need to actually track how much recovering happens and then set the recovery_mode back to 0 after 
+ race_rider.recovery_mode_recovery_so_far = 0;
+ 
+ if (typeof(race_rider.recovery_mode) != 'undefined'){
+        race_rider.recovery_mode = 0;
+      }
+      if (typeof(race_rider.recovery_mode_recovery_so_far) != 'undefined'){
+        race_rider.recovery_mode_recovery_so_far = 0;
+      }
+ 
+ - needs to be for both lead and chaser... 
+ 
+ ported it across and fook, the ga does not agree with the game AND it it getting short strats :-( 
+ something broken.
+ GA doesn't even agree with the one-off-race times :-( 
+ 
+ seem to have tots broken it. warum?
+ 
+ - did another change break it????? 
+ 
+ 
+ - if i comment out the check things go back, sooo
+ 
+ -- seems to be fine if ONE race runs, soooo, it's not resetting things... need to set the props when a race is set up, not during it... i think the issue is that recovery_mode is left on.
+ 
+ - yup, fixed it (i think), by setting the two props when the riders are first loaded... they must be getting stuck in fail mode from generation to generation.
+ 
+ - but, do the values used make sense?
+ 
+ 
+ -- need to mention the tapered start (distance to cover)
+ 
+ - boo, found discrepancy,
+ 
+ - ga time 			266.099
+ - viz game time	268.21 
+ 
+ - compare graphs
+ 
+ -- ooh of course, I never ported across the new recovery amount change!
+ 
+ no, it's there BUT i had this line commented out
+ recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
+ plus i had   let recovery_amount_required_after_fatigue = 120; //default instead of   let recovery_amount_required_after_fatigue = 12; //default
+ 
+- now i  get 
+
+- viz game			266.099
+FIXED
+
+
+-- hmm
+
+BUG. vis game data output is cloning the data for the 1st rider, they are all the same! 
+
+ISSUE. rider never fails, something to do with the fatigue setup?? make the ceiling fall more quickly?
+
+settings involved
+
+global
+"recovery_effort_level_reduction": 2,
+"fatigue_failure_level": 500,
+	"accumulated_fatigue_maximum": 1000,
+
+
+rider
+"fatigue_rate": 10,
+		"recovery_rate": 15,
+                "recovery_amount_required_after_fatigue": 12,
+				
+				
+TRY
+
+ "recovery_amount_required_after_fatigue": 120,
+ 
+ 
+ - yes, this causes them to fail faster, but is a long recovery period.... adjust the globals
+ 
+"fatigue_failure_level": 500,
+	"accumulated_fatigue_maximum": 1000,
+				
+- hmmm, need to understand better how these affect each other 
+accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
+let failure_level = settings.fatigue_failure_level*accumulated_effect;
+	
+	
+	
+- idea... only update the failure ceiling each time it is hit? or will this have no effect? what is the fatigue failure recovery REALLY doing?
+
+Mundee 19 may
+will updating the fatigue ceiling at the point of failure not cause a similar problem?
+
+what excactly do i want to happen with the fatgiue-fail-recovery mechanism?
+
+- significant effect of failure 
+- chance to recover to avoid it 
+- long-term (in race) of fatigue effect
+
+- could increase the fatgiue rate based on acc. fatigue?
+
+- need to make both fatigue and recovery rates higher- rider at MAX should only be able to do a short effort before failing.
+- what should we set recovery_amount_required_after_fatigue to? a lap's worth?
+
+- key issue is that if it is 12 or 120 it still repeats in a constant rhythm until failure... should be more gradual.
+
+managed to get NaN for chasing riders in the game version 
+
+- sometimes, if i run a race then press stop to reset it, the leading rider breaks away. other times it doesn't. weird. warum?
+
+- if I load it then press STOP then run it, the leader gets away.
+- if i load it, start the race, then press stop, the leader doesn't get away?
+
+- chaser in fail mode because of a NaN comparison??
+
+- seems to be workign, though there's a BUG whereby the race doesn't seem to reset properly? i think if it finishes in fail mode? the reset should make sure to include it,
+
+race_rider.recovery_mode = 0
+
+-- also, should set it to 0 IF the rider has no fatigue, if it goes to 0?
+
+- results are a little odd? failure as part of the strategy?
+
+- what happens if failure is very punitive?
+
+let DEFAULT_recovery_amount_required_after_fatigue = 12;
+
+let TEST_recovery_amount_required_after_fatigue = 100; //note the separate default and test
+
+
+let TEST_fatigue_rate = 20;
+let TEST_recovery_rate = 40;
+let TEST_fatigue_failure_level =  250;
+let TEST_accumulated_fatigue_maximum = 300;
+
+- what happens if recovery is very quick? but failure is still punitive?
+
+let TEST_recovery_amount_required_after_fatigue = 100; 
+let TEST_fatigue_rate = 20;
+let TEST_recovery_rate = 80;
+let TEST_fatigue_failure_level =  250;
+let TEST_accumulated_fatigue_maximum = 300;
+
+- not getting many switches? what if there is both high fatigue and high recovery?
+
+- nope, low drop instructs.
+
+- muck a little with the ga 
+
+- how about we put in two images, one where failure is rapid and harsh, and another where it takes longer and is less punitive?
+
+- looked at issue where the data in the textarea repeats the first tem member... was a very straightforward bug?
+
+- figure refs not workign again :-( warum?
+
+-- wednesdee 21 
+
+- when i get it to create tons of instructions, the final winner has none beyond timestep 168. warum?
+
+- also, the times don't match :-( need to analyse. 
+
+- wait, do I have test values turned on? try turning all of those off?
+
+- ooh, great, that was it... which one was different?
+
+- actually most of them were different, no wonder it didn't match.
+
+- lety's add a TON of instructs instead of almost none - embrace the chaos
+
+- i should have somewhere to VIEW the settings used for any experiment, even if not the power to change them...
+- this should be both on the results page AND the game page.
+
+- works, can now see settigns on all 3 of those pages 
+
+- what happens if I try to maximise the number of instructions? 
+
+- there's no mutation that replaces one instruction with another? i.e., converts a drop=3 to an effort=5?
+
+- why is my crossover so complex? why not use one-point crossover? 
+
+- shite, random process ends up with no instructions after a few generations... warum?
+
+- generation 0, avg. number of instructions is 20.32875
+- generation 1, this is 	0.82125.
+- yet, the mutation should not be removing them at all??
+
+- holy shit, I have 
+  if(Math.random() > p_delete_instruction){//if deleting, just ignore it
+  
+  GREATER THAN!!! but i;ve been using a LOW value for ga_p_delete_instruction and assumed it was 
+  
+- boo, still getting 0 sets, warum warum?
+-oh, wait, the idea is that we DON'T go into that section if we want to delete it, i.e. we ignore it and move to the next timestep... and 0 means we always go in, and NEVER delete. so it was not a bug
+- BUT, the issue remains, so how are instructs disappearing?
+
+- doens't seem to happen when the pop is low? 
+
+- now it doesn't seem to pressure towards fewer instructs, the average isn't changing so much, but the best-in-gen is an empty set... just a lottery effect?
+
+- try increasing the number of instructions being added in the initial pop? 
+
+- is it really fair to have  the basic, no-instruction beahviour, to have an effort of 5?
+
+- could punish this... or... always have an effort instruction in the first position? set it to 5, but then allow it to be morphed, and have a default of something with low fitness?
+
+- instead of defaulting to 5, add a specific instruction at the 0 timestep, OR, have a lower default starting speed so that it needs to learn to accelerate early on?
+
+- add a setting or two
+ "include_timestep_zero_starting_effort_instruction":1,
+ "default_power_effort_level":3,
+ 
+ - where do I implement this
+		
+		
+- let default_zero_instruction =   [0,"effort="+settings_r.threshold_power_effort_level];
+
+- where o where are instructions being changed?

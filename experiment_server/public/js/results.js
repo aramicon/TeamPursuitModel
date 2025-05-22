@@ -1346,10 +1346,10 @@ const  build_results_table = () =>{
 
 const draw_results = (data) => {
 
-  console.log("draw results (table)");
+  //console.log("draw results (table)");
 
   let results = data[0];
-  console.log(results);
+  //console.log(results);
 
   selected_id = results._id;
   selected_ga_settings_id = results.ga_settings_id;
@@ -1361,6 +1361,10 @@ const draw_results = (data) => {
   selected_global_settings = JSON.parse(results.global_settings);
   selected_race_settings = JSON.parse(results.race_settings);
   selected_rider_settings = JSON.parse(results.rider_settings);
+
+  $("#global_settings").val(data[0].global_settings);
+  $("#race_settings").val(data[0].race_settings);
+  $("#rider_settings").val(data[0].rider_settings);
 
   selected_ga_results =JSON.parse(results.ga_results);
   build_results_table();

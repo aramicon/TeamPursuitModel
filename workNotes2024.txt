@@ -1512,3 +1512,212 @@ ooh god, hard to explain. works, jagged line consistent height then flatlines.
  something broken.
  GA doesn't even agree with the one-off-race times :-( 
  
+ seem to have tots broken it. warum?
+ 
+ - did another change break it????? 
+ 
+ 
+ - if i comment out the check things go back, sooo
+ 
+ -- seems to be fine if ONE race runs, soooo, it's not resetting things... need to set the props when a race is set up, not during it... i think the issue is that recovery_mode is left on.
+ 
+ - yup, fixed it (i think), by setting the two props when the riders are first loaded... they must be getting stuck in fail mode from generation to generation.
+ 
+ - but, do the values used make sense?
+ 
+ 
+ -- need to mention the tapered start (distance to cover)
+ 
+ - boo, found discrepancy,
+ 
+ - ga time 			266.099
+ - viz game time	268.21 
+ 
+ - compare graphs
+ 
+ -- ooh of course, I never ported across the new recovery amount change!
+ 
+ no, it's there BUT i had this line commented out
+ recovery_amount_required_after_fatigue =  race_rider.recovery_amount_required_after_fatigue;
+ plus i had   let recovery_amount_required_after_fatigue = 120; //default instead of   let recovery_amount_required_after_fatigue = 12; //default
+ 
+- now i  get 
+
+- viz game			266.099
+FIXED
+
+
+-- hmm
+
+BUG. vis game data output is cloning the data for the 1st rider, they are all the same! 
+
+ISSUE. rider never fails, something to do with the fatigue setup?? make the ceiling fall more quickly?
+
+settings involved
+
+global
+"recovery_effort_level_reduction": 2,
+"fatigue_failure_level": 500,
+	"accumulated_fatigue_maximum": 1000,
+
+
+rider
+"fatigue_rate": 10,
+		"recovery_rate": 15,
+                "recovery_amount_required_after_fatigue": 12,
+				
+				
+TRY
+
+ "recovery_amount_required_after_fatigue": 120,
+ 
+ 
+ - yes, this causes them to fail faster, but is a long recovery period.... adjust the globals
+ 
+"fatigue_failure_level": 500,
+	"accumulated_fatigue_maximum": 1000,
+				
+- hmmm, need to understand better how these affect each other 
+accumulated_effect = (settings.accumulated_fatigue_maximum - race_rider.accumulated_fatigue)/settings.accumulated_fatigue_maximum;
+let failure_level = settings.fatigue_failure_level*accumulated_effect;
+	
+	
+	
+- idea... only update the failure ceiling each time it is hit? or will this have no effect? what is the fatigue failure recovery REALLY doing?
+
+Mundee 19 may
+will updating the fatigue ceiling at the point of failure not cause a similar problem?
+
+what excactly do i want to happen with the fatgiue-fail-recovery mechanism?
+
+- significant effect of failure 
+- chance to recover to avoid it 
+- long-term (in race) of fatigue effect
+
+- could increase the fatgiue rate based on acc. fatigue?
+
+- need to make both fatigue and recovery rates higher- rider at MAX should only be able to do a short effort before failing.
+- what should we set recovery_amount_required_after_fatigue to? a lap's worth?
+
+- key issue is that if it is 12 or 120 it still repeats in a constant rhythm until failure... should be more gradual.
+
+managed to get NaN for chasing riders in the game version 
+
+- sometimes, if i run a race then press stop to reset it, the leading rider breaks away. other times it doesn't. weird. warum?
+
+- if I load it then press STOP then run it, the leader gets away.
+- if i load it, start the race, then press stop, the leader doesn't get away?
+
+- chaser in fail mode because of a NaN comparison??
+
+- seems to be workign, though there's a BUG whereby the race doesn't seem to reset properly? i think if it finishes in fail mode? the reset should make sure to include it,
+
+race_rider.recovery_mode = 0
+
+-- also, should set it to 0 IF the rider has no fatigue, if it goes to 0?
+
+- results are a little odd? failure as part of the strategy?
+
+- what happens if failure is very punitive?
+
+let DEFAULT_recovery_amount_required_after_fatigue = 12;
+
+let TEST_recovery_amount_required_after_fatigue = 100; //note the separate default and test
+
+
+let TEST_fatigue_rate = 20;
+let TEST_recovery_rate = 40;
+let TEST_fatigue_failure_level =  250;
+let TEST_accumulated_fatigue_maximum = 300;
+
+- what happens if recovery is very quick? but failure is still punitive?
+
+let TEST_recovery_amount_required_after_fatigue = 100; 
+let TEST_fatigue_rate = 20;
+let TEST_recovery_rate = 80;
+let TEST_fatigue_failure_level =  250;
+let TEST_accumulated_fatigue_maximum = 300;
+
+- not getting many switches? what if there is both high fatigue and high recovery?
+
+- nope, low drop instructs.
+
+- muck a little with the ga 
+
+- how about we put in two images, one where failure is rapid and harsh, and another where it takes longer and is less punitive?
+
+- looked at issue where the data in the textarea repeats the first tem member... was a very straightforward bug?
+
+- figure refs not workign again :-( warum?
+
+-- wednesdee 21 
+
+- when i get it to create tons of instructions, the final winner has none beyond timestep 168. warum?
+
+- also, the times don't match :-( need to analyse. 
+
+- wait, do I have test values turned on? try turning all of those off?
+
+- ooh, great, that was it... which one was different?
+
+- actually most of them were different, no wonder it didn't match.
+
+- lety's add a TON of instructs instead of almost none - embrace the chaos
+
+- i should have somewhere to VIEW the settings used for any experiment, even if not the power to change them...
+- this should be both on the results page AND the game page.
+
+- works, can now see settigns on all 3 of those pages 
+
+- what happens if I try to maximise the number of instructions? 
+
+- there's no mutation that replaces one instruction with another? i.e., converts a drop=3 to an effort=5?
+
+- why is my crossover so complex? why not use one-point crossover? 
+
+- shite, random process ends up with no instructions after a few generations... warum?
+
+- generation 0, avg. number of instructions is 20.32875
+- generation 1, this is 	0.82125.
+- yet, the mutation should not be removing them at all??
+
+- holy shit, I have 
+  if(Math.random() > p_delete_instruction){//if deleting, just ignore it
+  
+  GREATER THAN!!! but i;ve been using a LOW value for ga_p_delete_instruction and assumed it was 
+  
+- boo, still getting 0 sets, warum warum?
+-oh, wait, the idea is that we DON'T go into that section if we want to delete it, i.e. we ignore it and move to the next timestep... and 0 means we always go in, and NEVER delete. so it was not a bug
+- BUT, the issue remains, so how are instructs disappearing?
+
+- doens't seem to happen when the pop is low? 
+
+- now it doesn't seem to pressure towards fewer instructs, the average isn't changing so much, but the best-in-gen is an empty set... just a lottery effect?
+
+- try increasing the number of instructions being added in the initial pop? 
+
+- is it really fair to have  the basic, no-instruction beahviour, to have an effort of 5?
+
+- could punish this... or... always have an effort instruction in the first position? set it to 5, but then allow it to be morphed, and have a default of something with low fitness?
+
+- instead of defaulting to 5, add a specific instruction at the 0 timestep, OR, have a lower default starting speed so that it needs to learn to accelerate early on?
+
+- add a setting or two
+ "include_timestep_zero_starting_effort_instruction":1,
+ "default_power_effort_level":3,
+ 
+ - where do I implement this
+		
+		
+- let default_zero_instruction =   [0,"effort="+settings_r.threshold_power_effort_level];
+
+- where o where are instructions being changed?
+
+- port it to the game
+
+
+- thursday
+- need to email COlm, better to do that now?
+
+- re-runnign the gamew causes a BIG problem - something is not being reset i thinks...
+- i think the chasers have not had their fatigue settings reset...

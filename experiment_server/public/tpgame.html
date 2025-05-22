@@ -1,6 +1,6 @@
 <html>
   <head>
-    <title>TP Game</title>
+    <title>Game</title>
     <link rel="shortcut icon" type="image/jpg" href="images/favicon.png"/>
     <link rel="stylesheet" type = "text/css" href = "css/model3.css">
     <link rel="stylesheet" type = "text/css" href = "css/bootstrap.min.css">
@@ -246,6 +246,55 @@
         <textarea class="form-control" id="data_display" rows="10"></textarea>
         </div>
       </div>
+    </div>
+
+    <div class="row">
+      <div class="col-lg-9">
+          <div class="accordion" id="accordionExample">
+            <div class="card">
+              <div class="card-header" id="headingOne">
+                <h2 class="mb-0">
+                  <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseOne" aria-expanded="false" aria-controls="collapseOne">
+                  <i class="fas fa-globe-asia"></i> Global Settings
+                  </button>
+                </h2>
+              </div>
+              <div id="collapseOne" class="collapse" aria-labelledby="headingOne" data-parent="#accordionExample">
+                <div class="card-body">
+                  <textarea rows="25" cols="100" id="global_settings">LOAD SETTINGS</textarea>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header" id="headingTwo">
+                <h2 class="mb-0">
+                  <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseTwo" aria-expanded="false" aria-controls="collapseTwo">
+                    <i class="fas fa-circle-notch"></i> Race Settings
+                  </button>
+                </h2>
+              </div>
+              <div id="collapseTwo" class="collapse" aria-labelledby="headingTwo" data-parent="#accordionExample">
+                <div class="card-body">
+                    <textarea rows="25" cols="100" id="race_settings">LOAD SETTINGS</textarea>
+                </div>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-header" id="headingThree">
+                <h2 class="mb-0">
+                  <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#collapseThree" aria-expanded="false" aria-controls="collapseThree">
+                    <i class="fas fa-biking"></i> Rider Settings
+                  </button>
+                </h2>
+              </div>
+              <div id="collapseThree" class="collapse" aria-labelledby="headingThree" data-parent="#accordionExample">
+                <div class="card-body">
+                  <textarea rows="25" cols="100" id="rider_settings">LOAD SETTINGS</textarea>
+                </div>
+              </div>
+            </div>
+            </div>
+            </div>  
     </div>
 
   </div>
