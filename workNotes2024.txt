@@ -1721,3 +1721,188 @@ let TEST_accumulated_fatigue_maximum = 300;
 
 - re-runnign the gamew causes a BIG problem - something is not being reset i thinks...
 - i think the chasers have not had their fatigue settings reset...
+
+  load_rider.accumulated_fatigue = 0;
+  
+  
+  load_rider.rider_fatigue_failure_level = settings.fatigue_failure_level;
+  
+  - i think the fatigue ceiling is too low?? they don't go much above 400 watts?
+  
+  - fook, do i need to fart about with the fatigue settings again?
+  
+  
+starting version 
+
+
+ 
+- old version 
+  
+let TEST_recovery_amount_required_after_fatigue = 100;
+let TEST_fatigue_rate = 15;
+let TEST_recovery_rate = 30;
+let TEST_fatigue_failure_level =  250;
+let TEST_accumulated_fatigue_maximum = 300;
+
+- 344 seconds
+
+
+- new versions 
+
+let TEST_recovery_amount_required_after_fatigue = 80;
+let TEST_fatigue_rate = 8;
+let TEST_recovery_rate = 45;
+let TEST_fatigue_failure_level =  300;
+let TEST_accumulated_fatigue_maximum = 600;
+
+- 302 seconds
+
+let TEST_recovery_amount_required_after_fatigue = 80;
+let TEST_fatigue_rate = 12;
+let TEST_recovery_rate = 45;
+let TEST_fatigue_failure_level =  300;
+let TEST_accumulated_fatigue_maximum = 600;
+
+- 319 seconds
+
+let TEST_recovery_amount_required_after_fatigue = 80;
+let TEST_fatigue_rate = 12;
+let TEST_recovery_rate = 45;
+let TEST_fatigue_failure_level =  300;
+let TEST_accumulated_fatigue_maximum = 700;
+
+- 313 seconds
+
+let TEST_recovery_amount_required_after_fatigue = 120;
+let TEST_fatigue_rate = 12;
+let TEST_recovery_rate = 45;
+let TEST_fatigue_failure_level =  300;
+let TEST_accumulated_fatigue_maximum = 700;
+
+- 314 seconds
+
+let TEST_recovery_amount_required_after_fatigue = 80;
+let TEST_fatigue_rate = 12;
+let TEST_recovery_rate = 55;
+let TEST_fatigue_failure_level =  300;
+let TEST_accumulated_fatigue_maximum = 770;
+
+- 309 seconds
+
+
+chosen examples,
+no fitness bias time 290.383	
+with fitness bias time 256.895
+
+
+- how expensive are these drops, and can i get them to emerge?
+- is the fatigue causing them be avoided, or is it a thing whereby the recovery is not really 'helping'? does recerving actually assist? 
+- feels like there needs to be a more local performance hit rather than a longer term failure?
+
+[[0,"effort=7.3"],[40,"drop=3"],[70,"drop=3"],[100,"drop=3"],[130,"drop=3"],[160,"drop=3"],[190,"drop=3"],[220,"drop=3"],[250,"drop=3"]]
+
+with this, I get 256.809 seconds. what happens if I change even more regulalry?
+
+[[0,"effort=7.3"],[40,"drop=3"],[60,"drop=3"],[80,"drop=3"],[100,"drop=3"],[120,"drop=3"],[140,"drop=3"],[160,"drop=3"],[180,"drop=3"],[200,"drop=3"],[220,"drop=3"],[240,"drop=3"]]
+
+- woah, 255 seconds!
+[[0,"effort=7.3"],[40,"drop=3"],[60,"drop=3"],[80,"drop=3"],[100,"drop=3"],[120,"drop=3"],[140,"drop=3"],[160,"drop=3"],[180,"drop=3"],[200,"drop=3"],[220,"drop=3"],[240,"drop=3"]]
+
+- can go lower, here at 251.942 seconds. but this is not emergign?	
+[[0,"effort=7.35"],[20,"drop=3"],[40,"drop=3"],[60,"drop=3"],[80,"drop=3"],[100,"drop=3"],[120,"drop=3"],[140,"drop=3"],[160,"drop=3"],[180,"drop=3"],[200,"drop=3"],[220,"drop=3"],[240,"drop=3"],[210,"effort=9"]]
+
+- one last change, inject some random new strategies into the population each generation... should this be the bottom X percentage or be purely random EXCEPT for the elite tourny winners?
+
+"ga_percentage_of_random_new_strategies_to_inject_each_gen": 0.0
+
+- moved things into a new rfunction create_new_race(settings_r)
+
+- BUGG!! 
+
+-- we are losing instructions! like, ones after the first one or 3 are not being copied into the next gen even when there is no mutation?
+
+-- woweeeee, looks like i changed the mutation loop so that it only loops to the LENGTH OF THE CURRENT INSTRUCTION SET!
+
+-- so, if there are 3 instructions it will ONLY loop to timestep 3 :-) 
+
+-- when the foooook did I make that change?
+
+
+-- Monday May 26th.
+
+
+- add the next paragraph, need to make a list of results....
+
+- have i found a bug ... if a rider drops back while at the same time the new leader is told to go faster, the rider dropping back gets it all wrong and is dropped?
+
+http://127.0.0.1:3003/tpgame.html?source=results&results_id=682fb4389584544bf82c21d1&startorder=0,3,2,1&instructions=%5B%5B0,%22effort=5%22%5D,%5B1,%22effort=7.56%22%5D,%5B5,%22effort=9.89%22%5D,%5B19,%22drop=3%22%5D,%5B21,%22effort=6.7%22%5D,%5B40,%22effort=7.33%22%5D,%5B43,%22drop=1%22%5D,%5B45,%22drop=3%22%5D,%5B65,%22effort=7.59%22%5D,%5B82,%22drop=3%22%5D,%5B84,%22effort=7.33%22%5D,%5B118,%22drop=3%22%5D,%5B163,%22drop=3%22%5D,%5B188,%22drop=3%22%5D,%5B193,%22effort=8.95%22%5D,%5B210,%22drop=1%22%5D,%5B227,%22effort=7.75%22%5D,%5B238,%22effort=5.82%22%5D%5D&noise_alterations=%7B%7D&performance_failures=%7B%7D&instruction_noise_choke_under_pressure=%7B%7D&instruction_noise_overeagerness=%7B%7D
+
+- timestep 198, rider 3, defo an issue here, it is no longer doing the special drop calcs and instead does a 'normal' one that leaves it too far back :-( 
+
+- save result and set up an automated one (will probably break?)
+
+
+-- need to run some experiment sequences, test one out first 
+
+
+{"iterations":21,"active":0,"variations":[{"iterations":[21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"enable_instruction_noise_1_random","values":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},{"iterations":[21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.95,0.9,0.85,0.8,0.75,0.7,0.65,0.6,0.55,0.5,0.45,0.4,0.35,0.3,0.25,0.2,0.15,0.1,0.05,0]}],"best_in_final_gen_tests":[{"iterations":21,"repeat_each":20,"variations":[{"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.95,0.9,0.85,0.8,0.75,0.7,0.65,0.6,0.55,0.5,0.45,0.4,0.35,0.3,0.25,0.2,0.15,0.1,0.05,0]}]}],"experiments":[{"client_id":"NO_ID_","iteration":21,"status":"complete"},{"client_id":"NO_ID_","iteration":20,"status":"complete"},{"client_id":"NO_ID_","iteration":19,"status":"complete"},{"client_id":"NO_ID_","iteration":18,"status":"complete"},{"client_id":"NO_ID_","iteration":17,"status":"complete"},{"client_id":"NO_ID_","iteration":16,"status":"complete"},{"client_id":"NO_ID_","iteration":15,"status":"complete"},{"client_id":"NO_ID_","iteration":14,"status":"complete"},{"client_id":"NO_ID_","iteration":13,"status":"complete"},{"client_id":"NO_ID_","iteration":12,"status":"complete"},{"client_id":"NO_ID_","iteration":11,"status":"complete"},{"client_id":"NO_ID_","iteration":10,"status":"complete"},{"client_id":"NO_ID_","iteration":9,"status":"complete"},{"client_id":"NO_ID_","iteration":8,"status":"complete"},{"client_id":"NO_ID_","iteration":7,"status":"complete"},{"client_id":"NO_ID_","iteration":6,"status":"complete"},{"client_id":"NO_ID_","iteration":5,"status":"complete"},{"client_id":"NO_ID_","iteration":4,"status":"complete"},{"client_id":"NO_ID_","iteration":3,"status":"complete"},{"client_id":"NO_ID_","iteration":2,"status":"complete"},{"client_id":"NO_ID_","iteration":1,"status":"complete"}]}
+
+{"iterations":3,"active":1,"variations":[{"iterations":[3,2,1],"type":"global","property":"ga_selection_type","values":["tournament_elitist_winner_takes_all","tournament_random_with_replacement","tournament_elitist_roulette"]}],"experiments":[]}
+
+- seemed to run ok... need to run the population one?
+
+"ga_population_size": 2000,
+"ga_population_size_first_generation": 2000,
+	
+5
+10
+50
+200
+500
+1000
+2000
+4000
+
+
+
+{"iterations":8,"active":1,"variations":[{"iterations":[8,7,6,5,4,3,2,1],"type":"global","property":"ga_population_size","values":[5,10,50,200,500,1000,2000,4000]},{"iterations":[8,7,6,5,4,3,2,1],"type":"global","property":"ga_population_size_first_generation","values":[5,10,50,200,500,1000,2000,4000]}],"experiments":[]}
+
+bug, line 1067... problem was using a tournament group size that was bigger than the population!
+
+- run each one 3 times instead
+
+{"iterations":24,"active":1,"variations":[{"iterations":[24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"ga_population_size","values":[5,5,5,10,10,10,50,50,50,200,200,200,500,500,500,1000,1000,1000,2000,2000,2000,4000,4000,4000]},{"iterations":[24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"ga_population_size_first_generation","values":[5,5,5,10,10,10,50,50,50,200,200,200,500,500,500,1000,1000,1000,2000,2000,2000,4000,4000,4000]}],"experiments":[]}
+
+- build one for number of generations 
+
+2
+5
+10
+20
+50
+100
+200
+500
+
+{"iterations":24,"active":1,"variations":[{"iterations":[24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"ga_number_of_generations","values":[2,2,2,5,5,5,10,10,10,20,20,20,50,50,50,100,100,100,200,200,200,500,500,500]}],"experiments":[]}
+
+try set tournament size 
+
+1
+2
+4
+8
+16
+100
+500
+1000
+
+{"iterations":24,"active":1,"variations":[{"iterations":[24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"ga_tournament_selection_group_size","values":[1,1,1,2,2,2,4,4,4,8,8,8,16,16,16,100,100,100,500,500,500,1000,1000,1000]}],"experiments":[]}
+
+issue, need to also set ga_tournament_roulette_exponent_group_size_divisor to the same value as ga_tournament_selection_group_size for each test 
+
+{"iterations":24,"active":1,"variations":[{"iterations":[24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"ga_tournament_selection_group_size","values":[1,1,1,2,2,2,4,4,4,8,8,8,16,16,16,100,100,100,500,500,500,1000,1000,1000]},{"iterations":[24,23,22,21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"ga_tournament_roulette_exponent_group_size_divisor","values":[1,1,1,2,2,2,4,4,4,8,8,8,16,16,16,100,100,100,500,500,500,1000,1000,1000]}],"experiments":[]}
+
+
+run 10 each of a few different team types, so that the BEST of them can be found and described. 
+

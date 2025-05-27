@@ -1,5 +1,5 @@
 //Load and edit sequences, DK 2021
-console.log("laod list of sequences");
+console.log("load list of sequences");
 
 let selected_id ="";
 let selected_seq_name = "";
@@ -24,8 +24,8 @@ const searchSequences = () => {
       $("#sequences_info_label").text(data.length + " sequences found.");
     }).catch((error) => {
       console.log("Error loading sequences from server");
-      $("#sequences_info_label").text("ERROR CONNECTING TO SERVER " + error)
-      console.log(error)
+      $("#sequences_info_label").text("ERROR CONNECTING TO SERVER " + error);
+      console.log(error);
 });
 
 }
@@ -59,8 +59,8 @@ const getSequences = () => {
       $("#sequences_info_label").text(data.length + " sequences found.");
     }).catch((error) => {
       console.log("Error loading sequences from server");
-      $("#sequences_info_label").text("ERROR CONNECTING TO SERVER " + error)
-      console.log(error)
+      $("#sequences_info_label").text("ERROR CONNECTING TO SERVER " + error);
+      console.log(error);
 });
   }
 
@@ -126,8 +126,8 @@ const getSequences = () => {
 
     }).catch((error) => {
       console.log("Error loading results from server");
-      $("#results_info_label").text("ERROR CONNECTING TO SERVER " + error)
-      console.log(error)
+      $("#results_info_label").text("ERROR CONNECTING TO SERVER " + error);
+      console.log(error);
   });
 
   }
@@ -255,8 +255,8 @@ const getSequences = () => {
 
       }).catch((error) => {
         console.log("Error updating sequence on experiment server");
-        $("#sequence_result_col").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error)
-        console.log(error)
+        $("#sequence_result_col").text("ERROR CONNECTING TO EXPERIMENT SERVER " + error);
+        console.log(error);
     });
 
   }
@@ -307,8 +307,6 @@ const getSequences = () => {
       $("#sequence_result_col").text("ERROR CONNECTING TO SERVER " + error);
       console.log(error);
     });
-
-
   }
   }
 
@@ -364,7 +362,7 @@ const getSequences = () => {
     getSequences();
     getSettingNames();
     d3.select("#searchSequences").on('click',searchSequences);
-  
+
     $( "#searchSequencesTerm" ).keydown(function( event ) {
       console.log("press");
     if ( event.which == 13 ) {

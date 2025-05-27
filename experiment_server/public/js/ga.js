@@ -5,7 +5,7 @@ let chosen_rider_settings = {};
 let selected_settings_id = 0;
 let ga_results = {};
 
-let sequences_mode = 0; //mode switch to run or not run sequences
+let sequences_mode = 1; //mode switch to run or not run sequences
 let sequence_experiment_underway = 0;
 let sequence_selected_seq_id = 0;
 let sequence_selected_iteration = 0;
@@ -21,7 +21,7 @@ function loadSingleRace(start_order,instructions, id){
   instructions = instructions.replace(/QQ/g, '"');
   $("#starting_order").val(start_order);
   $("#instructions").val(instructions);
-  $("#single_race_label").html("Selected best race generation " + id)
+  $("#single_race_label").html("Selected best race generation " + id);
 }
 
 
@@ -120,9 +120,12 @@ function run_ga(callback_func){
       if(sequences_mode == 1){
         console.log("@sequences_mode: experiment web worker returned, sequence mode running");
         console.log("@sequences_mode: browser_client_id " + browser_client_id+  " sequence_selected_seq_id " + sequence_selected_seq_id + " sequence_selected_iteration " + sequence_selected_iteration);
+        $("#info_under_settings").html("@sequences_mode running: browser_client_id " + browser_client_id+  " sequence_selected_seq_id " + sequence_selected_seq_id + " sequence_selected_iteration " + sequence_selected_iteration);
+
         if (browser_client_id && sequence_selected_seq_id && sequence_selected_iteration){
 
           console.log("@sequences_mode: save results");
+          $("#info_under_settings").html("@sequences_mode: saving results");
           saveResults();
           //update the experiment details (again)
           console.log("@sequences_mode:update sequence info");
@@ -148,6 +151,8 @@ function run_ga(callback_func){
               throw Error(response.statusText);
             }
           }).then((data)=>{
+
+            $("#info_under_settings").html("@sequences_mode: updated sequence and checkign for new sequence");
             console.log('@sequences_mode: updated sequence after running experiment, data ' + JSON.stringify(data));
 
             //finished running and it ran ok, can now look to do another experiment
@@ -910,12 +915,13 @@ const setClientID = () => {
   }
   else{
     console.log("client id not found, generate a new one from IP and browser");
-    $.getJSON('http://www.geoplugin.net/json.gp', function(data) {
-      console.log("calling gd.geobytes.com to get IP address")
+    $.getJSON('https://api.ipify.org?format=json', function(data) {
+      console.log("calling api.ipify.org to get IP address")
       console.log(JSON.stringify(data, null, 2));
 
-      let dstring = getDateTime();
-      let new_id = data['geoplugin_request'] + "_" + data['geoplugin_city'] + "_" + data['geoplugin_countryCode'] + "_" + getBrowserType() + "_" + dstring;
+      let dstring = new Date();
+      let dateFormatS = dstring.getFullYear() + "_" + dstring.getMonth() + "_" + dstring.getDate() + "_" + dstring.getHours() + "_" + dstring.getMinutes() + "_" + dstring.getSeconds();
+      let new_id = data['ip'] + "_" + dateFormatS;
       console.log('new id is ' + new_id);
       //save to sessionStorage
       sessionStorage.setItem('client_id', new_id);
@@ -963,6 +969,8 @@ const check_for_sequences = () => {
           if (seq_details.sequence_options.iterations){ //how many should be run?
             let total_iterations = seq_details.sequence_options.iterations;
             console.log("found active sequence with " +  total_iterations + " iterations");
+
+            $("#info_under_settings").html("@sequences_mode: found active sequence with " +  total_iterations + " iterations");
 
             let iterations_run_or_running = 0;
             let selected_iteration = total_iterations;

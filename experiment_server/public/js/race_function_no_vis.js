@@ -266,8 +266,8 @@ function randn_bm() {
       new_race.stats.number_of_start_order_shuffles++;
     }
 
-    //for(let i = 0;i<time_taken_old;i++){
-    for(let i = 0;i<r.instructions.length;i++){
+    for(let i = 0;i<time_taken_old;i++){
+    //for(let i = 0;i<r.instructions.length;i++){ what???? this will only loop up to the time of the length of the instrucitons. madness!!
       if(r.instructions.filter(a => a[0] == i).length == 0){
         //no instruction here- add a new one?
         if (Math.random() < p_add_instruction){
@@ -740,7 +740,7 @@ function randn_bm() {
 
     }
 
-    let segment_size = 20; //just to log % of gens done
+    let segment_size = 12; //just to log % of gens done
     let one_segment = Math.floor(number_of_generations/segment_size);
     let one_segment_count = 0;
 
@@ -1340,8 +1340,6 @@ function randn_bm() {
             generation_results.best_in_gen_tests_results = JSON.stringify(best_in_gen_tests_results);
           }
 
-
-
         }
         generation_results.population_size = 0;
         generation_results.variants_size =0;
@@ -1392,6 +1390,7 @@ function randn_bm() {
   }
 
   function new_population_tournament_selection(settings_r,current_population, stats,generation){
+
     let new_population = [];
     // split the popualtion into a set of groups; there may be a remainder
     let group_size = settings_r.ga_tournament_selection_group_size;
@@ -1764,7 +1763,6 @@ function randn_bm() {
       //console.log("------>  count_of_random_new_races_injected " +   count_of_random_new_races_injected);
 
       //shuffle the array to stop the same groups from simply repeating
-
       shuffleArray(new_population);
       return new_population;
     }

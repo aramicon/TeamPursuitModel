@@ -9,10 +9,10 @@ import {race_template} from './race_settings_template.js';
 import {riders_template} from './riders_template.js';
 
 //dk23Aug allow for targeted debugging of a rider and a timestep
-let targeted_debugging = 0;
-let targeted_debugging_rider_no = 0;
-let targeted_debugging_timestep_range_start = 0;
-let targeted_debugging_timestep_range_end = 1;
+let targeted_debugging = 1;
+let targeted_debugging_rider_no = 3;
+let targeted_debugging_timestep_range_start = 198;
+let targeted_debugging_timestep_range_end = 198;
 
 let LOG_EACH_STEP_OVERRIDE = 0;
 
@@ -1145,6 +1145,7 @@ function moveRace(){
       if(race_rider.current_aim =="drop"){ //once you are behind the rider_to_follow, you 'follow' again
         //donalK25: could add target_rider_gap here so that we drop back until behind the target rider, not until alongside them?
          if((race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= (rider_to_follow.distance_covered-rider_to_follow.start_offset))
+        //if((race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= (rider_to_follow.distance_covered-rider_to_follow.start_offset-0.3))
          {
           //idea is that you are dropping back so long as you are in front of the rider you should be behind
           race_rider.current_aim = "follow";
