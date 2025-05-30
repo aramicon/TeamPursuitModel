@@ -19,11 +19,11 @@ let LOG_EACH_STEP_OVERRIDE = 0;
 let DEFAULT_recovery_amount_required_after_fatigue = 12;
 
 // switch test values on/off
-let USE_TEST_recovery_amount_required_after_fatigue = 1;
-let USE_TEST_fatigue_rate = 1;
-let USE_TEST_recovery_rate = 1;
-let USE_TEST_fatigue_failure_level = 1;
-let USE_TEST_accumulated_fatigue_maximum = 1;
+let USE_TEST_recovery_amount_required_after_fatigue = 0;
+let USE_TEST_fatigue_rate = 0;
+let USE_TEST_recovery_rate = 0;
+let USE_TEST_fatigue_failure_level = 0;
+let USE_TEST_accumulated_fatigue_maximum = 0;
 
 //set test values
 
@@ -1429,7 +1429,11 @@ function moveRace(){
   //console.log("£££  riders_to_sort after sorting  £££" + JSON.stringify(riders_to_sort));
 
   //dksep24: increment time_on_front of leading rider
-  race.riders[riders_to_sort[0].rider].time_on_front++;
+
+  //dKelly25, ignore the first timestep as they are all starting off together
+  if(race.race_clock > 1){
+    race.riders[riders_to_sort[0].rider].time_on_front++;
+  }
 
   //set the second_last_rider using this distance based ordering
   let second_last_rider = race.riders[riders_to_sort[riders_to_sort.length-2].rider];

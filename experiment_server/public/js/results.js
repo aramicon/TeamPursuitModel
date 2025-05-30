@@ -14,9 +14,9 @@ let checkbox_toggle_state = true;
 
 let raw_data = [];
 
-let rider_colours = ['#648FFF','#785EF0','#DC267F','#FE6100','#FFB000'];
-let rider_line_styles = ['1, 0','2, 1','5,3','12,3','18,4'];
-let rider_line_stroke_width = [1,1.5,2,2.5,2.8];
+let rider_colours = ['#648FFF','#785EF0','#DC267F','#FE6100','#FFB000','#222222','#FFC0CB'];
+let rider_line_styles = ['1, 0','2, 1','5,3','12,3','18,4','20,5','22,6'];
+let rider_line_stroke_width = [1,1.5,2,2.5,2.8,3,3.2];
 
 var DecimalPrecision = (function() {
     if (Math.sign === undefined) {
@@ -494,6 +494,9 @@ const draw_line_graph = (graph_name_opt) =>{
 
         finish_times.sort(function(a, b){return a-b});  //we will show them sorted
 
+        //donalK25; put them into the data display to use elsewhere
+        raw_data = finish_times;
+
         graph_data_1.x_scale_to = finish_times.length;
 
         graph_data_1.y_scale_from = 0;
@@ -865,6 +868,10 @@ const draw_multi_line_graph = (graph_name_opt) =>{
         let graph_data_4 = {};
         let graph_data_5 = {};
 
+        //donalK25 add two more lines
+        let graph_data_6 = {};
+        let graph_data_7 = {};
+
         switch(graph_name) {
           case "best_in_final_gen_tests":{
             is_raw_data = true;
@@ -976,6 +983,26 @@ const draw_multi_line_graph = (graph_name_opt) =>{
               for (i=0;i<data[4].length;i++){
                 graph_data_5.data.push({x:i, y:data[4][i]});
                 raw_data_row.push([i,data[4][i]]);
+              }
+                raw_data.push(raw_data_row);
+            }
+            if(data[5]){
+              graph_data_6.title = short_titles[5];
+              graph_data_6.data = [];
+              raw_data_row = [];
+              for (i=0;i<data[5].length;i++){
+                graph_data_6.data.push({x:i, y:data[5][i]});
+                raw_data_row.push([i,data[5][i]]);
+              }
+                raw_data.push(raw_data_row);
+            }
+            if(data[6]){
+              graph_data_7.title = short_titles[6];
+              graph_data_7.data = [];
+              raw_data_row = [];
+              for (i=0;i<data[6].length;i++){
+                graph_data_7.data.push({x:i, y:data[6][i]});
+                raw_data_row.push([i,data[6][i]]);
               }
                 raw_data.push(raw_data_row);
             }
@@ -1108,6 +1135,32 @@ const draw_multi_line_graph = (graph_name_opt) =>{
       .y(function(d) { return y(d.y) })
     );
   }
+  if (!jQuery.isEmptyObject(graph_data_6)){
+    //draw second line if data is given
+    svg.append("path")
+    .datum(graph_data_6.data)
+    .attr("fill", "none")
+    .attr("stroke", rider_colours[5])
+    .style("stroke-dasharray", rider_line_styles[5])
+    .attr("stroke-width", rider_line_stroke_width[5])
+    .attr("d", d3.line()
+    .x(function(d) { return x(d.x) })
+    .y(function(d) { return y(d.y) })
+  );
+}
+if (!jQuery.isEmptyObject(graph_data_7)){
+  //draw second line if data is given
+  svg.append("path")
+  .datum(graph_data_7.data)
+  .attr("fill", "none")
+  .attr("stroke", rider_colours[6])
+  .style("stroke-dasharray", rider_line_styles[6])
+  .attr("stroke-width", rider_line_stroke_width[6])
+  .attr("d", d3.line()
+  .x(function(d) { return x(d.x) })
+  .y(function(d) { return y(d.y) })
+);
+}
   // X and Y labels
   svg.append("text")
   .attr("class", "x label")
@@ -1208,6 +1261,38 @@ const draw_multi_line_graph = (graph_name_opt) =>{
           .style("stroke", rider_colours[4]);
 
     svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  }
+  if (!jQuery.isEmptyObject(graph_data_6)){
+    legend_label_offset += (graph_data_5.title.length * legend_average_char_width) + legend_gap_length;
+
+    svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[5]);
+
+    svg.append("line")//making a line for legend
+          .attr("x1", legend_label_offset)
+          .attr("x2", legend_label_offset+legend_line_length)
+          .attr("y1", 4)
+          .attr("y2", 4)
+          .attr("stroke-width", rider_line_stroke_width[5])
+          .style("stroke-dasharray",rider_line_styles[5])
+          .style("stroke", rider_colours[5]);
+
+    svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_6.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  }
+  if (!jQuery.isEmptyObject(graph_data_7)){
+    legend_label_offset += (graph_data_6.title.length * legend_average_char_width) + legend_gap_length;
+
+    svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[6]);
+
+    svg.append("line")//making a line for legend
+          .attr("x1", legend_label_offset)
+          .attr("x2", legend_label_offset+legend_line_length)
+          .attr("y1", 4)
+          .attr("y2", 4)
+          .attr("stroke-width", rider_line_stroke_width[6])
+          .style("stroke-dasharray",rider_line_styles[6])
+          .style("stroke", rider_colours[6]);
+
+    svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_7.title).style("font-size", "15px").attr("alignment-baseline","middle");
   }
   //add a title
   // svg.append("text")
@@ -1373,6 +1458,13 @@ const draw_results = (data) => {
 
 const load_results = (id) =>{
 
+  //highlight the selected row
+  //first need to un-highlight every row..
+  $(".results_row").css( "border", "none" );
+
+  let row_id = "#row_" + id;
+  $(row_id).css( "border", "6px solid green" );
+
   let serverURL = 'http://127.0.0.1:3003/getResult/'+id;
   console.log("get result data from " + serverURL);
   $("#results_info_label").html("Connect to <a href='"+serverURL+"'>server to read single result details</a>");
@@ -1403,7 +1495,7 @@ const draw_table = (data) => {
     let tableHTML = "<table class='table table-striped table-bordered '>";
     tableHTML+="<thead class='thead-dark'><tr><th scope='col'>Select</th><th scope='col'>ID (click to load)</th><th scope='col'>GA Settings Name</th><th scope='col'>Tags</th><th scope='col'>S.Title</th><th scope='col'>Notes</th><th scope='col'>Date</th></tr></thead>"
     for(i=0;i<data.length;i++){
-      tableHTML += "<tr><th scope='row'><div class='form-check'><input class='form-check-input resultsCheckbox' type='checkbox' id='results_checkbox_" + i + "' name='results_checkbox' value='" + data[i]._id + "'></div></th><th scope='row'><button type='button' class='btn btn-light' onclick = 'load_results(\""+ data[i]._id+"\")'>"+ data[i]._id+"</button></th><td>" + data[i].settings_name + "</td><td>" + (data[i].tags?data[i].tags:'') + "</td><td>" + (data[i].short_title?data[i].short_title:'') + "</td><td>" + data[i].notes + "</td><td>"+ data[i].date_created + "</td></tr>";
+      tableHTML += "<tr id = 'row_" + data[i]._id + "' class='results_row'><th scope='row'><div class='form-check'><input class='form-check-input resultsCheckbox' type='checkbox' id='results_checkbox_" + i + "' name='results_checkbox' value='" + data[i]._id + "'></div></th><th scope='row'><button type='button' class='btn btn-light' onclick = 'load_results(\""+ data[i]._id+"\")'>"+ data[i]._id+"</button></th><td>" + data[i].settings_name + "</td><td>" + (data[i].tags?data[i].tags:'') + "</td><td>" + (data[i].short_title?data[i].short_title:'') + "</td><td>" + data[i].notes + "</td><td>"+ data[i].date_created + "</td></tr>";
     }
 
     tableHTML += "</table>";
