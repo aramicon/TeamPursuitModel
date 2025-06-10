@@ -1960,3 +1960,169 @@ four_strong (ran these tests today)
 }
 
 - latex not building now? warum?
+
+- so the frontal area is set to 0.233 
+- this is taken from the bike calculator data, and is actually the frontal area X drag coefficient.
+- if we assume a frontal area of 0.36, this means that the drag coefficient is 0.64722? maybe the frontal area is smaller? 
+
+https://www.timetriallingforum.co.uk/index.php?/topic/31442-frontal-area-and-drag-coefficient-on-tt-bike/
+
+"ACC's range of 0.4 to 0.7, given a default Cd of 0.5 covers a range of 0.20 to 0.35. I think it's safe to say you're in there somewhere"
+
+a drag chart (downloaded) 
+https://www.reddit.com/r/bicycling/comments/m6sal/drag_chart_for_different_bicycle_types/
+
+
+
+- run experiment to gradually increase a rider from very weak to very strong.
+
+
+{"iterations":21,"active":1,"variations":[{"iterations":[21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":0,"property":"threshold_power","values":[50,100,150,200,250,300,350,380,400,420,440,450,480,500,520,550,600,650,700,750,800]},{"iterations":[21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"rider","rider_no":0,"property":"max_power","values":[300,400,500,600,700,800,900,950,1000,1020,1040,1050,1080,1100,1150,1200,1400,1500,1600,1800,2000]}],"experiments":[]}
+
+-- have a bug whereby it thinks the LAST rider is also at the front for the first timestep :-( 
+
+
+50.2,48.05,49.61,35.16,20.54,39.69,33.86,15.08,22.71,20.08,20.88,33.73,17.41,14.46,7.66,12.76,8.68,3.78,2.94,0.84,3.38,0
+
+vary instructions (brittleness?)
+http://127.0.0.1:3003/tpgame.html?source=results&results_id=68365e83cb87822b14864efe&startorder=0,2,1,3&instructions=%5B%5B2,%22effort=9.74%22%5D,%5B43,%22effort=6.6%22%5D,%5B73,%22drop=3%22%5D,%5B113,%22drop=3%22%5D,%5B132,%22drop=2%22%5D,%5B141,%22effort=8.969999999999999%22%5D,%5B149,%22effort=9.35%22%5D,%5B154,%22drop=1%22%5D,%5B172,%22drop=2%22%5D,%5B178,%22drop=3%22%5D,%5B193,%22effort=3.39%22%5D,%5B201,%22effort=9.12%22%5D,%5B217,%22drop=2%22%5D%5D&noise_alterations=%7B%7D&performance_failures=%7B%7D&instruction_noise_choke_under_pressure=%7B%7D&instruction_noise_overeagerness=%7B%7D
+
+adjust [43,"effort=6.6"]
+
+6		255.71 
+6.3		260.376		
+6.35	260.876 		
+6.4		260.001  
+6.45	260.12 
+6.5		244.994 
+6.55	244.584 
+6.575	244.315 
+6.6		244.185 
+6.625	243.881 
+6.65	256.979 
+6.675	258.541 
+6.7		250.117 
+6.75	260.671 
+6.8		284.315 
+6.85	276.844 
+6.9		283.635 
+6.95	271.353 
+7		270.205 
+8		281.965 
+9		285.326 
+10		279.902 
+
+adjust the time
+
+37	289.121 
+38	282.531 
+39	279.613 
+40	277.662 
+41	280.215 
+42	256.472 
+43	244.185 
+44	244.424 
+45	244.666 
+46	259.806 
+47	260.106 
+48	260.051 
+49	259.888 
+50	260.242 
+
+
+
+3,4,5,6,6.3,6.35,6.4,6.45,6.5,6.55,6.575,6.6,6.625,6.65,6.675,6.7,6.75,6.8,6.85,6.9,6.95,7,8,9,10
+
+289.121,278.409,268.426,255.71,260.376,260.876,260.001,260.12,244.994,244.584,244.315,244.185,243.881,256.979,258.541,250.117,260.671,284.315,276.844,283.635,271.353,270.205,281.965,285.326,279.902
+
+
+37,38,39,40,41,42,43,44,45,46,47,48,49,50
+
+289.121,282.531,279.613,277.662,280.215,256.472,244.185,244.424,244.666,259.806,260.106,260.051,259.888,260.242
+
+drop instruction
+63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83
+258.306, 258.306, 258.306, 258.306, 258.306, 258.306, 258.306, 244.185, 244.185, 244.185, 244.185, 244.185, 244.185, 244.185, 244.185, 258.902, 258.902, 258.902, 258.902, 258.902, 258.902 
+
+1, 2, 3
+245.305, 256.252, 244.185  
+
+
+friday 30th... really need to get this draft in 
+
+
+1000,500,100,16,8,4,2,1
+258.3663333,256.4933333,255.7523333,253.487,251.9196667,251.0396667,254.426,266.5363333
+
+
+Fatigue rate	best finish time	lead periods	effort instructions	rider dropped? (y/n)
+0	221.3	4	1	y
+5	225.232	10	6	y
+8	235.406	14	4	n
+12	245.825	14	8	y
+15	254.84	12	8	n
+20	262.234	17	8	y
+30	271.476	16	6	n
+50	282.287	14	3	y
+100	295.494	13	5	y
+200	302.258	9	5	n
+
+0 & 221.3 & 4 & 1 & y
+5 & 225.232 & 10 & 6 & y
+8 & 235.406 & 14 & 4 & n
+12 & 245.825 & 14 & 8 & y
+15 & 254.84 & 12 & 8 & n
+20 & 262.234 & 17 & 8 & y
+30 & 271.476 & 16 & 6 & n
+50 & 282.287 & 14 & 3 & y
+100 & 295.494 & 13 & 5 & y
+200 & 302.258 & 9 & 5 & n
+
+create a mutation-based experiment 
+
+create a frontal area and shelter experiment
+
+- if we reduce or increase the shelter effect 
+
+- have NO shelter?
+
+- create an experiment for crossover ONLY
+"ga_p_crossover": 0.6,
+
+0,0.2,0.4,0.6,0.8,1
+
+- and one for mutation ONLY... this one is awkward as there are a bunch of mutation settings.
+
+"ga_p_shuffle_start": 0.01,
+"ga_p_add_instruction": 0.003,
+"ga_p_delete_instruction": 0.06,
+"ga_p_change_effort": 0.01,
+"ga_p_change_drop": 0.01,
+"ga_p_move_instruction": 0.01,
+"ga_range_to_move_instruction": 6,
+"ga_range_to_change_effort": 2,
+
+
+
+"ga_p_shuffle_start": [0,0.002,0.008,0.01,0.05,0.1,1]
+"ga_p_add_instruction": [0,0.0003,0.001,0.003,0.015,0.3,1]
+"ga_p_delete_instruction": [0,0.006,0.02,0.06,0.15,0.6,1]
+"ga_p_change_effort": [0,0.001,0.008,0.01,0.05,0.1,1]
+"ga_p_change_drop": [0,0.001,0.008,0.01,0.05,0.1,1]
+"ga_p_move_instruction": [0,0.001,0.008,0.01,0.05,0.1,1]
+"ga_range_to_move_instruction": [0,1,3,6,12,20,100]
+"ga_range_to_change_effort": [0,0.2,1,2,3,5,10]
+
+
+
+{"iterations":7,"active":0,"variations":[
+{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_shuffle_start","values":[0,0.002,0.008,0.01,0.05,0.1,1]},
+{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_add_instruction","values":[0,0.0003,0.001,0.003,0.015,0.3,1]},
+{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_delete_instruction","values":[0,0.006,0.02,0.06,0.15,0.6,1]},
+{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_change_effort","values":[0,0.001,0.008,0.01,0.05,0.1,1]},
+{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_change_drop","values":[0,0.001,0.008,0.01,0.05,0.1,1]},
+{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_move_instruction","values":[0,0.001,0.008,0.01,0.05,0.1,1]},
+{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_range_to_move_instruction","values":[0,0.2,1,2,3,5,10]},
+{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_range_to_change_effort","values":[0,0.2,1,2,3,5,10]},
+],
+"experiments":[]}

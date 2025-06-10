@@ -315,7 +315,8 @@ function run_robustness_check(){
         let end_time = new Date().getTime();
         let result_data = e.data;
         console.log("Robustness Test Duration " + (end_time - start_time)/1000 + " seconds.");
-        $("#robustness_check_result").html(result_data);
+        $("#robustness_check_result").html(result_data.message);
+        $("#data_display").val(JSON.stringify(result_data.raw_data));
         //get rid of the thread
         gaWorker.terminate();
       }

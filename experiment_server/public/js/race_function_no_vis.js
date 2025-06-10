@@ -43,7 +43,9 @@ onmessage = function(e) {
   }
   else if(messageType == "run_robustness_check"){
     robustnessresult = run_robustness_check(e.data[1], e.data[2], e.data[3]);
-    result = robustnessresult.message;
+    result = {};
+    result.message = robustnessresult.message;
+    result.raw_data = robustnessresult.raw_data;
   }
   else if(messageType == "run_consistency_check"){
     consistencyresult = run_consistency_check(e.data[1], e.data[2], e.data[3]);
@@ -56,6 +58,36 @@ onmessage = function(e) {
   postMessage(result);
 }
 
+//donalK25: a function to check if two arrays are identical (in terms of values or the object)
+// idea source https://stackoverflow.com/questions/7837456/how-to-compare-arrays-in-javascript
+function areTheseArraysIdentical(array1,array2){
+
+        if (!array1 || !array2){
+            return false;
+          }
+        // if the argument is the same array, we can be sure the contents are same as well
+        if(array1 === array2){
+            return true;
+          }
+        // compare lengths - can save a lot of time
+        if (array1.length != array2.length){
+            return false;
+          }
+        for (var i = 0, l=array1.length; i < l; i++) {
+            // Check if we have nested arrays
+            if (array1[i] instanceof Array && array2[i] instanceof Array) {
+                // recurse into the nested arrays
+                if (!areTheseArraysIdentical(array1[i],array2[i])){
+                    return false;
+                  }
+            }
+            else if (array1[i] != array2[i]) {
+                // Warning - two different object instances will never be equal: {x:20} != {x:20}
+                return false;
+            }
+        }
+        return true;
+}
 
 let newton_lookup = []; //used to store newton() function calculations to avoid tons of needless calls
 
@@ -447,8 +479,6 @@ function randn_bm() {
     race_r.time_taken = race_results.time_taken;
     let original_time_taken = race_r.time_taken;
 
-
-
     // running the race clears the instruction[] array but it is needed for the mutation function
     race_r.instructions = [...race_r.race_instructions_r]; // added Jan 24, was not creating mutants because race_r.instrucitons was [] :-(
 
@@ -458,13 +488,29 @@ function randn_bm() {
     //now set up a population of mutants
     //debugger
     //console.log("Creating mutant clones for " + race_r.instructions);
+
+    let FORBID_DIRECT_CLONES = 1;
+
     for(i=0;i<settings_r.robustness_check_population_size;i++){
       if(race_r.start_order == undefined ){
         debugger;
       }
       let new_mutated_clone = mutate_race(race_r,settings_r,1001);
       //console.log("mutant clone " + i + " " + new_mutated_clone.instructions);
-      population.push(new_mutated_clone);
+      //no not add direct clones?
+
+      let add_new_element = 1;
+      if(FORBID_DIRECT_CLONES == 1){
+        if(areTheseArraysIdentical(original_start_order, new_mutated_clone.start_order) && areTheseArraysIdentical(original_instructions, new_mutated_clone.instructions) ){
+            add_new_element = 0;
+        }
+      }
+      if(add_new_element){
+        population.push(new_mutated_clone);
+      }
+      else{
+          i--; //only increment when a non-clone is added so that we get the number we want
+      }
     }
 
     let one_fifth = Math.floor(settings_r.robustness_check_population_size/5);
@@ -472,9 +518,14 @@ function randn_bm() {
 
     //now run each race and store the results
     let population_stats = [];
+    let population_stats_changes = [];
+    let number_of_clones = 0;
     let race_result = 0;
     let fittest_mutant_time_taken = 100000;
     let unfittest_mutant_time_taken = 0;
+
+    let mutantMaxChanges = 0;
+    let mutantMaxStrategy = "";
 
     for(i=0;i<population.length;i++){
       let load_race_properties = population[i];
@@ -482,9 +533,61 @@ function randn_bm() {
       race_r.start_order = [...load_race_properties.start_order];
       settings_r.run_type = "robustness_check";
 
+      //run the mutant race
       let race_results = run_race(settings_r,race_r,riders_r);
       load_race_properties.time_taken = race_results.time_taken;
       population_stats.push(load_race_properties.time_taken);
+
+
+
+      //count how many changes are in the two instruction sets (original and mutant)
+      let changes_count = 0;
+      //check the start order; add one if they differ
+      let start_order_change = 0;
+      for(let so1 = 0;so1< original_start_order.length; so1++){
+        if(race_r.start_order[so1] != original_start_order[so1]){
+          start_order_change = 1;
+          break;
+        }
+      }
+      if(start_order_change == 1){
+        changes_count++;
+      }
+      //go through the instructions
+      for(icc = 0;icc<original_instructions.length;icc++){
+        //can we find it in the new instructions? loop until the instruction timestep is bigger
+        let found_instruct = 0;
+        for(icc2 = 0; icc2 < race_r.race_instructions_r.length;icc2++){
+          if(race_r.race_instructions_r[icc2][0] > original_instructions[icc][0]){
+            break; //we have gone past the timestep and they are sorted in time, so we can quit
+          }
+          else{
+            if(race_r.race_instructions_r[icc2][0] == original_instructions[icc][0] && race_r.race_instructions_r[icc2][1] == original_instructions[icc][1]){
+              found_instruct = 1;
+              break;
+            }
+          }
+        }
+        if(found_instruct == 0){ //we didn't find an exact match
+          changes_count++;
+        }
+      }
+      //also need to add a change for any instruction added (ones removed will be caught in the above loop)
+      if(race_r.race_instructions_r.length > original_instructions.length){
+        changes_count += (race_r.race_instructions_r.length - original_instructions.length);
+      }
+
+      if(changes_count > mutantMaxChanges){
+        mutantMaxChanges = changes_count;
+        mutantMaxStrategy = "Starting_order: " + JSON.stringify(race_r.start_order) +  ", Instructions " + JSON.stringify(race_r.race_instructions_r);
+      }
+
+      population_stats_changes.push(changes_count);
+
+      //count the direct clones - where there's zero mutation
+      if(changes_count == 0){
+        number_of_clones++;
+      }
 
       if (load_race_properties.time_taken < original_time_taken ){
         //we've found a better solution, so log it?
@@ -510,16 +613,21 @@ function randn_bm() {
     //return the stats
     //work out the average
     let sumOfMutantRaceTimes = 0;
+    let sumOfMutantChanges = 0;
     for(i=0;i<population_stats.length;i++){
       sumOfMutantRaceTimes+=population_stats[i]; //summing the finish times
+      sumOfMutantChanges += population_stats_changes[i];
     }
 
-    let mutantMean =  (sumOfMutantRaceTimes/population_stats.length);
+    let mutantMeanTime =  (sumOfMutantRaceTimes/population_stats.length);
+    let mutantMeanChanges =  (sumOfMutantChanges/population_stats.length);
+
 
     robustness_result={};
 
     robustness_result.original_time_taken = original_time_taken;
-    robustness_result.average_mutant_time_taken = mutantMean;
+    robustness_result.average_mutant_time_taken = mutantMeanTime;
+    robustness_result.average_mutant_changes = mutantMeanChanges; //donalK25: june, added to also track some view of variation
     robustness_result.unfittest_mutant_time_taken = unfittest_mutant_time_taken;
     robustness_result.fittest_mutant_time_taken = fittest_mutant_time_taken;
 
@@ -528,7 +636,7 @@ function randn_bm() {
     let mutantVariance = 0;
     let totalDeviation = 0;
     for(i=0;i<population_stats.length;i++){
-      totalDeviation+=Math.pow((population_stats[i] - mutantMean),2); //summing the finish times
+      totalDeviation+=Math.pow((population_stats[i] - mutantMeanTime),2); //summing the finish times
     }
 
     mutantVariance = totalDeviation/population_stats.length;
@@ -536,20 +644,28 @@ function randn_bm() {
 
     robustness_result.robustness_check_standard_dev = mutantStdDev;
     //add a message
-    robustness_result.message = "Robustness Check:  Original race time taken " + original_time_taken + "<br> Average time of " + population.length + " mutants = " + mutantMean + ", std. Dev. " + mutantStdDev;
+    robustness_result.message = "<strong>Random Mutant Robustness Check</strong><br>Original race time taken " + original_time_taken;
+    robustness_result.message += "<br> Mutants Created " + population.length;
+    robustness_result.message += "<br> No. of direct clones " + number_of_clones;
+    robustness_result.message += "<br> Mean instruct. changes made = " + mutantMeanChanges;
+    robustness_result.message += "<br> Max. instruct. changes made = " + mutantMaxChanges + " Strategy: " + mutantMaxStrategy;
+    robustness_result.message += "<br> Avg. time " + mutantMeanTime;
+    robustness_result.message += "<br> Std. Dev. " + mutantStdDev;
+
 
     //debugger
     //donalK24: new robustness measure, mutate each instruction a fixed number of times and measure the effect of each
-    let ga_robustness_check_mutation_per_instruction = 0;
-    if (settings_r.ga_robustness_check_mutation_per_instruction){
-      ga_robustness_check_mutation_per_instruction = settings_r.ga_robustness_check_mutation_per_instruction;
+    let ga_robustness_check_mutation_per_instruction_random = 0;
+    if (settings_r.ga_robustness_check_mutation_per_instruction_random){
+      ga_robustness_check_mutation_per_instruction_random = settings_r.ga_robustness_check_mutation_per_instruction_random;
     }
-    if(ga_robustness_check_mutation_per_instruction > 0){
+    /* ************* Robustness checks for each instruction: 2 versions due to history of development************* */
+    if(ga_robustness_check_mutation_per_instruction_random > 0){
         let robustness_single_mutation_times = [];
         let robustness_single_mutation_mutations = [];
         //get back to the original version of the race (unmutated)
         race_r.race_instructions_r = [...original_instructions];
-        race_r.instrutions = [...original_instructions];
+        race_r.instructions = [...original_instructions];
         race_r.start_order = [...original_start_order];
         settings_r.run_type = "robustness_check";
         race_r.time_taken = original_time_taken;
@@ -562,15 +678,15 @@ function randn_bm() {
           let original_instruction = race_r.race_instructions_r[ii];
           already_run[JSON.stringify(original_instruction)] = 1;
 
-          for(let ix = 0; ix < ga_robustness_check_mutation_per_instruction; ix++){
+          for(let ix = 0; ix < ga_robustness_check_mutation_per_instruction_random; ix++){
             //need to reset the instructions each time
-            //race_r.instrutions_r = [...original_instructions];
+            //race_r.instructions_r = [...original_instructions];
             let mutated_instruction = mutate_instruction(settings_r,race_r,race_r.race_instructions_r[ii]);
             //check if the timestep contains a decimal point
             if(String(mutated_instruction[0]).indexOf(".") >= 0){
               debugger
             }
-            //run  if NOT already run
+            //run  if NOT already run... only run unique mutations?
             if(JSON.stringify(mutated_instruction) in already_run){
               //console.log("robustness variation already ran " + JSON.stringify(mutated_instruction));
             }
@@ -586,37 +702,164 @@ function randn_bm() {
           }
         }
 
+        let average_single_mutation = 0;
+        let sum_mutation_times = 0;
+        let sum_percentage_time_worsens_total = 0;
+        //note that the number of actual mutations tried will vary as there may be duplicates (mostly with DROPs)
+        for(let iy = 0;iy<robustness_single_mutation_times.length;iy++){
+          sum_mutation_times += robustness_single_mutation_times[iy];
+          let time_worsens = robustness_single_mutation_times[iy]-original_time_taken;
+          let time_worsens_p = 0;
+          if(time_worsens < 0){
+            time_worsens = 0;
+          }
+          sum_percentage_time_worsens_total += (robustness_single_mutation_times[iy]/original_time_taken);
+        }
+        console.log("!!  Robustness robustness_single_mutation_times !!");
+        console.log(robustness_single_mutation_times);
+        console.log(robustness_single_mutation_mutations);
+
+        average_single_mutation = DecimalPrecision.round(sum_mutation_times / robustness_single_mutation_times.length,2);
+        let average_percentage_time_worsens_total = DecimalPrecision.round(sum_percentage_time_worsens_total / robustness_single_mutation_times.length,2);
+        robustness_result.robustness_single_mutation_qty = robustness_single_mutation_times.length;
+        robustness_result.robustness_single_mutation_average = average_single_mutation;
+        robustness_result.robustness_single_mutation_worsening_effect_multiplier = average_percentage_time_worsens_total;
+        robustness_result.robustness_single_mutation_times = JSON.stringify(robustness_single_mutation_times);
+
+        //append to the message (displays if you run it from the GA page)
+        robustness_result.message += "<br><br><strong>Instruction Mutation tests (version 1, RANDOM)</strong>";
+        robustness_result.message += "<br>Total variations run: " + robustness_result.robustness_single_mutation_qty;
+        robustness_result.message += "<br>Average race time: " + robustness_result.robustness_single_mutation_average;
+        robustness_result.message += "<br>Average % that times worsens: " + robustness_result.robustness_single_mutation_worsening_effect_multiplier;
+        robustness_result.message += "<br>Times: " + robustness_result.robustness_single_mutation_times;
+    }
+
+    //donalK25: a second kind of instruction-by-instruction systematic search that uses a fixed schedule of changes yyyyyyy
+
+    let ga_robustness_check_mutation_per_instruction_systematic = 0;
+    if (settings_r.ga_robustness_check_mutation_per_instruction_systematic){
+      ga_robustness_check_mutation_per_instruction_systematic = settings_r.ga_robustness_check_mutation_per_instruction_systematic;
+    }
+
+    if(ga_robustness_check_mutation_per_instruction_systematic > 0){
+      let robustness_single_mutation_times_systematic = [];
+      let robustness_single_mutation_mutations_systematic = [];
+      //get back to the original version of the race (unmutated)
+      race_r.race_instructions_r = [...original_instructions];
+      race_r.instructions = [...original_instructions];
+      race_r.start_order = [...original_start_order];
+      settings_r.run_type = "robustness_check";
+      race_r.time_taken = original_time_taken;
+
+      //get the variations to use
+      let systematic_effort_values = [-1,1];
+      let systematic_drop_values = [1,2,3];
+      let systematic_timestep_values = [-1,1];
+
+      //check for global property versions (once tested)
+      if (settings_r.systematic_effort_values){
+        systematic_effort_values = settings_r.systematic_effort_values;
+      }
+      if (settings_r.systematic_drop_values){
+        systematic_drop_values = settings_r.systematic_drop_values;
+      }
+      if (settings_r.systematic_timestep_values){
+        systematic_timestep_values = settings_r.systematic_timestep_values;
+      }
+
+      //go through each instruction
+      let variations_set = []; // set up the entire set of variations on the theme
+      //format of variations_set element [type,instruction num,new value,start_order,instructions]
+      for(let ii = 0; ii<race_r.race_instructions_r.length;ii++){
+        //do it a number of times
+
+        let original_instruction = race_r.race_instructions_r[ii];
+
+        //check the instruction type
+        let inst = race_r.race_instructions_r[ii][1].split("=");
+        let instruction_type = inst[0];
+        let instruction_value = parseFloat(inst[1]);
+        if(instruction_type == "drop"){
+          for(ii_d = 0; ii_d<systematic_drop_values.length; ii_d++){
+            let new_start_order =  [...race_r.start_order];
+            let new_instructions =  race_r.instructions.map(a => ([...a]));
+            new_instructions[ii][1] = "drop=" + systematic_drop_values[ii_d];
+            variations_set.push(["drop",ii,systematic_drop_values[ii_d],[...new_start_order],[...new_instructions]]);
+          }
+        }
+        else if(instruction_type == "effort"){
+        //  debugger;
+          for(ii_e = 0; ii_e<systematic_effort_values.length; ii_e++){
+            let new_start_order =  [...race_r.start_order];
+            let new_instructions =  race_r.instructions.map(a => ([...a]));
+            let new_value = "effort=" + (instruction_value + systematic_effort_values[ii_e]);
+            new_instructions[ii][1] = new_value;
+            variations_set.push(["effort",ii,systematic_effort_values[ii_e],[...new_start_order],[...new_instructions]]);
+          }
+        }
+        //timestep variations
+        for(ii_t = 0; ii_t<systematic_timestep_values.length; ii_t++){
+          let new_start_order =  [...race_r.start_order];
+          let new_instructions =  race_r.instructions.map(a => ([...a]));
+          new_instructions[ii][0] = (new_instructions[ii][0] + systematic_timestep_values[ii_t]);
+          variations_set.push(["timestep",ii,systematic_timestep_values[ii_t],[...new_start_order],[...new_instructions]]);
+        }
+      }
+
+      console.log("*** SYSTEMATICK robustness variations ****");
+      console.log(JSON.stringify(variations_set));
+
+      //Now RUN the variations
+      for(let ix = 0; ix < variations_set.length; ix++){
+
+        //  debugger;
+          race_r.race_instructions_r = [...variations_set[ix][4]];
+          race_r.instructions = [...variations_set[ix][4]];
+          race_r.start_order = [...variations_set[ix][3]];
+
+          let race_results = run_race(settings_r,race_r,riders_r);
+
+          robustness_single_mutation_times_systematic.push(race_results.time_taken);
+          //robustness_single_mutation_mutations_systematic.push(JSON.stringify(original_instruction) + " -> " + JSON.stringify(mutated_instruction));
+          //reset to the original instruction
+          //race_r.race_instructions_r[ii] = original_instruction;
+      }
+
       let average_single_mutation = 0;
       let sum_mutation_times = 0;
       let sum_percentage_time_worsens_total = 0;
       //note that the number of actual mutations tried will vary as there may be duplicates (mostly with DROPs)
-      for(let iy = 0;iy<robustness_single_mutation_times.length;iy++){
-        sum_mutation_times += robustness_single_mutation_times[iy];
-        let time_worsens = robustness_single_mutation_times[iy]-original_time_taken;
+      for(let iy = 0;iy<robustness_single_mutation_times_systematic.length;iy++){
+        sum_mutation_times += robustness_single_mutation_times_systematic[iy];
+        let time_worsens = robustness_single_mutation_times_systematic[iy]-original_time_taken;
         let time_worsens_p = 0;
         if(time_worsens < 0){
           time_worsens = 0;
         }
-        sum_percentage_time_worsens_total += (robustness_single_mutation_times[iy]/original_time_taken);
+        sum_percentage_time_worsens_total += (robustness_single_mutation_times_systematic[iy]/original_time_taken);
       }
-      console.log("!!  Robustness robustness_single_mutation_times !!");
-      console.log(robustness_single_mutation_times);
-      console.log(robustness_single_mutation_mutations);
+      console.log("!!  Robustness robustness_single_mutation_times_systematic !!");
+      console.log(robustness_single_mutation_times_systematic);
+      //console.log(robustness_single_mutation_mutations_systematic);
 
-      average_single_mutation = DecimalPrecision.round(sum_mutation_times / robustness_single_mutation_times.length,2);
-      let average_percentage_time_worsens_total = DecimalPrecision.round(sum_percentage_time_worsens_total / robustness_single_mutation_times.length,2);
-      robustness_result.robustness_single_mutation_qty = robustness_single_mutation_times.length;
+      average_single_mutation = DecimalPrecision.round(sum_mutation_times / robustness_single_mutation_times_systematic.length,2);
+      let average_percentage_time_worsens_total = DecimalPrecision.round(sum_percentage_time_worsens_total / robustness_single_mutation_times_systematic.length,2);
+      robustness_result.robustness_single_mutation_qty = robustness_single_mutation_times_systematic.length;
       robustness_result.robustness_single_mutation_average = average_single_mutation;
       robustness_result.robustness_single_mutation_worsening_effect_multiplier = average_percentage_time_worsens_total;
-      robustness_result.robustness_single_mutation_times = JSON.stringify(robustness_single_mutation_times);
+      robustness_result.robustness_single_mutation_times_systematic = JSON.stringify(robustness_single_mutation_times_systematic);
 
       //append to the message (displays if you run it from the GA page)
-      robustness_result.message += "<br>Instruction Mutation tests";
+      robustness_result.message += "<br><br><strong>Instruction Mutation tests (version 2, SYSTEMATICK)</strong>";
       robustness_result.message += "<br>Total variations run: " + robustness_result.robustness_single_mutation_qty;
       robustness_result.message += "<br>Average race time: " + robustness_result.robustness_single_mutation_average;
       robustness_result.message += "<br>Average % that times worsens: " + robustness_result.robustness_single_mutation_worsening_effect_multiplier;
-      robustness_result.message += "<br>Times: " + robustness_result.robustness_single_mutation_times;
-    }
+      robustness_result.message += "<br>Times: " + robustness_result.robustness_single_mutation_times_systematic;
+
+      robustness_result.raw_data = variations_set;
+      }
+
+
     console.log("!!robustness_result!!");
     console.log(robustness_result);
     return robustness_result;

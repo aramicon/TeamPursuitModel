@@ -2115,6 +2115,13 @@ create a frontal area and shelter experiment
 
 
 
+
+
+
+
+
+
+
 {"iterations":7,"active":0,"variations":[
 {"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_shuffle_start","values":[0,0.002,0.008,0.01,0.05,0.1,1]},
 {"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_add_instruction","values":[0,0.0003,0.001,0.003,0.015,0.3,1]},
@@ -2123,6 +2130,40 @@ create a frontal area and shelter experiment
 {"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_change_drop","values":[0,0.001,0.008,0.01,0.05,0.1,1]},
 {"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_move_instruction","values":[0,0.001,0.008,0.01,0.05,0.1,1]},
 {"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_range_to_move_instruction","values":[0,0.2,1,2,3,5,10]},
-{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_range_to_change_effort","values":[0,0.2,1,2,3,5,10]},
+{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_range_to_change_effort","values":[0,0.2,1,2,3,5,10]}
 ],
 "experiments":[]}
+
+{"iterations":7,
+    "active":0,
+	"variations":
+	    [{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_shuffle_start","values":[0,0.002,0.008,0.01,0.05,0.1,1]},{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_add_instruction","values":[0,0.0003,0.001,0.003,0.015,0.3,1]},{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_delete_instruction","values":[0,0.006,0.02,0.06,0.15,0.6,1]},{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_change_effort","values":[0,0.001,0.008,0.01,0.05,0.1,1]},{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_change_drop","values":[0,0.001,0.008,0.01,0.05,0.1,1]},{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_p_move_instruction","values":[0,0.001,0.008,0.01,0.05,0.1,1]},{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_range_to_move_instruction","values":[0,0.2,1,2,3,5,10]},{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"ga_range_to_change_effort","values":[0,0.2,1,2,3,5,10]}],
+	"experiments":[{"client_id":"86.45.238.255_2025_4_28_13_4_4","iteration":7,"status":"active"}]}
+	
+	
+	{"iterations":6,"active":1,"variations":[{"iterations":[6,5,4,3,2,1],"type":"global","property":"ga_p_crossover","values":[0,0.2,0.4,0.6,0.8,1]}],"experiments":[{"client_id":"86.45.238.255_2025_4_28_13_4_4","iteration":6,"status":"complete"},{"client_id":"86.45.238.255_2025_4_28_13_4_4","iteration":5,"status":"complete"},{"client_id":"86.45.238.255_2025_4_28_13_4_4","iteration":4,"status":"active"}]}
+	
+
+generations test
+
+2,5,10,20,50,100,200,500
+
+265.2666667,261.4346667,258.5,254.877,250.6713333,247.9193333,245.1376667,242.35
+
+- updated mutation rates based on the above experiment results 
+
+"ga_p_shuffle_start": 0.008,
+"ga_p_add_instruction": 0.001,
+"ga_p_delete_instruction": 0.02,
+"ga_p_change_effort": 0.008,
+"ga_p_change_drop": 0.008,
+"ga_p_move_instruction": 0.008,
+"ga_range_to_move_instruction": 3,
+"ga_range_to_change_effort": 1,
+
+- should also set crossover rate to 0.4
+
+- run some tests on  "ga_percentage_of_random_new_strategies_to_inject_each_gen": 0,
+
+{"iterations":11,"active":0,"variations":[{"iterations":[11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"ga_percentage_of_random_new_strategies_to_inject_each_gen","values":[0,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1]}],"experiments":[]}
+

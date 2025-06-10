@@ -1,0 +1,105 @@
+-- June 4 2025.
+
+- starting on Noise chapter.
+
+- added text from Overleaf paper
+
+- fixed issues with the grid of figures, but did that cause a problem elsewhere, 
+
+-- issue was a clash between 
+\usepackage{caption}
+\usepackage{subcaption}
+
+and
+
+\usepackage{subfig}
+
+- image refs not working, though other side-by-side images do display.
+
+- do the citations work?
+
+- citations ok, image refs nokay
+
+- change all cite to parencite in the new chapter 
+
+
+- can is use ground effect as an example of when a design that performs 'well' shoudl not be used due to other issues in the wider context?
+
+"The Lotus 79, on the other hand, went on to win six races and the world championship for Mario Andretti and gave teammate Ronnie Peterson a posthumous second place, demonstrating just how much of an advantage the cars had. In the following years other teams copied and improved on the Lotus until cornering speeds became dangerously high, resulting in several severe accidents in 1982; flat undersides became mandatory for 1983.[14] Part of the danger of relying on ground effects to corner at high speeds is the possibility of the sudden removal of this force; if the underside of the car contacts the ground, the flow is constricted too much, resulting in almost total loss of any ground effects. If this occurs in a corner where the driver is relying on this force to stay on the track, its sudden removal can cause the car to abruptly lose most of its traction and skid off the track."
+
+
+- robustness paper/section:
+
+- 15 pages in Springer format, by June 26th,
+
+- percolation and perturbation, useful context?
+
+- notes from meeting June 5th 2025
+
+- 1: create a 15 page paper on robustness material by June 26th 
+
+- 2: email Colm next Monday with a shell of the document, and ask about meeting later next week about it. 
+
+- 3: research the conference. ECTA. https://ecta.scitevents.org/ October 22-24, Marbella, Spain. 
+
+- 
+
+
+- starting paper. what email address should I use? My UG one is not a-working, so I can't use that to sign up?
+
+-- Munday work on robustness 
+
+- 1: add code to count and report on the number of mutant clones that actually have no mutations : compare their instructions and starting orders.
+
+- count any change to the start order as 1 change. 
+
+- checking to see if an array is inside an array usign includes() doesn't seem to do what I want it to, returns False, e.g. is [1,1] in [[1,1],[2,2]]
+
+- write my own loop here?
+
+- ok, it now counts changes, but I needs to test this. 
+
+- also, this seems wrong: Average % that times worsens: 1
+
+- should I keep or remove the clones? or only include actual variants? I think the latter? But do they need to be UNIQUE variants? or could i have copies, but not clones?
+
+- adding new properties to use for the systematic instruction-by-instruction set of variations 
+
+    "ga_robustness_check_mutation_per_instruction_systematic":1,
+    "systematic_effort_values":[-5,-4,-3,-2,-1,-0.5,-0.25,-0.125,0,0.125,0.25,0.5,1,2,3,4,5],
+    "systematic_drop_values":[0,1,2,3],
+    "systematic_timestep_values":[-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8],
+		
+		
+- should I be varying the starting order????
+- should be an option?? 
+
+
+archive of our own 
+spy x family
+
+- issue when trying to create the new arrays, getting confused, I guess my [...x] method doesdn't work 2 levels deep, so i need to use 
+https://stackoverflow.com/questions/597588/how-do-you-clone-an-array-of-objects-in-javascript
+const newArray = myArray.map(a => ({...a}));
+	
+-- that seemed to work, but does the test work in general?
+0,1,2,3
+[[5,"effort=8"]]
+
+
+variations 
+[instruction num,new value,start_order,instructions]
+
+[[0,1,[0,1,2,3],[{"0":5,"1":"effort=7"}]],
+[0,2,[0,1,2,3],[{"0":5,"1":"effort=9"}]],
+[0,1,[0,1,2,3],[{"0":4,"1":"effort=8"}]],
+[0,2,[0,1,2,3],[{"0":6,"1":"effort=8"}]]]
+
+- inclue the type, and run for the full set of schedules 
+- hmmm
+Average % that times worsens: 1.01
+
+[["drop",0,-5,[0,1,2,3],[[5,"effort=3"]]],["drop",0,-4,[0,1,2,3],[[5,"effort=4"]]],["drop",0,-3,[0,1,2,3],[[5,"effort=5"]]],["drop",0,-2,[0,1,2,3],[[5,"effort=6"]]],["drop",0,-1,[0,1,2,3],[[5,"effort=7"]]],["drop",0,-0.5,[0,1,2,3],[[5,"effort=7.5"]]],["drop",0,-0.25,[0,1,2,3],[[5,"effort=7.75"]]],["drop",0,-0.125,[0,1,2,3],[[5,"effort=7.875"]]],["drop",0,0,[0,1,2,3],[[5,"effort=8"]]],["drop",0,0.125,[0,1,2,3],[[5,"effort=8.125"]]],["drop",0,0.25,[0,1,2,3],[[5,"effort=8.25"]]],["drop",0,0.5,[0,1,2,3],[[5,"effort=8.5"]]],["drop",0,1,[0,1,2,3],[[5,"effort=9"]]],["drop",0,2,[0,1,2,3],[[5,"effort=10"]]],["drop",0,3,[0,1,2,3],[[5,"effort=11"]]],["drop",0,4,[0,1,2,3],[[5,"effort=12"]]],["drop",0,5,[0,1,2,3],[[5,"effort=13"]]],["drop",0,-8,[0,1,2,3],[[-3,"effort=8"]]],["drop",0,-7,[0,1,2,3],[[-2,"effort=8"]]],["drop",0,-6,[0,1,2,3],[[-1,"effort=8"]]],["drop",0,-5,[0,1,2,3],[[0,"effort=8"]]],["drop",0,-4,[0,1,2,3],[[1,"effort=8"]]],["drop",0,-3,[0,1,2,3],[[2,"effort=8"]]],["drop",0,-2,[0,1,2,3],[[3,"effort=8"]]],["drop",0,-1,[0,1,2,3],[[4,"effort=8"]]],["drop",0,0,[0,1,2,3],[[5,"effort=8"]]],["drop",0,1,[0,1,2,3],[[6,"effort=8"]]],["drop",0,2,[0,1,2,3],[[7,"effort=8"]]],["drop",0,3,[0,1,2,3],[[8,"effort=8"]]],["drop",0,4,[0,1,2,3],[[9,"effort=8"]]],["drop",0,5,[0,1,2,3],[[10,"effort=8"]]],["drop",0,6,[0,1,2,3],[[11,"effort=8"]]],["drop",0,7,[0,1,2,3],[[12,"effort=8"]]],["drop",0,8,[0,1,2,3],[[13,"effort=8"]]]]
+
+
+-- have to make sure that no instruction 'overtakes' or 'undertakes' another, or goes over or under maximum allowed values
