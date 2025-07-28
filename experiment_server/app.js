@@ -382,6 +382,56 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
       });
     });
 
+    app.get('/best_in_gen_robustness_test_times/:id/:gen',cors(corsOptions), (req,res)=>{
+      const resultID = req.params.id;
+      const generationID = req.params.gen;
+
+      console.log("best_in_gen_robustness_test_times with ids " + resultID + " and generation " + generationID);
+      let ids = JSON.parse(resultID);
+      let ids_mongo = [];
+      for(let i = 0; i < ids.length;i++){
+        ids_mongo.push(db.getPrimaryKey(ids[i]));
+      }
+      db.getDB().collection(collectionResults).find({_id : {$in: ids_mongo}},{_id:1,'ga_results':1}).toArray((err,documents)=>{
+        if(err){
+          console.log("error getting results using ID " + err);
+        }
+        else{
+          //console.log(documents);
+          console.log(documents.length + " docs");
+          let return_data = [];
+
+          //aim is to get the robustness data for the selected generation
+
+          for(let i = 0; i < documents.length; i++){
+            let return_data_element = {};
+            return_data_element.experiment_id = documents[i]._id;
+
+            return_data_element.mutant_times = [];
+            return_data_element.variation_times = [];
+            return_data_element.best_race_time = 0;
+            let ga_results = JSON.parse(documents[i].ga_results);
+
+            //get the specified generation OR the LAST one if -1 is sent in
+
+            let selected_generationID = generationID;
+            if(generationID == -1){
+              selected_generationID = ga_results.generations.length - 1;
+            }
+            return_data_element.selected_generation = selected_generationID;
+            return_data_element.best_race_time = ga_results.generations[selected_generationID].best_race_time;
+            return_data_element.mutant_times =  ga_results.generations[selected_generationID].robustness_mutation_results.mutant_times;
+            return_data_element.variation_times = ga_results.generations[selected_generationID].robustness_variation_results.robustness_single_mutation_times_systematic;
+            console.log(">> returning robustness mutant and variant times <<");
+            return_data.push(return_data_element);
+          }
+
+          res.json(return_data);
+        }
+      });
+    });
+
+
 
 
 

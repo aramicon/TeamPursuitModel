@@ -21,6 +21,7 @@ let DEFAULT_RECOVERY_AMOUNT_AFTER_FATIGUE = 12;
 //store the sequence of normal_distribution_output_inflation_percentage values to check them
 //let normal_distribution_output_inflation_percentage_array = [];
 // ** var to check the max performance failure
+// why are these in the global scope? they will not be reset from race to race?
 let max_performance_failure_percentage = 0;
 let max_fatigue_rise = 0;
 let max_endurance_fatigue_level = 0;
@@ -174,6 +175,12 @@ function randn_bm() {
       current_fatigue_max = current_fatigue; //current_fatigue/current_fatigue_max will now max out at 1
     }
 
+    //donalK25, try the same for the accumulated fatigue...
+    if (accumulated_fatigue > accumulated_fatigue_max){
+      accumulated_fatigue_max = accumulated_fatigue;
+      //console.log("***dk25: adjusting accumulated_fatigue_max  since it is < accumulated_fatigue");
+    }
+
     let rider_performance_failure__percentage_amount = (
       (
         (
@@ -185,6 +192,10 @@ function randn_bm() {
       )
       * (rider_performance_failure_multiplier/rider_performance_failure_multiplier_max)
     );
+
+    if (rider_performance_failure__percentage_amount > 1){
+      debugger;
+    }
     //console.log("rider_performance_failure__percentage_amount =  " + rider_performance_failure__percentage_amount + " * " + performance_failure_base_max_percentage + " = " + (rider_performance_failure__percentage_amount*performance_failure_base_max_percentage));
     rider_performance_failure__percentage_amount  = rider_performance_failure__percentage_amount*performance_failure_base_max_percentage;
 
@@ -199,23 +210,23 @@ function randn_bm() {
       let p1 = Math.random();
       let amount1 = (rider_performance_failure__percentage_amount*p1);
 
-      if (amount1 > max_performance_failure_percentage){
-        max_performance_failure_percentage = amount1;
-        //log info if this is really high
-        console.log("####****max_performance_failure_percentage breached****####");
-        console.log("max_performance_failure_percentage " + max_performance_failure_percentage
-        + " effort " + effort + " effort_max " + effort_max
-        + " current_fatigue " + current_fatigue + " current_fatigue_max " + current_fatigue_max
-        + "\n accumulated_fatigue " +  accumulated_fatigue
-        + "\n accumulated_fatigue_max " +  accumulated_fatigue_max
-        + " rider_performance_failure_multiplier " + rider_performance_failure_multiplier
-        + " rider_performance_failure_multiplier_max " + rider_performance_failure_multiplier_max
-        + "\n performance_failure_base_max_percentage " + performance_failure_base_max_percentage
-        + " performance_failure_amount_exponent " + performance_failure_amount_exponent
-        + "\n performance_failure_effort_importance_multiplier " + performance_failure_effort_importance_multiplier
-        + " failure_type " + failure_type);
-
-      }
+      // if (amount1 > max_performance_failure_percentage){
+      //   max_performance_failure_percentage = amount1;
+      //   //log info if this is really high
+      //   console.log("####****max_performance_failure_percentage breached****####");
+      //   console.log("max_performance_failure_percentage " + max_performance_failure_percentage
+      //   + " rider_performance_failure__percentage_amount " +        rider_performance_failure__percentage_amount + " p1 " + p1 + " effort " + effort + " effort_max " + effort_max
+      //   + " current_fatigue " + current_fatigue + " current_fatigue_max " + current_fatigue_max
+      //   + "\n accumulated_fatigue " +  accumulated_fatigue
+      //   + "\n accumulated_fatigue_max " +  accumulated_fatigue_max
+      //   + " rider_performance_failure_multiplier " + rider_performance_failure_multiplier
+      //   + " rider_performance_failure_multiplier_max " + rider_performance_failure_multiplier_max
+      //   + "\n performance_failure_base_max_percentage " + performance_failure_base_max_percentage
+      //   + " performance_failure_amount_exponent " + performance_failure_amount_exponent
+      //   + "\n performance_failure_effort_importance_multiplier " + performance_failure_effort_importance_multiplier
+      //   + " failure_type " + failure_type);
+      //
+      // }
       //console.log("Performance failure, adjusting from deterministic " + rider_performance_failure__percentage_amount + "to randomised " + amount1);
       return DecimalPrecision.round(amount1,4);
 
@@ -470,6 +481,8 @@ function randn_bm() {
 
   function run_robustness_check(settings_r, race_r, riders_r){
 
+    let robustness_result={};
+
     //create a population of mutations and measure how much they vary
     let population = [];
 
@@ -521,8 +534,13 @@ function randn_bm() {
     let population_stats_changes = [];
     let number_of_clones = 0;
     let race_result = 0;
-    let fittest_mutant_time_taken = 100000;
-    let unfittest_mutant_time_taken = 0;
+    let best_mutant_time_taken = 100000;
+    let best_mutant_start_order = [];
+    let best_mutant_instructions = [];
+    let worst_mutant_time_taken = 0;
+    let worst_mutant_start_order = [];
+    let worst_mutant_instructions = [];
+
 
     let mutantMaxChanges = 0;
     let mutantMaxStrategy = "";
@@ -537,8 +555,6 @@ function randn_bm() {
       let race_results = run_race(settings_r,race_r,riders_r);
       load_race_properties.time_taken = race_results.time_taken;
       population_stats.push(load_race_properties.time_taken);
-
-
 
       //count how many changes are in the two instruction sets (original and mutant)
       let changes_count = 0;
@@ -589,25 +605,29 @@ function randn_bm() {
         number_of_clones++;
       }
 
-      if (load_race_properties.time_taken < original_time_taken ){
-        //we've found a better solution, so log it?
-        console.log("Robustness check found better solution");
-        console.log("Start Order " + race_r.start_order);
-        console.log("Instructions " + load_race_properties.instructions);
-      }
+      // if (load_race_properties.time_taken < original_time_taken ){
+      //   //we've found a better solution, so log it?
+      //   console.log("Robustness check found better solution");
+      //   console.log("Start Order " + race_r.start_order);
+      //   console.log("Instructions " + load_race_properties.instructions);
+      // }
 
       //update best and worst if needs be
-      if (load_race_properties.time_taken > unfittest_mutant_time_taken){
-        unfittest_mutant_time_taken = load_race_properties.time_taken;
+      if (load_race_properties.time_taken > worst_mutant_time_taken){
+        worst_mutant_time_taken = load_race_properties.time_taken;
+        worst_mutant_start_order = [...race_r.start_order];
+        worst_mutant_instructions = [...load_race_properties.instructions];
       }
-      if (load_race_properties.time_taken < fittest_mutant_time_taken){
-        fittest_mutant_time_taken = load_race_properties.time_taken;
+      if (load_race_properties.time_taken < best_mutant_time_taken){
+        best_mutant_time_taken = load_race_properties.time_taken;
+        best_mutant_start_order = [...race_r.start_order];
+        best_mutant_instructions = [...load_race_properties.instructions];
       }
 
-      if (i % one_fifth == 0){
-        console.log("robustness check " + one_fifth_count*25 + "% done");
-        one_fifth_count++;
-      }
+      // if (i % one_fifth == 0){
+      //   console.log("robustness check " + one_fifth_count*25 + "% done");
+      //   one_fifth_count++;
+      // }
     }
 
     //return the stats
@@ -622,35 +642,68 @@ function randn_bm() {
     let mutantMeanTime =  (sumOfMutantRaceTimes/population_stats.length);
     let mutantMeanChanges =  (sumOfMutantChanges/population_stats.length);
 
-
-    robustness_result={};
-
-    robustness_result.original_time_taken = original_time_taken;
-    robustness_result.average_mutant_time_taken = mutantMeanTime;
-    robustness_result.average_mutant_changes = mutantMeanChanges; //donalK25: june, added to also track some view of variation
-    robustness_result.unfittest_mutant_time_taken = unfittest_mutant_time_taken;
-    robustness_result.fittest_mutant_time_taken = fittest_mutant_time_taken;
-
     //loop through again knowing the mean to work out the standard deviation
     let mutantStdDev = 0;
     let mutantVariance = 0;
     let totalDeviation = 0;
+    let robustness_count_of_slower_mutants = 0;
+    let robustness_percentage_of_equal_time_mutants = 0;
+    let robustness_percentage_of_faster_mutants = 0;
+    let sum_of_mutant_time_differences = 0;
+    let sum_of_mutant_percentage_differences = 0;
+
     for(i=0;i<population_stats.length;i++){
-      totalDeviation+=Math.pow((population_stats[i] - mutantMeanTime),2); //summing the finish times
+      totalDeviation+=Math.pow((population_stats[i] - mutantMeanTime),2);
+      if(population_stats[i] > original_time_taken){
+        robustness_count_of_slower_mutants++;
+      }
+      else if(population_stats[i] < original_time_taken){
+        robustness_percentage_of_faster_mutants++;
+      }
+      else{
+        robustness_percentage_of_equal_time_mutants++;
+      }
+      sum_of_mutant_time_differences += Math.abs(population_stats[i] - original_time_taken);
+      sum_of_mutant_percentage_differences += Math.abs((population_stats[i] - original_time_taken)/original_time_taken);
     }
 
     mutantVariance = totalDeviation/population_stats.length;
     mutantStdDev = Math.sqrt(mutantVariance);
 
-    robustness_result.robustness_check_standard_dev = mutantStdDev;
+    robustness_result.mutations = {};
+    robustness_result.mutations.original_time_taken = original_time_taken;
+    robustness_result.mutations.average_mutant_time_taken = mutantMeanTime;
+    robustness_result.mutations.average_mutant_changes = mutantMeanChanges; //donalK25: june, added to also track some view of variation
+    robustness_result.mutations.worst_mutant_time_taken = worst_mutant_time_taken;
+    robustness_result.mutations.best_mutant_time_taken = best_mutant_time_taken;
+    robustness_result.mutations.robustness_check_standard_dev = mutantStdDev;
+    robustness_result.mutations.robustness_percentage_of_slower_mutants = DecimalPrecision.round(robustness_count_of_slower_mutants/population_stats.length,2);
+    robustness_result.mutations.robustness_percentage_of_equal_time_mutants = DecimalPrecision.round(robustness_percentage_of_equal_time_mutants/population_stats.length,2);
+    robustness_result.mutations.robustness_percentage_of_faster_mutants = DecimalPrecision.round(robustness_percentage_of_faster_mutants/population_stats.length,2);
+    robustness_result.mutations.robustness_mutant_average_time_difference = sum_of_mutant_time_differences/population_stats.length;
+    robustness_result.mutations.robustness_mutation_average_percentage_difference = sum_of_mutant_percentage_differences/population_stats.length;
+    robustness_result.mutations.best_mutant_start_order = best_mutant_start_order;
+    robustness_result.mutations.best_mutant_instructions = best_mutant_instructions;
+    robustness_result.mutations.worst_mutant_start_order = worst_mutant_start_order;
+    robustness_result.mutations.worst_mutant_instructions = worst_mutant_instructions;
+    robustness_result.mutations.mutant_times = population_stats;
+
+    let total_percentage_of_slower_same_faster_times = (robustness_result.mutations.robustness_percentage_of_slower_mutants + robustness_result.mutations.robustness_percentage_of_equal_time_mutants + robustness_result.mutations.robustness_percentage_of_faster_mutants)*100;
+
     //add a message
     robustness_result.message = "<strong>Random Mutant Robustness Check</strong><br>Original race time taken " + original_time_taken;
     robustness_result.message += "<br> Mutants Created " + population.length;
     robustness_result.message += "<br> No. of direct clones " + number_of_clones;
     robustness_result.message += "<br> Mean instruct. changes made = " + mutantMeanChanges;
     robustness_result.message += "<br> Max. instruct. changes made = " + mutantMaxChanges + " Strategy: " + mutantMaxStrategy;
-    robustness_result.message += "<br> Avg. time " + mutantMeanTime;
-    robustness_result.message += "<br> Std. Dev. " + mutantStdDev;
+    robustness_result.message += "<br> Average race time " + mutantMeanTime;
+    robustness_result.message += "<br> Std. Dev. of mutant race times " + mutantStdDev;
+    robustness_result.message += "<br>% of races that are slower/the same/faster (total): " + robustness_result.mutations.robustness_percentage_of_slower_mutants + " / " + robustness_result.mutations.robustness_percentage_of_equal_time_mutants + " / " + robustness_result.mutations.robustness_percentage_of_faster_mutants + " (" + total_percentage_of_slower_same_faster_times + " %)";
+    robustness_result.message += "<br>Average amount that times differ by: " + robustness_result.mutations.robustness_mutant_average_time_difference;
+    robustness_result.message += "<br>Average % that times differ by: " + robustness_result.mutations.robustness_mutation_average_percentage_difference;
+    robustness_result.message += "<br>Best strategy found: " + JSON.stringify(best_mutant_start_order) + "  /  " +  JSON.stringify(best_mutant_instructions) + "  /  <strong>" + best_mutant_time_taken + "</strong>";
+    robustness_result.message += "<br>Worst strategy found: " + JSON.stringify(worst_mutant_start_order) + "  /  " +  JSON.stringify(worst_mutant_instructions) + "  /   <strong>" + worst_mutant_time_taken + "</strong>";
+    //robustness_result.message += "<br>Times: " + JSON.stringify(population_stats);
 
 
     //debugger
@@ -705,9 +758,14 @@ function randn_bm() {
         let average_single_mutation = 0;
         let sum_mutation_times = 0;
         let sum_percentage_time_worsens_total = 0;
+        let count_of_slower_variants = 0;
+
         //note that the number of actual mutations tried will vary as there may be duplicates (mostly with DROPs)
         for(let iy = 0;iy<robustness_single_mutation_times.length;iy++){
           sum_mutation_times += robustness_single_mutation_times[iy];
+          if(robustness_single_mutation_times[iy] > original_time_taken){
+            count_of_slower_variants++;
+          }
           let time_worsens = robustness_single_mutation_times[iy]-original_time_taken;
           let time_worsens_p = 0;
           if(time_worsens < 0){
@@ -715,14 +773,15 @@ function randn_bm() {
           }
           sum_percentage_time_worsens_total += (robustness_single_mutation_times[iy]/original_time_taken);
         }
-        console.log("!!  Robustness robustness_single_mutation_times !!");
-        console.log(robustness_single_mutation_times);
-        console.log(robustness_single_mutation_mutations);
+        //console.log("!!  Robustness robustness_single_mutation_times !!");
+        //console.log(robustness_single_mutation_times);
+        //console.log(robustness_single_mutation_mutations);
 
         average_single_mutation = DecimalPrecision.round(sum_mutation_times / robustness_single_mutation_times.length,2);
         let average_percentage_time_worsens_total = DecimalPrecision.round(sum_percentage_time_worsens_total / robustness_single_mutation_times.length,2);
         robustness_result.robustness_single_mutation_qty = robustness_single_mutation_times.length;
         robustness_result.robustness_single_mutation_average = average_single_mutation;
+        robustness_result.robustness_percentage_of_slower_variants = DecimalPrecision.round(count_of_slower_variants / robustness_single_mutation_times.length,2);
         robustness_result.robustness_single_mutation_worsening_effect_multiplier = average_percentage_time_worsens_total;
         robustness_result.robustness_single_mutation_times = JSON.stringify(robustness_single_mutation_times);
 
@@ -730,11 +789,12 @@ function randn_bm() {
         robustness_result.message += "<br><br><strong>Instruction Mutation tests (version 1, RANDOM)</strong>";
         robustness_result.message += "<br>Total variations run: " + robustness_result.robustness_single_mutation_qty;
         robustness_result.message += "<br>Average race time: " + robustness_result.robustness_single_mutation_average;
+        robustness_result.message += "<br>% of races that are slower: " + robustness_result.robustness_percentage_of_slower_variants;
         robustness_result.message += "<br>Average % that times worsens: " + robustness_result.robustness_single_mutation_worsening_effect_multiplier;
         robustness_result.message += "<br>Times: " + robustness_result.robustness_single_mutation_times;
     }
 
-    //donalK25: a second kind of instruction-by-instruction systematic search that uses a fixed schedule of changes yyyyyyy
+    //donalK25: a second kind of instruction-by-instruction systematic search that uses a fixed schedule of changes
 
     let ga_robustness_check_mutation_per_instruction_systematic = 0;
     if (settings_r.ga_robustness_check_mutation_per_instruction_systematic){
@@ -751,12 +811,24 @@ function randn_bm() {
       settings_r.run_type = "robustness_check";
       race_r.time_taken = original_time_taken;
 
+      //create an object to store data to return (for graphing)
+      let dstring = new Date();
+      let dateFormatS = dstring.getFullYear() + "-" + (dstring.getMonth()+1) + "-" + dstring.getDate() + " " + dstring.getHours() + ":" + dstring.getMinutes() + ":" + dstring.getSeconds();
+
+      let return_data = {};
+      return_data.data_type = "systematic_variations";
+      return_data.time_created = dateFormatS;
+      return_data.original_start_order = original_start_order;
+      return_data.original_instructions = original_instructions;
+      return_data.original_time_taken = original_time_taken;
+      return_data.variations = [];
+
       //get the variations to use
       let systematic_effort_values = [-1,1];
       let systematic_drop_values = [1,2,3];
       let systematic_timestep_values = [-1,1];
 
-      //check for global property versions (once tested)
+      // check for global property versions (once tested)
       if (settings_r.systematic_effort_values){
         systematic_effort_values = settings_r.systematic_effort_values;
       }
@@ -767,14 +839,18 @@ function randn_bm() {
         systematic_timestep_values = settings_r.systematic_timestep_values;
       }
 
+      const EFFORT_VALUE_MIN = settings_r.minimum_power_output;
+      const EFFORT_VALUE_MAX = settings_r.maximum_effort_value;
+      const DROP_VALUE_MIN = 1;
+      const DROP_VALUE_MAX = (settings_r.ga_team_size-1);
+      const TIMESTEP_VALUE_MIN = 0;
+      const TIMESTEP_VALUE_MAX = settings_r.ga_max_timestep;
+
       //go through each instruction
       let variations_set = []; // set up the entire set of variations on the theme
       //format of variations_set element [type,instruction num,new value,start_order,instructions]
       for(let ii = 0; ii<race_r.race_instructions_r.length;ii++){
-        //do it a number of times
-
         let original_instruction = race_r.race_instructions_r[ii];
-
         //check the instruction type
         let inst = race_r.race_instructions_r[ii][1].split("=");
         let instruction_type = inst[0];
@@ -783,8 +859,10 @@ function randn_bm() {
           for(ii_d = 0; ii_d<systematic_drop_values.length; ii_d++){
             let new_start_order =  [...race_r.start_order];
             let new_instructions =  race_r.instructions.map(a => ([...a]));
-            new_instructions[ii][1] = "drop=" + systematic_drop_values[ii_d];
-            variations_set.push(["drop",ii,systematic_drop_values[ii_d],[...new_start_order],[...new_instructions]]);
+            let new_value = systematic_drop_values[ii_d];
+            new_value = Math.min(DROP_VALUE_MAX,Math.max(DROP_VALUE_MIN,new_value));
+            new_instructions[ii][1] = "drop=" + new_value;
+            variations_set.push([ii,new_instructions[ii][0],"drop",systematic_drop_values[ii_d],new_value,[...new_start_order],[...new_instructions]]);
           }
         }
         else if(instruction_type == "effort"){
@@ -792,76 +870,169 @@ function randn_bm() {
           for(ii_e = 0; ii_e<systematic_effort_values.length; ii_e++){
             let new_start_order =  [...race_r.start_order];
             let new_instructions =  race_r.instructions.map(a => ([...a]));
-            let new_value = "effort=" + (instruction_value + systematic_effort_values[ii_e]);
-            new_instructions[ii][1] = new_value;
-            variations_set.push(["effort",ii,systematic_effort_values[ii_e],[...new_start_order],[...new_instructions]]);
+            let new_value = (instruction_value + systematic_effort_values[ii_e]);
+            //check min and max values
+            new_value = Math.min(EFFORT_VALUE_MAX,Math.max(EFFORT_VALUE_MIN,new_value));
+            let new_value_instruction = "effort=" + new_value;
+            new_instructions[ii][1] = new_value_instruction;
+            variations_set.push([ii,new_instructions[ii][0],"effort",systematic_effort_values[ii_e],new_value,[...new_start_order],[...new_instructions]]);
           }
         }
         //timestep variations
         for(ii_t = 0; ii_t<systematic_timestep_values.length; ii_t++){
           let new_start_order =  [...race_r.start_order];
           let new_instructions =  race_r.instructions.map(a => ([...a]));
-          new_instructions[ii][0] = (new_instructions[ii][0] + systematic_timestep_values[ii_t]);
-          variations_set.push(["timestep",ii,systematic_timestep_values[ii_t],[...new_start_order],[...new_instructions]]);
+          let new_value = new_instructions[ii][0] + systematic_timestep_values[ii_t];
+          new_value = Math.min(TIMESTEP_VALUE_MAX,Math.max(TIMESTEP_VALUE_MIN,new_value));
+          // if there already IS an instruction at this timestep, we need to remove it
+          //but rather than change the array while we are working with its indices, we can store a FLAG pointing to one that can be deleted afterwards
+          //remove any instruction with the timestep of new_value
+          let delete_item_flag = -1;
+          for(ii_t2 = 0; ii_t2<new_instructions.length; ii_t2++){
+            if((ii_t2 != ii) && new_instructions[ii_t2][0] == new_value){
+              delete_item_flag = ii_t2;
+              break; //should only be one instruction at any timestep
+            }
+          }
+          new_instructions[ii][0] = (new_value);
+
+
+          let timestep_of_new_instruction = new_instructions[ii][0];
+          //NOW, delete an entry if needs be
+          if(delete_item_flag >= 0){
+              new_instructions.splice(delete_item_flag,1); //removes1 element at this ii_t2 locaton
+              //have to be very careful NOT to refer to any array index from now on, in case they misalign now
+          }
+          let timestep_type = "timestep_" + instruction_type;
+          //here, we want to store the ORIGINAL drop/effort value in position 4, not the new timestep (that's in position 1)
+
+          variations_set.push([ii,timestep_of_new_instruction,timestep_type,systematic_timestep_values[ii_t],instruction_value,[...new_start_order],[...new_instructions]]);
         }
       }
 
-      console.log("*** SYSTEMATICK robustness variations ****");
-      console.log(JSON.stringify(variations_set));
+      //console.log("*** SYSTEMATICK robustness variations ****");
+      //console.log(JSON.stringify(variations_set));
 
       //Now RUN the variations
+      //track the best and worst-found strategies
+      let best_found_time = 10000;
+      let best_found_start_order = [];
+      let best_found_instructions = [];
+
+      let worst_found_time = 0;
+      let worst_found_start_order = [];
+      let worst_found_instructions = [];
+
+      let average_variation_time = 0;
+      let sum_variation_times = 0;
+
       for(let ix = 0; ix < variations_set.length; ix++){
 
-        //  debugger;
-          race_r.race_instructions_r = [...variations_set[ix][4]];
-          race_r.instructions = [...variations_set[ix][4]];
-          race_r.start_order = [...variations_set[ix][3]];
+          race_r.race_instructions_r = [...variations_set[ix][6]];
+          race_r.instructions = [...variations_set[ix][6]];
+          race_r.start_order = [...variations_set[ix][5]];
 
           let race_results = run_race(settings_r,race_r,riders_r);
 
+          let race_time = race_results.time_taken;
+          //update the best and worst
+          if(race_time < best_found_time){
+            best_found_time = race_time;
+            best_found_start_order = [...variations_set[ix][5]];
+            best_found_instructions = [...variations_set[ix][6]];
+          }
+          if(race_time > worst_found_time){
+            worst_found_time = race_time;
+            worst_found_start_order = [...variations_set[ix][5]];
+            worst_found_instructions = [...variations_set[ix][6]];
+          }
           robustness_single_mutation_times_systematic.push(race_results.time_taken);
+          variations_set[ix].push(race_results.time_taken);
+
+          sum_variation_times += race_time;
+
           //robustness_single_mutation_mutations_systematic.push(JSON.stringify(original_instruction) + " -> " + JSON.stringify(mutated_instruction));
           //reset to the original instruction
           //race_r.race_instructions_r[ii] = original_instruction;
       }
 
-      let average_single_mutation = 0;
-      let sum_mutation_times = 0;
-      let sum_percentage_time_worsens_total = 0;
+      //work out the average
+      average_variation_time = DecimalPrecision.round(sum_variation_times / robustness_single_mutation_times_systematic.length,2);
+
+      let sum_time_differences = 0;
+      let sum_percentage_differences = 0;
+      let count_of_slower_variants = 0;
+      let count_of_faster_variants = 0;
+      let count_of_equal_time_variants = 0;
+      let totalDeviation = 0;
       //note that the number of actual mutations tried will vary as there may be duplicates (mostly with DROPs)
+
       for(let iy = 0;iy<robustness_single_mutation_times_systematic.length;iy++){
-        sum_mutation_times += robustness_single_mutation_times_systematic[iy];
-        let time_worsens = robustness_single_mutation_times_systematic[iy]-original_time_taken;
-        let time_worsens_p = 0;
-        if(time_worsens < 0){
-          time_worsens = 0;
+
+        totalDeviation+=Math.pow((robustness_single_mutation_times_systematic[iy] - average_variation_time),2);
+        if(robustness_single_mutation_times_systematic[iy] > original_time_taken){
+          count_of_slower_variants++;
         }
-        sum_percentage_time_worsens_total += (robustness_single_mutation_times_systematic[iy]/original_time_taken);
+        else if(robustness_single_mutation_times_systematic[iy] < original_time_taken){
+          count_of_faster_variants++;
+        }
+        else{
+          count_of_equal_time_variants++;
+        }
+        let time_difference = Math.abs(robustness_single_mutation_times_systematic[iy]-original_time_taken);
+        sum_time_differences += time_difference;
+        sum_percentage_differences += time_difference/original_time_taken; //percentage of original time that it has changed by (faster or slower)
       }
-      console.log("!!  Robustness robustness_single_mutation_times_systematic !!");
-      console.log(robustness_single_mutation_times_systematic);
+      //console.log("!!  Robustness robustness_single_mutation_times_systematic !!");
+      //console.log(robustness_single_mutation_times_systematic);
       //console.log(robustness_single_mutation_mutations_systematic);
 
-      average_single_mutation = DecimalPrecision.round(sum_mutation_times / robustness_single_mutation_times_systematic.length,2);
-      let average_percentage_time_worsens_total = DecimalPrecision.round(sum_percentage_time_worsens_total / robustness_single_mutation_times_systematic.length,2);
-      robustness_result.robustness_single_mutation_qty = robustness_single_mutation_times_systematic.length;
-      robustness_result.robustness_single_mutation_average = average_single_mutation;
-      robustness_result.robustness_single_mutation_worsening_effect_multiplier = average_percentage_time_worsens_total;
-      robustness_result.robustness_single_mutation_times_systematic = JSON.stringify(robustness_single_mutation_times_systematic);
+
+      let average_time_difference = DecimalPrecision.round(sum_time_differences / robustness_single_mutation_times_systematic.length,2);
+      let average_percentage_difference = DecimalPrecision.round(sum_percentage_differences / robustness_single_mutation_times_systematic.length,2);
+      let variationVariance = totalDeviation/robustness_single_mutation_times_systematic.length;
+      variationStdDev = DecimalPrecision.round(Math.sqrt(variationVariance),2);
+
+      robustness_result.variations = {};
+
+      robustness_result.variations.original_time_taken = return_data.original_time_taken;
+      robustness_result.variations.robustness_variations_run = robustness_single_mutation_times_systematic.length;
+      robustness_result.variations.robustness_average_variation_time = average_variation_time;
+      robustness_result.variations.robustness_best_variation_time = best_found_time;
+      robustness_result.variations.robustness_worst_variation_time = worst_found_time;
+      robustness_result.variations.variationStdDev = variationStdDev;
+      robustness_result.variations.robustness_percentage_of_slower_variants = DecimalPrecision.round(count_of_slower_variants / robustness_single_mutation_times_systematic.length,2);
+      robustness_result.variations.robustness_percentage_of_faster_variants = DecimalPrecision.round(count_of_faster_variants / robustness_single_mutation_times_systematic.length,2);
+      robustness_result.variations.robustness_percentage_of_equal_time_variants = DecimalPrecision.round(count_of_equal_time_variants / robustness_single_mutation_times_systematic.length,2);
+      robustness_result.variations.robustness_single_mutation_average_time_difference = average_time_difference;
+      robustness_result.variations.robustness_single_mutation_average_percentage_difference = average_percentage_difference;
+      robustness_result.variations.robustness_single_mutation_times_systematic = JSON.stringify(robustness_single_mutation_times_systematic);
+      robustness_result.variations.best_found_start_order = best_found_start_order;
+      robustness_result.variations.best_found_instructions = best_found_instructions;
+      robustness_result.variations.worst_found_start_order = worst_found_start_order;
+      robustness_result.variations.worst_found_instructions = worst_found_instructions;
+
+      let total_percentage_of_slower_same_faster_times = (robustness_result.variations.robustness_percentage_of_slower_variants + robustness_result.variations.robustness_percentage_of_equal_time_variants + robustness_result.variations.robustness_percentage_of_faster_variants)*100;
 
       //append to the message (displays if you run it from the GA page)
       robustness_result.message += "<br><br><strong>Instruction Mutation tests (version 2, SYSTEMATICK)</strong>";
-      robustness_result.message += "<br>Total variations run: " + robustness_result.robustness_single_mutation_qty;
-      robustness_result.message += "<br>Average race time: " + robustness_result.robustness_single_mutation_average;
-      robustness_result.message += "<br>Average % that times worsens: " + robustness_result.robustness_single_mutation_worsening_effect_multiplier;
-      robustness_result.message += "<br>Times: " + robustness_result.robustness_single_mutation_times_systematic;
+      robustness_result.message += "<br>Original race finish time: <strong>" + robustness_result.variations.original_time_taken + "</strong>";
+      robustness_result.message += "<br>Total variations run: " + robustness_result.variations.robustness_variations_run;
+      robustness_result.message += "<br>Average race time: " + robustness_result.variations.robustness_average_variation_time;
+      robustness_result.message += "<br>Std. deviation of variation race times: " + robustness_result.variations.variationStdDev;
+      robustness_result.message += "<br>% of races that are slower/the same/faster (total): " + robustness_result.variations.robustness_percentage_of_slower_variants + " / " + robustness_result.variations.robustness_percentage_of_equal_time_variants + " / " + robustness_result.variations.robustness_percentage_of_faster_variants + "(" + total_percentage_of_slower_same_faster_times + " %)";
+      robustness_result.message += "<br>Average amount that times differ by: " + robustness_result.variations.robustness_single_mutation_average_time_difference;
+      robustness_result.message += "<br>Average % that times differ by: " + robustness_result.variations.robustness_single_mutation_average_percentage_difference;
+      robustness_result.message += "<br>Best strategy found: " + JSON.stringify(best_found_start_order) + "  /  " +  JSON.stringify(best_found_instructions) + "  /  <strong>" + best_found_time + "</strong>";
+      robustness_result.message += "<br>Worst strategy found: " + JSON.stringify(worst_found_start_order) + "  /  " +  JSON.stringify(worst_found_instructions) + "  /   <strong>" + worst_found_time + "</strong>";
+      //robustness_result.message += "<br>Times: " + robustness_result.variations.robustness_single_mutation_times_systematic;
 
-      robustness_result.raw_data = variations_set;
+      return_data.variations = variations_set;
+      robustness_result.raw_data = return_data;
       }
 
-
-    console.log("!!robustness_result!!");
-    console.log(robustness_result);
+    //console.log("!!robustness_result!!");
+    //console.log(robustness_result);
     return robustness_result;
   }
   function run_consistency_check(settings_r, race_r, riders_r){
@@ -1342,16 +1513,21 @@ function randn_bm() {
       generation_results.stats_average_time = stats_average_time;
       generation_results.stats_average_number_of_instructions = stats_average_number_of_instructions;
       generation_results.stats_std_dev_number_of_instructions = stats_std_dev_number_of_instructions;
-      generation_results.robustness_check_number_of_mutants = 0;
-      generation_results.robustness_check_average_mutant_time_taken = 0;
-      generation_results.robustness_check_best_mutant_time_taken = 0;
-      generation_results.robustness_check_worst_mutant_time_taken = 0;
-      generation_results.robustness_check_standard_dev = 0;
-      generation_results.race_fitness_all = race_fitness_all;
 
-      generation_results.robustness_single_mutation_qty = 0;
-      generation_results.robustness_single_mutation_average = 0;
-      generation_results.robustness_single_mutation_times = [];
+      //robustness test data
+      // generation_results.robustness_check_number_of_mutants = 0;
+      // generation_results.robustness_check_average_mutant_time_taken = 0;
+      // generation_results.robustness_check_best_mutant_time_taken = 0;
+      // generation_results.robustness_check_worst_mutant_time_taken = 0;
+      // generation_results.robustness_check_standard_dev = 0;
+      // generation_results.race_fitness_all = race_fitness_all;
+      // generation_results.robustness_single_mutation_qty = 0;
+      // generation_results.robustness_single_mutation_average = 0;
+      // generation_results.robustness_single_mutation_times = [];
+
+      generation_results.robustness_mutation_results = {};
+      generation_results.robustness_variation_results = {};
+      generation_results.message = "";
 
       //get the power data of the best race
       generation_results.best_race_rider_power = best_race_rider_power;
@@ -1384,19 +1560,24 @@ function randn_bm() {
         race_r.race_instructions_r = [...load_race_properties.instructions];
         race_r.start_order = [...load_race_properties.start_order];
 
+        //run the robustness check on the best-in-generation result
         let robustness_check_results = run_robustness_check(settings_r, race_r, riders_r);
 
-        generation_results.robustness_check_number_of_mutants = settings_r.robustness_check_population_size;
-        generation_results.robustness_check_average_mutant_time_taken = robustness_check_results.average_mutant_time_taken;
-        generation_results.robustness_check_standard_dev = robustness_check_results.robustness_check_standard_dev;
-        generation_results.robustness_check_best_mutant_time_taken = robustness_check_results.fittest_mutant_time_taken;
-        generation_results.robustness_check_worst_mutant_time_taken = robustness_check_results.unfittest_mutant_time_taken;
+        generation_results.robustness_mutation_results = robustness_check_results.mutations;
+        generation_results.robustness_variation_results = robustness_check_results.variations;
+        generation_results.message = robustness_check_results.message;
 
-        generation_results.robustness_single_mutation_qty = robustness_result.robustness_single_mutation_qty;
-        generation_results.robustness_single_mutation_average = robustness_result.robustness_single_mutation_average;
-        generation_results.robustness_single_mutation_times = robustness_result.robustness_single_mutation_times;
+        // generation_results.robustness_check_number_of_mutants = settings_r.robustness_check_population_size;
+        // generation_results.robustness_check_average_mutant_time_taken = robustness_check_results.average_mutant_time_taken;
+        // generation_results.robustness_check_standard_dev = robustness_check_results.robustness_check_standard_dev;
+        // generation_results.robustness_check_best_mutant_time_taken = robustness_check_results.best_mutant_time_taken;
+        // generation_results.robustness_check_worst_mutant_time_taken = robustness_check_results.worst_mutant_time_taken;
+        //
+        // generation_results.robustness_single_mutation_qty = robustness_result.robustness_single_mutation_qty;
+        // generation_results.robustness_single_mutation_average = robustness_result.robustness_single_mutation_average;
+        // generation_results.robustness_single_mutation_times = robustness_result.robustness_single_mutation_times;
 
-        console.log("Run robustness check generation " + g + robustness_check_results.message);
+        //console.log("Run robustness check generation " + g + robustness_check_results.message);
       }
 
       //log the log_generation_instructions_info if requested
@@ -2475,7 +2656,7 @@ function randn_bm() {
   // cup22 choke_under_pressure function to derive a probability
   function calculate_linear_space_value(value_list, probability_variables){
     // value list contains sets of 4, each set representing a paramter in the expression, which is built using a loop
-    //v1 - multiplier
+    //v1 - multiplier / (weighting?)
     //v2 - value
     //v3 - exponent
     //v4 - max value
@@ -2619,6 +2800,8 @@ function randn_bm() {
   }
 
   function run_race(settings_r,race_r,riders_r){
+
+
     //run the race and return the finish time
     race_r.riders = [];
     race_r.riders_r = [];
@@ -2627,6 +2810,7 @@ function randn_bm() {
     settings_r.race_bend_distance = Math.PI * settings_r.track_bend_radius;
     race_r.instructions = [];
     race_r.instructions_t = [];
+    race_r.drop_instruction = 0; //donalK25: this was not being reset here, sometimes caused an errant drop at the beginning of the next race run
 
     //donalK25: set the new global for the acceleration calculations (default to OFF/0)
     if (typeof(settings_r.power_application_include_acceleration) != 'undefined'){
@@ -2695,6 +2879,8 @@ function randn_bm() {
       //donalK25: set the failure ceiling, May 25
       load_rider.rider_fatigue_failure_level = settings_r.fatigue_failure_level;
       load_rider.output_level=settings_r.threshold_power_effort_level;
+
+      delete load_rider.frontal_area_adjusted_for_shelter; //donalK25, adding this trying to fix a discrepancy
       //donalK25: use the default_starting_power_effort_level value, if it exists
       //this will puunish empty instruction sets
       if (typeof(settings_r.default_starting_effort_level) != 'undefined'){
@@ -3184,7 +3370,7 @@ function randn_bm() {
           if (settings_r.hasOwnProperty('choke_under_pressure_switch')){
             if (settings_r.choke_under_pressure_switch == 1){ // 1 is ON, 0 is OFF
               //rides need the property to reflect their 'tendency' to fail in this way
-              //also this should never be appled to a rider twice to once enabled the application should then be ignored
+              //also this should never be appled to a rider twice to once enabled, the application should then be ignored
               if(race_rider.hasOwnProperty("choke_under_pressure_state")){
                 if(race_rider.choke_under_pressure_state == 0){ // 0 = not set, so can check
                   rider_choke_under_pressure_tendency = 0;
@@ -3193,11 +3379,28 @@ function randn_bm() {
                   }
                   //dumb version, choke purely based on the rider's "temperment"
                   //maybe update the rider's characteristice to have an effect on their next turn
-                  //otherwise will need to move this up the chain of happenings
-                  // [multiplier, value, exponent, max value]
+                  //otherwise will need to move this up the chain of happenings (???)
 
+                  //** START -- updated calculation of choke-under-pressure section ***
                   let prob_choke_under_pressure = 0;
-                  let choke_under_pressure_value_list = [1, rider_choke_under_pressure_tendency,1,10]; //guessing the values here really
+                  // set up a [weight multiplier, value, exponent, max value] array
+                  //get settings for weight
+
+                  let choke_under_pressure_rider_tendancy_weight = 1;
+                  let choke_under_pressure_rider_tendancy_exponent = 1;
+                  let max_rider_choke_under_pressure_tendency =10;
+
+                  if (typeof(settings_r.choke_under_pressure_rider_tendancy_weight) != 'undefined'){
+                    choke_under_pressure_rider_tendancy_weight = settings_r.choke_under_pressure_rider_tendancy_weight;
+                  }
+                  if (typeof(settings_r.choke_under_pressure_rider_tendancy_exponent) != 'undefined'){
+                    choke_under_pressure_rider_tendancy_exponent = settings_r.choke_under_pressure_rider_tendancy_exponent;
+                  }
+                  if (typeof(settings_r.max_rider_choke_under_pressure_tendency) != 'undefined'){
+                    max_rider_choke_under_pressure_tendency = settings_r.max_rider_choke_under_pressure_tendency;
+                  }
+
+                  let choke_under_pressure_value_list = [choke_under_pressure_rider_tendancy_weight, rider_choke_under_pressure_tendency,choke_under_pressure_rider_tendancy_exponent,max_rider_choke_under_pressure_tendency]; //guessing the values here really
                   let choke_under_pressure_probability_variables = [];
 
                   // want to make failure more likely if the race is near the end and only possible if the current average is better than the best time average
@@ -3205,16 +3408,41 @@ function randn_bm() {
                   let current_speed = (race_rider.distance_covered/race_r.race_clock);
                   let speed_higher_than_best = ((current_speed > best_time_speed)?1:0);
                   //the idea here is that IF the race looks like it will be a new PB and we are approachign the end, choking becomes way more likely!
+
+                  //this will be 0 if the current avg. speed is slower than the best-in-gen final average speed.
+
+                  choke_under_pressure_probability_variables.push(speed_higher_than_best);
+
                   let end_race_better_time_factor = speed_higher_than_best*(race_rider.distance_covered/race_r.distance);
                   // note that ridersd CAN go beyond the race distance, i.e. if one slow one is way behind, soooo need to limit it to a max of 1
                   if(end_race_better_time_factor > 1){
                     end_race_better_time_factor = 1;
                   }
-                  choke_under_pressure_probability_variables.push(end_race_better_time_factor);
+
+                  //append  a new quartet to the array
+                  let choke_under_pressure_new_best_speed_pressure_weight = 1;
+                  let choke_under_pressure_new_best_speed_pressure_max = 1;
+                  let choke_under_pressure_new_best_speed_pressure_exponent = 1;
+
+                  if (typeof(settings_r.choke_under_pressure_new_best_speed_pressure_weight) != 'undefined'){
+                    choke_under_pressure_new_best_speed_pressure_weight = settings_r.choke_under_pressure_new_best_speed_pressure_weight;
+                  }
+                  if (typeof(settings_r.choke_under_pressure_new_best_speed_pressure_max) != 'undefined'){
+                    choke_under_pressure_new_best_speed_pressure_max = settings_r.choke_under_pressure_new_best_speed_pressure_max;
+                  }
+                  if (typeof(settings_r.choke_under_pressure_new_best_speed_pressure_exponent) != 'undefined'){
+                    choke_under_pressure_new_best_speed_pressure_exponent = settings_r.choke_under_pressure_new_best_speed_pressure_exponent;
+                  }
+
+                  //[weight multiplier, value, exponent, max value]
+                  choke_under_pressure_value_list.append(choke_under_pressure_new_best_speed_pressure_weight,end_race_better_time_factor,choke_under_pressure_new_best_speed_pressure_exponent,choke_under_pressure_new_best_speed_pressure_max);
+
                   // if the rider is going to fail then reduce their capacities
 
-                  prob_choke_under_pressure = calculate_linear_space_value(choke_under_pressure_value_list,choke_under_pressure_probability_variables);
+                  //donalK25 update this to include the new-pb part as both an on-off switch and a 4 piece param... need to tie these to global vars, too
 
+                  prob_choke_under_pressure = calculate_linear_space_value(choke_under_pressure_value_list,choke_under_pressure_probability_variables);
+                  //** END -- updated calculation of choke-under-pressure section ***
 
                   if (speed_higher_than_best == 0){
                     zero_cup_count++;
@@ -3722,8 +3950,26 @@ function randn_bm() {
                     //otherwise will need to move this up the chain of happenings
                     // [multiplier, value, exponent, max value]
 
+                    //** START -- updated calculation of choke-under-pressure section ***
                     let prob_choke_under_pressure = 0;
-                    let choke_under_pressure_value_list = [1, rider_choke_under_pressure_tendency,1,10]; //guessing the values here really
+                    // set up a [weight multiplier, value, exponent, max value] array
+                    //get settings for weight
+
+                    let choke_under_pressure_rider_tendancy_weight = 1;
+                    let choke_under_pressure_rider_tendancy_exponent = 1;
+                    let max_rider_choke_under_pressure_tendency =10;
+
+                    if (typeof(settings_r.choke_under_pressure_rider_tendancy_weight) != 'undefined'){
+                      choke_under_pressure_rider_tendancy_weight = settings_r.choke_under_pressure_rider_tendancy_weight;
+                    }
+                    if (typeof(settings_r.choke_under_pressure_rider_tendancy_exponent) != 'undefined'){
+                      choke_under_pressure_rider_tendancy_exponent = settings_r.choke_under_pressure_rider_tendancy_exponent;
+                    }
+                    if (typeof(settings_r.max_rider_choke_under_pressure_tendency) != 'undefined'){
+                      max_rider_choke_under_pressure_tendency = settings_r.max_rider_choke_under_pressure_tendency;
+                    }
+
+                    let choke_under_pressure_value_list = [choke_under_pressure_rider_tendancy_weight, rider_choke_under_pressure_tendency,choke_under_pressure_rider_tendancy_exponent,max_rider_choke_under_pressure_tendency]; //guessing the values here really
                     let choke_under_pressure_probability_variables = [];
 
                     // want to make failure more likely if the race is near the end and only possible if the current average is better than the best time average
@@ -3731,14 +3977,42 @@ function randn_bm() {
                     let current_speed = (race_rider.distance_covered/race_r.race_clock);
                     let speed_higher_than_best = ((current_speed > best_time_speed)?1:0);
                     //the idea here is that IF the race looks like it will be a new PB and we are approachign the end, choking becomes way more likely!
+
+                    //this will be 0 if the current avg. speed is slower than the best-in-gen final average speed.
+
+                    choke_under_pressure_probability_variables.push(speed_higher_than_best);
+
                     let end_race_better_time_factor = speed_higher_than_best*(race_rider.distance_covered/race_r.distance);
-                    if(end_race_better_time_factor > 1){ //riders could go beyond the distance of the race while others finish
+                    // note that ridersd CAN go beyond the race distance, i.e. if one slow one is way behind, soooo need to limit it to a max of 1
+                    if(end_race_better_time_factor > 1){
                       end_race_better_time_factor = 1;
                     }
-                    choke_under_pressure_probability_variables.push(end_race_better_time_factor);
+
+                    //append  a new quartet to the array
+                    let choke_under_pressure_new_best_speed_pressure_weight = 1;
+                    let choke_under_pressure_new_best_speed_pressure_max = 1;
+                    let choke_under_pressure_new_best_speed_pressure_exponent = 1;
+
+                    if (typeof(settings_r.choke_under_pressure_new_best_speed_pressure_weight) != 'undefined'){
+                      choke_under_pressure_new_best_speed_pressure_weight = settings_r.choke_under_pressure_new_best_speed_pressure_weight;
+                    }
+                    if (typeof(settings_r.choke_under_pressure_new_best_speed_pressure_max) != 'undefined'){
+                      choke_under_pressure_new_best_speed_pressure_max = settings_r.choke_under_pressure_new_best_speed_pressure_max;
+                    }
+                    if (typeof(settings_r.choke_under_pressure_new_best_speed_pressure_exponent) != 'undefined'){
+                      choke_under_pressure_new_best_speed_pressure_exponent = settings_r.choke_under_pressure_new_best_speed_pressure_exponent;
+                    }
+
+                    //[weight multiplier, value, exponent, max value]
+                    choke_under_pressure_value_list.append(choke_under_pressure_new_best_speed_pressure_weight,end_race_better_time_factor,choke_under_pressure_new_best_speed_pressure_exponent,choke_under_pressure_new_best_speed_pressure_max);
+
                     // if the rider is going to fail then reduce their capacities
 
+                    //donalK25 update this to include the new-pb part as both an on-off switch and a 4 piece param... need to tie these to global vars, too
+
                     prob_choke_under_pressure = calculate_linear_space_value(choke_under_pressure_value_list,choke_under_pressure_probability_variables);
+                    //** END -- updated calculation of choke-under-pressure section ***
+
                     if (speed_higher_than_best == 0){
                       zero_cup_count++;
                     }
@@ -3753,14 +4027,14 @@ function randn_bm() {
                       if (settings_r.hasOwnProperty('choke_under_pressure_amount_percentage')){
                         choke_under_pressure_amount = settings_r.choke_under_pressure_amount_percentage;
                       }
-                      //console.log("************ CHOKE UNDER PRESSURE HAPPENING (chase rider)! [[ " + count_of_choke_under_pressure_loggings + "]]************" );
-                      //console.log("race_rider.velocity " + race_rider.velocity);
-                      //console.log("prob_choke_under_pressure " + prob_choke_under_pressure + " cup_r " + cup_r);
-                      //console.log("rider_choke_under_pressure_tendency " + rider_choke_under_pressure_tendency);
-                      //console.log("end_race_better_time_factor " + end_race_better_time_factor);
-                      //console.log("race_rider.distance_covered / race_r.race_clock " + race_rider.distance_covered + " / " + race_r.race_clock);
-                      //console.log("updating threshold power from " + race_rider.threshold_power + " to " + (race_rider.threshold_power - (race_rider.threshold_power*choke_under_pressure_amount)));
-                      //console.log("updating max power from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power*choke_under_pressure_amount)));
+                        console.log("************ CHOKE UNDER PRESSURE HAPPENING (chase rider)! [[ " + count_of_choke_under_pressure_loggings + "]]************" );
+                        console.log("race_rider.velocity " + race_rider.velocity);
+                        console.log("prob_choke_under_pressure " + prob_choke_under_pressure + " cup_r " + cup_r);
+                        console.log("rider_choke_under_pressure_tendency " + rider_choke_under_pressure_tendency);
+                        console.log("end_race_better_time_factor " + end_race_better_time_factor);
+                        console.log("race_rider.distance_covered / race_r.race_clock " + race_rider.distance_covered + " / " + race_r.race_clock);
+                        console.log("updating threshold power from " + race_rider.threshold_power + " to " + (race_rider.threshold_power - (race_rider.threshold_power*choke_under_pressure_amount)));
+                        console.log("updating max power from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power*choke_under_pressure_amount)));
                       race_rider.threshold_power -= (race_rider.threshold_power*choke_under_pressure_amount);
                       race_rider.max_power -= (race_rider.max_power*choke_under_pressure_amount);
                       race_rider.choke_under_pressure_state = 1; //shouldn't be checked again for the remainder of the race
@@ -3945,12 +4219,14 @@ function randn_bm() {
           display_rider.distance_from_rider_in_front = min_distance;
           display_rider.number_of_riders_in_front = number_of_riders_in_front;
 
-          if(global_log_message_now || ((settings_r.ga_log_each_step || debug_log_specific_timesteps.includes(race_r.race_clock)) && settings_r.run_type == "single_race")){
+
+          if((global_log_message_now || ((settings_r.ga_log_each_step || debug_log_specific_timesteps.includes(race_r.race_clock)) && settings_r.run_type == "single_race"))){
             logMessage += " " + race_r.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race_r.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + " |||| " + display_rider.step_info;
           }
         }
-        if((settings_r.ga_log_each_step || debug_log_specific_timesteps.includes(race_r.race_clock)) && settings_r.run_type == "single_race"){
-          console.log(logMessage);
+
+        if(((settings_r.ga_log_each_step || debug_log_specific_timesteps.includes(race_r.race_clock)) && settings_r.run_type == "single_race")){
+                  console.log(logMessage);
         }
         else if (global_log_message_now){
           //dk23 note this can sometimes throw an error "caught RangeError: Invalid string length"

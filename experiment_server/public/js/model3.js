@@ -52,7 +52,7 @@ let c = {};
 let ctx = {};
 let race_state = 'stop';
 
-let step_speed = 60;
+let step_speed = 0; //donalK25, changed from 60 to 0
 
 let rider_power_data = []; //record power outpur of each rider to generate graph
 
@@ -64,10 +64,13 @@ let use_lookup_velocity = false;
 console.log("Track bend radius = 22m");
 console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/2 );
 
+//set up the sim speed.
+
 var range = $('.input-range');
 range.val(10-(step_speed/60));
 
 range.on('input', function(){
+
     step_speed =(10 - this.value) * 60;
     console.log("step_speed "+ step_speed);
 });
@@ -782,6 +785,11 @@ function moveRace(){
             if (changes[cup] == race.current_order[i]){ //this is the rider to target
 
               console.log(" >*>*>*>*>*>*>*>*> Choke Under Pressure Noise failure lead rider " + race.current_order[i] + " : race_rider.threshold_power changed from " + race_rider.threshold_power + " to " + (race_rider.threshold_power-(race_rider.threshold_power * changes[cup+1])) + " race_rider.max_power changed from " +race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power * changes[cup+1])));
+
+              //donalK25July: LEADER set the original properties so that they can be recovered if we re-run the race
+              race_rider.original_threshold_power = race_rider.threshold_power;
+              race_rider.original_max_power = race_rider.max_power;
+
               race_rider.threshold_power -= (race_rider.threshold_power * changes[cup+1]);
               race_rider.max_power -= (race_rider.max_power * changes[cup+1]);
             }
@@ -1224,8 +1232,13 @@ function moveRace(){
             if (changes[cup] == race.current_order[i]){ //this is the rider to target
 
               console.log(" >*>*>*>*>*>*>*>*> Choke Under Pressure Noise failure chasing rider " + race.current_order[i] + " : race_rider.threshold_power changed from " + race_rider.threshold_power + " to " + (race_rider.threshold_power-(race_rider.threshold_power * changes[cup+1])) + " race_rider.max_power changed from " + race_rider.max_power + " to " + (race_rider.max_power - (race_rider.max_power * changes[cup+1])));
+              //donalK25July: CHASER set the original properties so that they can be recovered if we re-run the race
+              race_rider.original_threshold_power = race_rider.threshold_power;
+              race_rider.original_max_power = race_rider.max_power;
+
               race_rider.threshold_power -= (race_rider.threshold_power * changes[cup+1]);
               race_rider.max_power -= (race_rider.max_power * changes[cup+1]);
+              // how do we change the values BACK if we rerun the race?
             }
           }
         }
@@ -1539,6 +1552,17 @@ function load_race(){
   //Reset rider properties that change during the race
   for(let i = 0;i<race.start_order.length;i++){
     let load_rider = riders[race.start_order[i]];
+
+    //donalK25July chokeunderpressure, need to reset the power values IF the rider choked and we are re-running a race
+    if (typeof(load_rider.original_threshold_power) != 'undefined'){
+      load_rider.threshold_power = load_rider.original_threshold_power;
+    }
+    if (typeof(load_rider.original_max_power) != 'undefined'){
+      load_rider.max_power = load_rider.original_max_power;
+    }
+    //*****************************
+
+
     load_rider.start_offset = i*settings.start_position_offset;
     load_rider.starting_position_x = settings.track_centre_x + (load_rider.start_offset)*settings.vis_scale ;
     load_rider.starting_position_y = settings.track_centre_y - (settings.track_bend_radius*settings.vis_scale);

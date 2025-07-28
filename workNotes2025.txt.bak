@@ -65,10 +65,10 @@ and
 
 - adding new properties to use for the systematic instruction-by-instruction set of variations 
 
-    "ga_robustness_check_mutation_per_instruction_systematic":1,
-    "systematic_effort_values":[-5,-4,-3,-2,-1,-0.5,-0.25,-0.125,0,0.125,0.25,0.5,1,2,3,4,5],
-    "systematic_drop_values":[0,1,2,3],
-    "systematic_timestep_values":[-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8],
+"ga_robustness_check_mutation_per_instruction_systematic":1,
+"systematic_effort_values":[-5,-4,-3,-2,-1,-0.5,-0.25,-0.125,0,0.125,0.25,0.5,1,2,3,4,5],
+"systematic_drop_values":[0,1,2,3],
+"systematic_timestep_values":[-8,-7,-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6,7,8],
 		
 		
 - should I be varying the starting order????
@@ -78,4 +78,1068 @@ and
 archive of our own 
 spy x family
 
+- issue when trying to create the new arrays, getting confused, I guess my [...x] method doesdn't work 2 levels deep, so i need to use 
+https://stackoverflow.com/questions/597588/how-do-you-clone-an-array-of-objects-in-javascript
+const newArray = myArray.map(a => ({...a}));
+	
+-- that seemed to work, but does the test work in general?
+0,1,2,3
+[[5,"effort=8"]]
+
+
+variations 
+[instruction num,new value,start_order,instructions]
+
+[[0,1,[0,1,2,3],[{"0":5,"1":"effort=7"}]],
+[0,2,[0,1,2,3],[{"0":5,"1":"effort=9"}]],
+[0,1,[0,1,2,3],[{"0":4,"1":"effort=8"}]],
+[0,2,[0,1,2,3],[{"0":6,"1":"effort=8"}]]]
+
+- inclue the type, and run for the full set of schedules 
+- hmmm
+Average % that times worsens: 1.01
+
+[["drop",0,-5,[0,1,2,3],[[5,"effort=3"]]],["drop",0,-4,[0,1,2,3],[[5,"effort=4"]]],["drop",0,-3,[0,1,2,3],[[5,"effort=5"]]],["drop",0,-2,[0,1,2,3],[[5,"effort=6"]]],["drop",0,-1,[0,1,2,3],[[5,"effort=7"]]],["drop",0,-0.5,[0,1,2,3],[[5,"effort=7.5"]]],["drop",0,-0.25,[0,1,2,3],[[5,"effort=7.75"]]],["drop",0,-0.125,[0,1,2,3],[[5,"effort=7.875"]]],["drop",0,0,[0,1,2,3],[[5,"effort=8"]]],["drop",0,0.125,[0,1,2,3],[[5,"effort=8.125"]]],["drop",0,0.25,[0,1,2,3],[[5,"effort=8.25"]]],["drop",0,0.5,[0,1,2,3],[[5,"effort=8.5"]]],["drop",0,1,[0,1,2,3],[[5,"effort=9"]]],["drop",0,2,[0,1,2,3],[[5,"effort=10"]]],["drop",0,3,[0,1,2,3],[[5,"effort=11"]]],["drop",0,4,[0,1,2,3],[[5,"effort=12"]]],["drop",0,5,[0,1,2,3],[[5,"effort=13"]]],["drop",0,-8,[0,1,2,3],[[-3,"effort=8"]]],["drop",0,-7,[0,1,2,3],[[-2,"effort=8"]]],["drop",0,-6,[0,1,2,3],[[-1,"effort=8"]]],["drop",0,-5,[0,1,2,3],[[0,"effort=8"]]],["drop",0,-4,[0,1,2,3],[[1,"effort=8"]]],["drop",0,-3,[0,1,2,3],[[2,"effort=8"]]],["drop",0,-2,[0,1,2,3],[[3,"effort=8"]]],["drop",0,-1,[0,1,2,3],[[4,"effort=8"]]],["drop",0,0,[0,1,2,3],[[5,"effort=8"]]],["drop",0,1,[0,1,2,3],[[6,"effort=8"]]],["drop",0,2,[0,1,2,3],[[7,"effort=8"]]],["drop",0,3,[0,1,2,3],[[8,"effort=8"]]],["drop",0,4,[0,1,2,3],[[9,"effort=8"]]],["drop",0,5,[0,1,2,3],[[10,"effort=8"]]],["drop",0,6,[0,1,2,3],[[11,"effort=8"]]],["drop",0,7,[0,1,2,3],[[12,"effort=8"]]],["drop",0,8,[0,1,2,3],[[13,"effort=8"]]]]
+
+
+-- have to make sure that no instruction 'overtakes' or 'undertakes' another, or goes over or under maximum allowed values
+
+
+[["effort",0,-5,[0,1,2,3],[[5,"effort=3"]]],["effort",0,-4,[0,1,2,3],[[5,"effort=4"]]],["effort",0,-3,[0,1,2,3],[[5,"effort=5"]]],["effort",0,-2,[0,1,2,3],[[5,"effort=6"]]],["effort",0,-1,[0,1,2,3],[[5,"effort=7"]]],["effort",0,-0.5,[0,1,2,3],[[5,"effort=7.5"]]],["effort",0,-0.25,[0,1,2,3],[[5,"effort=7.75"]]],["effort",0,-0.125,[0,1,2,3],[[5,"effort=7.875"]]],["effort",0,0,[0,1,2,3],[[5,"effort=8"]]],["effort",0,0.125,[0,1,2,3],[[5,"effort=8.125"]]],["effort",0,0.25,[0,1,2,3],[[5,"effort=8.25"]]],["effort",0,0.5,[0,1,2,3],[[5,"effort=8.5"]]],["effort",0,1,[0,1,2,3],[[5,"effort=9"]]],["effort",0,2,[0,1,2,3],[[5,"effort=10"]]],["effort",0,3,[0,1,2,3],[[5,"effort=10"]]],["effort",0,4,[0,1,2,3],[[5,"effort=10"]]],["effort",0,5,[0,1,2,3],[[5,"effort=10"]]],["timestep",0,-8,[0,1,2,3],[[0,"effort=8"]]],["timestep",0,-7,[0,1,2,3],[[0,"effort=8"]]],["timestep",0,-6,[0,1,2,3],[[0,"effort=8"]]],["timestep",0,-5,[0,1,2,3],[[0,"effort=8"]]],["timestep",0,-4,[0,1,2,3],[[1,"effort=8"]]],["timestep",0,-3,[0,1,2,3],[[2,"effort=8"]]],["timestep",0,-2,[0,1,2,3],[[3,"effort=8"]]],["timestep",0,-1,[0,1,2,3],[[4,"effort=8"]]],["timestep",0,0,[0,1,2,3],[[5,"effort=8"]]],["timestep",0,1,[0,1,2,3],[[6,"effort=8"]]],["timestep",0,2,[0,1,2,3],[[7,"effort=8"]]],["timestep",0,3,[0,1,2,3],[[8,"effort=8"]]],["timestep",0,4,[0,1,2,3],[[9,"effort=8"]]],["timestep",0,5,[0,1,2,3],[[10,"effort=8"]]],["timestep",0,6,[0,1,2,3],[[11,"effort=8"]]],["timestep",0,7,[0,1,2,3],[[12,"effort=8"]]],["timestep",0,8,[0,1,2,3],[[13,"effort=8"]]]]
+
+-- need to include the actual original instructions here in this raw_data? make it an object? otherwise it is too confusing?
+
+{
+	data_type: "systematic_variations",
+	time_created: "2025-06-11 17:44 00",
+	original_instructions: [],
+	variations: []
+}
+
+-- seeeems to work, but oh so much to do 
+
+original time 359.672
+
+-- ooh, I need to inclue the TIME of each variation in the raw data
+
+
+{"data_type":"systematic_variations","time_created":"2025-6-11 17:54:53","original_start_order":[0,1,2,3],"original_instructions":[[5,"effort=8"]],"variations":[["effort",0,-1,[0,1,2,3],[[5,"effort=7"]],358.701],["effort",0,1,[0,1,2,3],[[5,"effort=9"]],359.708],["timestep",0,-1,[0,1,2,3],[[4,"effort=8"]],359.283],["timestep",0,1,[0,1,2,3],[[6,"effort=8"]],360.041]]}
+
+[[5,"effort=6"],[100,"drop=3"]]
+
+- we want an instruction movement (timestep variation) to REPLACE another instruction if there is one already at its destination timestep.
+
+- to delete an element from an array we can use splice()
+splice(start, deleteCount)
+e.g., 
+let x = [1,2,3]
+x.splice(1,1);
+//x is now [1,3]
+
+- changed it to first flag then delete in case it breaks array access 
+- test 
+[[5,"effort=6"],[4,"effort=4.3"]]
+
+{"data_type":"systematic_variations","time_created":"2025-6-12 12:35:45","original_start_order":[0,1,2,3],"original_instructions":[[5,"effort=6"],[4,"effort=4.3"]],"variations":[[0,"effort",-1,[0,1,2,3],[[5,"effort=5"],[4,"effort=4.3"]],307.692],[0,"effort",1,[0,1,2,3],[[5,"effort=7"],[4,"effort=4.3"]],358.727],[0,"timestep",-1,[0,1,2,3],[[4,"effort=6"]],355.853],[0,"timestep",1,[0,1,2,3],[[6,"effort=6"],[4,"effort=4.3"]],355.831],[1,"effort",-1,[0,1,2,3],[[5,"effort=6"],[4,"effort=3.3"]],356.013],[1,"effort",1,[0,1,2,3],[[5,"effort=6"],[4,"effort=5.3"]],355.668],[1,"timestep",-1,[0,1,2,3],[[5,"effort=6"],[3,"effort=4.3"]],355.451],[1,"timestep",1,[0,1,2,3],[[5,"effort=4.3"]],324.953]]}
+
+-- add the original finish time to the results object
+
+
+- why is the rider so slow with [[5,"effort=6"]], that's no a huge effort, but they fail really quickly.
+
+-- hmm, well they DO recover BUT they are not told to go fast again.
+
+Average % that times differ by is not quote the right label... it's the average Time diff, not the average % diff. could include both?
+
+- updated, ran all equal test, best in final 50 gen is 
+
+
+let's compare first and last generation 
+
+generation 1
+
+2,0,3,1
+
+[[0,"effort=5"],[19,"effort=6.36"],[24,"effort=6.6"],[33,"effort=3.8"],[35,"effort=6.62"],[49,"drop=3"],[63,"drop=1"],[67,"drop=3"],[94,"drop=1"],[113,"effort=6.24"],[125,"drop=3"],[142,"drop=1"],[153,"drop=3"],[154,"effort=6.38"],[156,"drop=2"],[201,"drop=1"],[227,"drop=3"],[264,"drop=1"]]
+
+
+Instruction Mutation tests (version 2, SYSTEMATICK)
+Original race finsih time: 276.446
+Total variations run: 469
+Average race time: 282.52n
+% of races that are slower: 0.51
+Average amount that times differ by: 6.35
+Average % that times differ by: 0.02
+Best strategy found: [2,0,3,1] / [[0,"effort=5"],[19,"effort=6.36"],[24,"effort=6.6"],[33,"effort=3.8"],[35,"effort=6.62"],[49,"drop=3"],[63,"drop=1"],[67,"drop=3"],[94,"drop=1"],[113,"effort=6.24"],[125,"drop=3"],[142,"drop=1"],[153,"drop=3"],[154,"effort=6.38"],[156,"drop=2"],[201,"drop=2"],[227,"drop=3"],[264,"drop=1"]] / 273.735
+Worst strategy found: [2,0,3,1] / [[0,"effort=5"],[19,"effort=6.36"],[24,"effort=6.6"],[33,"effort=3.8"],[35,"effort=6.62"],[49,"drop=3"],[63,"drop=1"],[67,"drop=3"],[94,"drop=1"],[113,"effort=6.24"],[125,"drop=3"],[142,"drop=1"],[153,"drop=3"],[154,"effort=1.38"],[156,"drop=2"],[201,"drop=1"],[227,"drop=3"],[264,"drop=1"]] / 358.133
+
+
+generation 50 
+
+start order 
+2,1,0,3
+
+[[0,"effort=5.97"],[1,"effort=6.58"],[24,"effort=7.43"],[33,"effort=3.8"],[35,"effort=6.62"],[39,"drop=3"],[49,"drop=3"],[68,"drop=3"],[110,"drop=3"],[113,"effort=8.6"],[125,"drop=3"],[134,"effort=6.71"],[143,"drop=3"],[176,"drop=3"],[188,"drop=1"],[218,"drop=3"],[224,"drop=3"],[228,"effort=8.6"],[251,"drop=1"],[256,"effort=6.77"]]
+
+
+
+instruction Mutation tests (version 2, SYSTEMATICK)
+Original race finsih time: 262.212
+Total variations run: 537
+Average race time: 273.8
+% of races that are slower: 0.64
+Average amount that times differ by: 11.6
+Average % that times differ by: 0.04
+Best strategy found: [2,1,0,3] / [[0,"effort=5.97"],[1,"effort=6.58"],[24,"effort=7.43"],[33,"effort=3.8"],[35,"effort=6.62"],[39,"drop=3"],[49,"drop=3"],[68,"drop=3"],[110,"drop=3"],[113,"effort=8.6"],[125,"drop=3"],[134,"effort=6.71"],[143,"drop=3"],[176,"drop=3"],[188,"drop=1"],[218,"drop=3"],[224,"drop=3"],[228,"effort=8.1"],[251,"drop=1"],[256,"effort=6.77"]] / 261.884
+Worst strategy found: [2,1,0,3] / [[0,"effort=5.97"],[1,"effort=6.58"],[24,"effort=10"],[33,"effort=3.8"],[35,"effort=6.62"],[39,"drop=3"],[49,"drop=3"],[68,"drop=3"],[110,"drop=3"],[113,"effort=8.6"],[125,"drop=3"],[134,"effort=6.71"],[143,"drop=3"],[176,"drop=3"],[188,"drop=1"],[218,"drop=3"],[224,"drop=3"],[228,"effort=8.6"],[251,"drop=1"],[256,"effort=6.77"]] / 323.544
+
+
+-- renaming fittest_mutant_time_taken to best_mutant_time_taken
+and smae for unfittest_mutant_time_taken to worst_mutant_time_taken
+
+ran it for 200 gens 
+
+
+
+GEN 1
+3,2,1,0
+[[0,"effort=5"],[12,"effort=6.12"],[29,"drop=2"],[92,"drop=3"],[164,"drop=3"],[185,"drop=2"],[192,"drop=2"],[200,"drop=1"],[201,"drop=2"]]
+
+Random Mutant Robustness Check
+Original race time taken 278.296
+Mutants Created 2000
+No. of direct clones 0
+Mean instruct. changes made = 1.209
+Max. instruct. changes made = 4 Strategy: Starting_order: [3,2,1,0], Instructions [[0,"effort=5"],[12,"effort=6.12"],[29,"drop=2"],[51,"effort=2.9"],[92,"drop=3"],[99,"drop=3"],[134,"drop=3"],[164,"drop=3"],[179,"drop=1"],[185,"drop=2"],[192,"drop=2"],[200,"drop=1"],[201,"drop=2"]]
+Average race time 299.73881149999477
+Std. Dev. of mutant race times 28.588499788008626
+% of races that are slower: 0.6325
+Average amount that times differ by: 21.489388499999965
+Average % that times differ by: 0.07721774118205049
+Best strategy found: [3,2,1,0] / [[0,"effort=5.78"],[12,"effort=6.12"],[29,"drop=2"],[92,"drop=3"],[131,"drop=1"],[164,"drop=3"],[192,"drop=2"],[200,"drop=1"],[201,"drop=2"]] / 276.906
+Worst strategy found: [3,2,1,0] / [[0,"effort=5"],[12,"effort=6.12"],[24,"effort=1.05"],[29,"drop=2"],[92,"drop=3"],[164,"drop=3"],[185,"drop=2"],[192,"drop=2"],[200,"drop=1"],[201,"drop=2"]] / 517.432
+
+Instruction Mutation tests (version 2, SYSTEMATICK)
+Original race finish time: 278.296
+Total variations run: 215
+Average race time: 301.33
+Std. deviation of variation race times: 31.23
+% of races that are slower: 0.49
+Average amount that times differ by: 23.05
+Average % that times differ by: 0.08
+Best strategy found: [3,2,1,0] / [[0,"effort=5"],[12,"effort=6.12"],[29,"drop=2"],[92,"drop=3"],[164,"drop=3"],[192,"drop=2"],[200,"drop=1"],[201,"drop=2"]] / 277.997
+Worst strategy found: [3,2,1,0] / [[0,"effort=5"],[12,"effort=1.12"],[29,"drop=2"],[92,"drop=3"],[164,"drop=3"],[185,"drop=2"],[192,"drop=2"],[200,"drop=1"],[201,"drop=2"]] / 522.101
+
+
+GEN 200 
+2,0,1,3
+[[0,"effort=4.28"],[1,"effort=6.96"],[3,"effort=7"],[5,"drop=1"],[27,"drop=3"],[41,"drop=3"],[46,"drop=3"],[76,"drop=3"],[93,"drop=2"],[119,"effort=6.88"],[126,"drop=3"],[148,"drop=3"],[164,"effort=7.28"],[167,"drop=3"],[174,"effort=7.11"],[177,"drop=3"],[194,"drop=3"],[200,"effort=8.42"],[208,"drop=3"],[229,"drop=3"],[231,"effort=9.52"],[235,"drop=1"]]
+
+Random Mutant Robustness Check
+Original race time taken 256.387
+Mutants Created 2000
+No. of direct clones 0
+Mean instruct. changes made = 1.415
+Max. instruct. changes made = 5 Strategy: Starting_order: [2,0,1,3], Instructions [[2,"effort=4.28"],[1,"effort=6.96"],[3,"effort=7"],[5,"drop=1"],[27,"drop=3"],[46,"drop=3"],[76,"drop=3"],[93,"drop=2"],[126,"drop=3"],[148,"drop=3"],[164,"effort=7.28"],[167,"drop=3"],[174,"effort=7.11"],[194,"drop=3"],[200,"effort=8.42"],[208,"drop=3"],[229,"drop=3"],[231,"effort=9.52"],[235,"drop=1"]]
+Average race time 271.8458439999985
+Std. Dev. of mutant race times 16.520881982105667
+% of races that are slower: 0.862
+Average amount that times differ by: 15.459354999999928
+Average % that times differ by: 0.060296953433676574
+Best strategy found: [2,0,1,3] / [[0,"effort=4.28"],[1,"effort=6.96"],[3,"effort=7"],[5,"drop=1"],[27,"drop=3"],[41,"drop=3"],[46,"drop=3"],[76,"drop=3"],[93,"drop=2"],[119,"effort=6.88"],[126,"drop=3"],[148,"drop=3"],[162,"effort=7.28"],[167,"drop=3"],[174,"effort=7.11"],[177,"drop=3"],[194,"drop=3"],[200,"effort=8.42"],[208,"drop=3"],[229,"drop=3"],[231,"effort=9.52"],[235,"drop=1"]] / 256.334
+Worst strategy found: [2,0,1,3] / [[0,"effort=4.28"],[1,"effort=6.96"],[3,"effort=7"],[5,"drop=1"],[26,"effort=1.55"],[27,"drop=3"],[41,"drop=3"],[46,"drop=3"],[76,"drop=3"],[93,"drop=2"],[119,"effort=6.88"],[126,"drop=3"],[148,"drop=3"],[164,"effort=7.28"],[167,"drop=3"],[174,"effort=7.11"],[177,"drop=3"],[194,"drop=3"],[200,"effort=8.42"],[208,"drop=3"],[229,"drop=3"],[231,"effort=9.52"],[235,"drop=1"]] / 330.611
+
+Instruction Mutation tests (version 2, SYSTEMATICK)
+Original race finish time: 256.387
+Total variations run: 566
+Average race time: 265.35
+Std. deviation of variation race times: 14.7
+% of races that are slower: 0.71
+Average amount that times differ by: 8.96
+Average % that times differ by: 0.03
+Best strategy found: [2,0,1,3] / [[0,"effort=4.28"],[1,"effort=6.96"],[3,"effort=7"],[5,"drop=1"],[27,"drop=3"],[41,"drop=3"],[46,"drop=3"],[76,"drop=3"],[93,"drop=2"],[119,"effort=6.88"],[126,"drop=3"],[148,"drop=3"],[164,"effort=7.28"],[167,"drop=3"],[174,"effort=7.11"],[177,"drop=3"],[194,"drop=3"],[200,"effort=8.42"],[208,"drop=3"],[229,"drop=3"],[231,"effort=9.645"],[235,"drop=1"]] / 256.287
+Worst strategy found: [2,0,1,3] / [[0,"effort=4.28"],[1,"effort=6.96"],[3,"effort=2"],[5,"drop=1"],[27,"drop=3"],[41,"drop=3"],[46,"drop=3"],[76,"drop=3"],[93,"drop=2"],[119,"effort=6.88"],[126,"drop=3"],[148,"drop=3"],[164,"effort=7.28"],[167,"drop=3"],[174,"effort=7.11"],[177,"drop=3"],[194,"drop=3"],[200,"effort=8.42"],[208,"drop=3"],[229,"drop=3"],[231,"effort=9.52"],[235,"drop=1"]] / 332.904
+
+- this could be a useful example, the early effort instruction is where the worst results are coming from... whereas the first effort instruction effect is protected, like Korean being protected by Japan from quakes?
+
+- could use the example of needing different building regulations if close to the edge of a tectonic plate considered at risk of earthquakes.
+
+- add another tidbit: the number of BETTER instructions found- many variants will be the same, phenotypically neutral. maybe include all three- they should sum to 1, a kind of check.
+
+
+- what has the best mutant/variant done to improve?
+
+original: [[0,"effort=4.28"],[1,"effort=6.96"],[3,"effort=7"],[5,"drop=1"],[27,"drop=3"],[41,"drop=3"],[46,"drop=3"],[76,"drop=3"],[93,"drop=2"],[119,"effort=6.88"],[126,"drop=3"],[148,"drop=3"],[164,"effort=7.28"],[167,"drop=3"],[174,"effort=7.11"],[177,"drop=3"],[194,"drop=3"],[200,"effort=8.42"],[208,"drop=3"],[229,"drop=3"],[231,"effort=9.52"],[235,"drop=1"]] / 256.387
+mutant: [[0,"effort=4.28"],[1,"effort=6.96"],[3,"effort=7"],[5,"drop=1"],[27,"drop=3"],[41,"drop=3"],[46,"drop=3"],[76,"drop=3"],[93,"drop=2"],[119,"effort=6.88"],[126,"drop=3"],[148,"drop=3"],[162,"effort=7.28"],[167,"drop=3"],[174,"effort=7.11"],[177,"drop=3"],[194,"drop=3"],[200,"effort=8.42"],[208,"drop=3"],[229,"drop=3"],[231,"effort=9.52"],[235,"drop=1"]] / 256.334 difference is [162,"effort=7.28"], moved it back from 164
+variant: [[0,"effort=4.28"],[1,"effort=6.96"],[3,"effort=7"],[5,"drop=1"],[27,"drop=3"],[41,"drop=3"],[46,"drop=3"],[76,"drop=3"],[93,"drop=2"],[119,"effort=6.88"],[126,"drop=3"],[148,"drop=3"],[164,"effort=7.28"],[167,"drop=3"],[174,"effort=7.11"],[177,"drop=3"],[194,"drop=3"],[200,"effort=8.42"],[208,"drop=3"],[229,"drop=3"],[231,"effort=9.645"],[235,"drop=1"]] / 256.287 difference is [231,"effort=9.645"]
+
+if I run it for 500 generations will these improvements disappear?
+
+500 gen experiment is not saving 
+  errmsg: 'BSONObj size: 17,149,943 (0x105AFF7) is invalid. Size must be between 0 and 16,793,600(16MB) First element: insert: "experiment_results"',
+  code: 10334,
+  
+ - doesn't seem like something I can easily change :-( 
+ 
+ "The maximum document size helps ensure that a single document cannot use an excessive amount of RAM or, during transmission, an excessive amount of bandwidth. To store documents larger than the maximum size, MongoDB provides the GridFS API. For more information about GridFS, see mongofiles and the documentation for your driver" 
+ 
+ limit is probs between 400 and 450 gens? pop is 2000. 
+ 
+ - final strat after 500 gens is this:
+ 
+ 2,1,0,3
+ [[1,"effort=7.37"],[22,"drop=3"],[26,"drop=2"],[39,"drop=2"],[40,"drop=2"],[60,"drop=3"],[61,"drop=3"],[65,"effort=7.42"],[76,"drop=3"],[83,"effort=8.24"],[90,"drop=1"],[92,"drop=2"],[97,"effort=9.57"],[98,"effort=9.91"],[102,"effort=6.81"],[103,"effort=6.99"],[105,"effort=6.99"],[113,"drop=2"],[114,"drop=3"],[124,"drop=3"],[142,"drop=1"],[171,"drop=3"],[175,"drop=2"],[206,"drop=3"],[218,"drop=3"],[224,"effort=9.9"],[231,"effort=4.8"],[232,"effort=10"],[235,"drop=1"],[236,"effort=7.54"],[237,"effort=9.37"],[246,"effort=9.22"],[247,"drop=2"],[249,"drop=1"],[253,"drop=3"]] 254.995
+ 
+ nice, so the robustness tests can no longer really improve things. 
+ 
+ Check results:
+Random Mutant Robustness Check
+Original race time taken 254.995
+Mutants Created 2000
+No. of direct clones 0
+Mean instruct. changes made = 1.6635
+Max. instruct. changes made = 6 Strategy: Starting_order: [0,1,2,3], Instructions [[1,"effort=7.37"],[22,"drop=3"],[26,"drop=2"],[39,"drop=2"],[40,"drop=2"],[60,"drop=3"],[61,"drop=3"],[65,"effort=7.42"],[76,"drop=3"],[83,"effort=8.24"],[90,"drop=1"],[92,"drop=2"],[97,"effort=9.57"],[104,"effort=6.81"],[103,"effort=6.99"],[107,"effort=6.99"],[113,"drop=2"],[114,"drop=3"],[124,"drop=3"],[142,"drop=1"],[171,"drop=3"],[175,"drop=2"],[206,"drop=3"],[218,"drop=3"],[231,"effort=4.8"],[232,"effort=10"],[236,"effort=7.54"],[237,"effort=9.37"],[246,"effort=9.22"],[247,"drop=2"],[249,"drop=1"],[253,"drop=3"]]
+Average race time 289.41942800000027
+Std. Dev. of mutant race times 26.979523899391207
+% of races that are slower/the same/faster (total): 0.88 / 0.12 / undefined (NaN %)
+Average amount that times differ by: 34.42442799999983
+Average % that times differ by: 0.1350004039294881
+Best strategy found: [0,1,2,3] / [[1,"effort=7.37"],[22,"drop=3"],[26,"drop=2"],[36,"drop=2"],[40,"drop=2"],[60,"drop=3"],[61,"drop=3"],[65,"effort=7.42"],[76,"drop=3"],[83,"effort=8.24"],[90,"drop=1"],[92,"drop=2"],[97,"effort=9.57"],[98,"effort=9.91"],[102,"effort=6.81"],[103,"effort=6.99"],[105,"effort=6.99"],[113,"drop=2"],[114,"drop=3"],[124,"drop=3"],[142,"drop=1"],[171,"drop=3"],[175,"drop=2"],[206,"drop=3"],[218,"drop=3"],[224,"effort=9.9"],[231,"effort=4.8"],[232,"effort=10"],[235,"drop=1"],[236,"effort=7.54"],[237,"effort=9.37"],[246,"effort=9.22"],[249,"drop=1"],[253,"drop=3"]] / 254.995
+Worst strategy found: [0,1,2,3] / [[22,"drop=3"],[26,"drop=2"],[39,"drop=2"],[40,"drop=2"],[60,"drop=3"],[61,"drop=3"],[65,"effort=7.42"],[76,"drop=3"],[83,"effort=8.24"],[90,"drop=1"],[92,"drop=2"],[97,"effort=9.57"],[98,"effort=9.91"],[102,"effort=6.81"],[103,"effort=6.99"],[105,"effort=6.99"],[113,"drop=2"],[124,"drop=3"],[142,"drop=1"],[153,"effort=1.04"],[171,"drop=3"],[175,"drop=2"],[206,"drop=3"],[218,"drop=3"],[224,"effort=9.9"],[231,"effort=4.8"],[232,"effort=10"],[235,"drop=1"],[236,"effort=7.54"],[237,"effort=9.37"],[246,"effort=9.22"],[247,"drop=2"],[249,"drop=1"],[253,"drop=3"]] / 364.382
+
+Instruction Mutation tests (version 2, SYSTEMATICK)
+Original race finish time: 254.995
+Total variations run: 1001
+Average race time: 288.95
+Std. deviation of variation race times: 26.74
+% of races that are slower/the same/faster (total): 0.86 / 0.14 / 0(100 %)
+Average amount that times differ by: 33.96
+Average % that times differ by: 0.13
+Best strategy found: [0,1,2,3] / [[1,"effort=7.37"],[22,"drop=3"],[26,"drop=2"],[39,"drop=2"],[40,"drop=2"],[60,"drop=3"],[61,"drop=3"],[65,"effort=7.42"],[76,"drop=3"],[83,"effort=8.24"],[90,"drop=1"],[92,"drop=2"],[97,"effort=9.57"],[98,"effort=9.91"],[102,"effort=6.81"],[103,"effort=6.99"],[105,"effort=6.99"],[113,"drop=2"],[114,"drop=3"],[124,"drop=3"],[142,"drop=1"],[171,"drop=3"],[175,"drop=2"],[206,"drop=3"],[218,"drop=3"],[224,"effort=9.9"],[231,"effort=4.8"],[232,"effort=10"],[235,"drop=1"],[236,"effort=7.54"],[237,"effort=9.37"],[247,"effort=9.22"],[249,"drop=1"],[253,"drop=3"]] / 254.994
+Worst strategy found: [0,1,2,3] / [[1,"effort=2.37"],[22,"drop=3"],[26,"drop=2"],[39,"drop=2"],[40,"drop=2"],[60,"drop=3"],[61,"drop=3"],[65,"effort=7.42"],[76,"drop=3"],[83,"effort=8.24"],[90,"drop=1"],[92,"drop=2"],[97,"effort=9.57"],[98,"effort=9.91"],[102,"effort=6.81"],[103,"effort=6.99"],[105,"effort=6.99"],[113,"drop=2"],[114,"drop=3"],[124,"drop=3"],[142,"drop=1"],[171,"drop=3"],[175,"drop=2"],[206,"drop=3"],[218,"drop=3"],[224,"effort=9.9"],[231,"effort=4.8"],[232,"effort=10"],[235,"drop=1"],[236,"effort=7.54"],[237,"effort=9.37"],[246,"effort=9.22"],[247,"drop=2"],[249,"drop=1"],[253,"drop=3"]] / 341.881
+
+- look at the storage of generation-by-generation results.
+
+- these are the current robustness check properties saved:
+		generation_results.robustness_check_number_of_mutants = settings_r.robustness_check_population_size;
+generation_results.robustness_check_average_mutant_time_taken = robustness_check_results.average_mutant_time_taken;
+generation_results.robustness_check_standard_dev = robustness_check_results.robustness_check_standard_dev;
+generation_results.robustness_check_best_mutant_time_taken = robustness_check_results.best_mutant_time_taken;
+generation_results.robustness_check_worst_mutant_time_taken = robustness_check_results.worst_mutant_time_taken;
+
+generation_results.robustness_single_mutation_qty = robustness_result.robustness_single_mutation_qty;
+generation_results.robustness_single_mutation_average = robustness_result.robustness_single_mutation_average;
+generation_results.robustness_single_mutation_times = robustness_result.robustness_single_mutation_times;
+
+- need to save a lot more, for both kinds of robustness measure. 
+
+- hmmmm, so the robustness results object has two parts now,
+robustness_result.mutations.original_time_taken = original_time_taken;
+robustness_result.mutations.average_mutant_time_taken = mutantMeanTime;
+robustness_result.mutations.average_mutant_changes = mutantMeanChanges; //donalK25: june, added to also track some view of variation
+robustness_result.mutations.worst_mutant_time_taken = worst_mutant_time_taken;
+robustness_result.mutations.best_mutant_time_taken = best_mutant_time_taken;
+robustness_result.mutations.robustness_check_standard_dev = mutantStdDev;
+robustness_result.mutations.robustness_percentage_of_slower_mutants = DecimalPrecision.round(robustness_count_of_slower_mutants/population_stats.length,2);
+robustness_result.mutations.robustness_percentage_of_equal_time_mutants = DecimalPrecision.round(robustness_percentage_of_equal_time_mutants/population_stats.length,2);
+robustness_result.mutations.robustness_percentage_of_faster_mutants = DecimalPrecision.round(robustness_percentage_of_faster_mutants/population_stats.length,2);
+robustness_result.mutations.robustness_mutant_average_time_difference = sum_of_mutant_time_differences/population_stats.length;
+robustness_result.mutations.robustness_mutation_average_percentage_difference = sum_of_mutant_percentage_differences/population_stats.length;
+robustness_result.mutations.best_mutant_start_order = best_mutant_start_order;
+robustness_result.mutations.best_mutant_instructions = best_mutant_instructions;
+robustness_result.mutations.worst_mutant_start_order = worst_mutant_start_order;
+robustness_result.mutations.worst_mutant_instructions = worst_mutant_instructions;
+robustness_result.mutations.mutant_times = population_stats;
+	
+	and
+	
+	
+	robustness_result.variations.original_time_taken = return_data.original_time_taken;
+  robustness_result.variations.robustness_variations_run = robustness_single_mutation_times_systematic.length;
+  robustness_result.variations.robustness_average_variation_time = average_variation_time;
+  robustness_result.variations.robustness_best_variation_time = best_found_time;
+  robustness_result.variations.robustness_worst_variation_time = worst_found_time;
+  robustness_result.variations.variationStdDev = variationStdDev;
+  robustness_result.variations.robustness_percentage_of_slower_variants = DecimalPrecision.round(count_of_slower_variants / robustness_single_mutation_times_systematic.length,2);
+  robustness_result.variations.robustness_percentage_of_faster_variants = DecimalPrecision.round(count_of_faster_variants / robustness_single_mutation_times_systematic.length,2);
+  robustness_result.variations.robustness_percentage_of_equal_time_variants = DecimalPrecision.round(count_of_equal_time_variants / robustness_single_mutation_times_systematic.length,2);
+  robustness_result.variations.robustness_single_mutation_average_time_difference = average_time_difference;
+  robustness_result.variations.robustness_single_mutation_average_percentage_difference = average_percentage_difference;
+  robustness_result.variations.robustness_single_mutation_times_systematic = JSON.stringify(robustness_single_mutation_times_systematic);
+  robustness_result.variations.best_found_start_order = best_found_start_order;
+  robustness_result.variations.best_found_instructions = best_found_instructions;
+  robustness_result.variations.worst_found_start_order = worst_found_start_order;
+  robustness_result.variations.worst_found_instructions = worst_found_instructions;
+
+- maybe I can just add these entire objects? 
+
+- added 
+		generation_results.robustness_mutation_results = {};
+  generation_results.robustness_variation_results = {};
+  generation_results.message = "";
+
 		
+		
+- runs, i think, but very slow, too many console log lines
+
+- ok, it kinda wurks.
+
+- needs to include the average fitness per generation 
+- the y scale is off 
+
+- need to get the min value to set a useful y axis 
+
+e.g. 
+
+
+var min_all_data = d3.min(data, function(array) {
+  return d3.min(array);
+});
+// y axis scale from min of data
+graph_data_1.y_scale_from = min_all_data-5;
+			
+
+names of the two graphs (in the code)
+- best_fitness_robustness_check
+- robustness_instruction_variation_times
+
+- where is the best race time per gen stored?
+
+selected_ga_results.generations[i].best_race_time
+
+- add this to the robustness_instruction_variation_times graph
+
+in the test, there's a big improvement in average mutant/variant scores in generation 49. could be worth exploring what happens?
+
+gen 48
+time:
+263.643
+
+start order:
+2,1,0,3
+
+instructions:
+[[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[27,"effort=6.07"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]]
+
+results:
+	Random Mutant Robustness Check
+	Original race time taken 263.643
+	Mutants Created 2000
+	No. of direct clones 0
+	Mean instruct. changes made = 1.4075
+	Max. instruct. changes made = 4 Strategy: Starting_order: [2,1,0,3], Instructions [[24,"drop=2"],[26,"drop=3"],[27,"effort=6.07"],[38,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=1"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]]
+	Average race time 284.94021649999985
+	Std. Dev. of mutant race times 19.174048597508733
+	% of races that are slower/the same/faster (total): 0.78 / 0.2 / undefined (NaN %)
+	Average amount that times differ by: 21.30328649999998
+	Average % that times differ by: 0.08080353546272813
+	Best strategy found: [2,1,0,3] / [[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[27,"effort=6.39"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]] / 262.481
+	Worst strategy found: [2,1,0,3] / [[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[27,"effort=6.07"],[34,"effort=9.58"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]] / 327.2
+
+	Instruction Mutation tests (version 2, SYSTEMATICK)
+	Original race finish time: 263.643
+	Total variations run: 576
+	Average race time: 286.59
+	Std. deviation of variation race times: 20.74
+	% of races that are slower/the same/faster (total): 0.77 / 0.19 / 0.04(100 %)
+	Average amount that times differ by: 22.97
+	Average % that times differ by: 0.09
+	Best strategy found: [2,1,0,3] / [[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[27,"effort=6.32"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]] / 262.717
+	Worst strategy found: [2,1,0,3] / [[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[27,"effort=1.0700000000000003"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]] / 332.264
+
+gen 49
+time:
+262.546
+
+start order:
+3,1,0,2
+
+instructions:
+[[0,"effort=5"],[3,"effort=6.51"],[34,"drop=2"],[48,"effort=6.25"],[52,"drop=3"],[63,"effort=7.11"],[83,"drop=3"],[86,"drop=3"],[125,"drop=3"],[136,"drop=2"],[150,"effort=6.64"],[156,"drop=2"],[179,"drop=2"],[189,"drop=2"],[207,"drop=1"],[216,"effort=9.62"],[220,"drop=3"],[230,"effort=6.71"],[232,"drop=3"],[247,"effort=6.56"],[253,"effort=6.41"],[262,"drop=1"]]	
+
+results:
+	Random Mutant Robustness Check
+	Original race time taken 262.546
+	Mutants Created 2000
+	No. of direct clones 0
+	Mean instruct. changes made = 1.4075
+	Max. instruct. changes made = 5 Strategy: Starting_order: [3,1,0,2], Instructions [[0,"effort=5"],[34,"drop=2"],[48,"effort=6.25"],[52,"drop=3"],[63,"effort=7.11"],[83,"drop=3"],[86,"drop=3"],[104,"drop=2"],[136,"drop=2"],[150,"effort=6.34"],[156,"drop=2"],[179,"drop=2"],[189,"drop=2"],[207,"drop=1"],[216,"effort=9.62"],[220,"drop=3"],[230,"effort=6.71"],[232,"drop=3"],[262,"drop=1"]]
+	Average race time 272.66472249999856
+	Std. Dev. of mutant race times 10.928411278428976
+	% of races that are slower/the same/faster (total): 0.82 / 0.09 / undefined (NaN %)
+	Average amount that times differ by: 10.144790500000049
+	Average % that times differ by: 0.03864004974366405
+	Best strategy found: [3,1,0,2] / [[0,"effort=5"],[3,"effort=6.51"],[34,"drop=2"],[48,"effort=6.31"],[52,"drop=3"],[63,"effort=7.11"],[83,"drop=3"],[86,"drop=3"],[125,"drop=3"],[136,"drop=2"],[150,"effort=6.64"],[156,"drop=2"],[179,"drop=2"],[189,"drop=2"],[207,"drop=1"],[216,"effort=10"],[220,"drop=3"],[230,"effort=6.71"],[232,"drop=3"],[247,"effort=6.56"],[253,"effort=6.41"],[262,"drop=1"]] / 262.068
+	Worst strategy found: [3,1,0,2] / [[0,"effort=5"],[3,"effort=7.36"],[34,"drop=2"],[48,"effort=6.25"],[52,"drop=3"],[63,"effort=7.11"],[83,"drop=3"],[86,"drop=3"],[125,"drop=3"],[136,"drop=2"],[150,"effort=6.64"],[156,"drop=2"],[179,"drop=2"],[189,"drop=2"],[207,"drop=1"],[216,"effort=9.62"],[220,"drop=3"],[230,"effort=6.71"],[232,"drop=3"],[247,"effort=6.56"],[253,"effort=6.41"],[262,"drop=1"]] / 323.816
+
+	Instruction Mutation tests (version 2, SYSTEMATICK)
+	Original race finish time: 262.546
+	Total variations run: 633
+	Average race time: 269.94
+	Std. deviation of variation race times: 8.95
+	% of races that are slower/the same/faster (total): 0.76 / 0.13 / 0.11(100 %)
+	Average amount that times differ by: 7.44
+	Average % that times differ by: 0.03
+	Best strategy found: [3,1,0,2] / [[0,"effort=5"],[3,"effort=6.51"],[34,"drop=2"],[48,"effort=6.25"],[52,"drop=3"],[63,"effort=7.11"],[83,"drop=3"],[86,"drop=3"],[125,"drop=3"],[136,"drop=2"],[150,"effort=6.64"],[156,"drop=2"],[179,"drop=2"],[189,"drop=2"],[207,"drop=1"],[216,"effort=9.62"],[220,"drop=3"],[230,"effort=6.71"],[232,"drop=3"],[247,"effort=10"],[253,"effort=6.41"],[262,"drop=1"]] / 261.666
+	Worst strategy found: [3,1,0,2] / [[0,"effort=5"],[3,"effort=1.5099999999999998"],[34,"drop=2"],[48,"effort=6.25"],[52,"drop=3"],[63,"effort=7.11"],[83,"drop=3"],[86,"drop=3"],[125,"drop=3"],[136,"drop=2"],[150,"effort=6.64"],[156,"drop=2"],[179,"drop=2"],[189,"drop=2"],[207,"drop=1"],[216,"effort=9.62"],[220,"drop=3"],[230,"effort=6.71"],[232,"drop=3"],[247,"effort=6.56"],[253,"effort=6.41"],[262,"drop=1"]] / 306.938
+
+
+Something is dramatically improving in terms of robustness, but what- if I can visualize the instruction-by-instruction view then maybe that would be a result?
+
+- bug, delte flag thingy in variations is trying to delete itself, doesn't check for that case.
+
+
+- hmmmmmm, seems to work, kinda. run it for a simple test strategy 
+
+
+
+0,1,2,3
+[[5,"effort=6"]]
+
+add a drop 
+
+[[5,"effort=6"],[45,"drop=3"]]
+
+
+-- % of races that are slower/the same/faster (total): 0.78 / 0.21 / undefined (NaN %) hmmmmmmmmmm, maybe not being set to 0 props?
+
+- spend one hour writing, if possible
+
+- reading about robustness, e.g., https://en.wikipedia.org/wiki/Robust_optimization
+
+- "The term “robust optimization” has come to encompass several approaches to protecting the decision-maker against parameter ambiguity and stochastic uncertainty. " from "Recent advances in robust optimization: An overview", 2014
+
+- "The main paradigm relies on worst-case analysis: a solution is evaluated using the realization of the uncertainty that is most unfavorable."
+
+- could i mention redundancies in the biological world, i.e., mechanisms to improve the stability of key genotype-to-phenotype relationships under the pressure of variance.
+
+- run a one-strong race and see if the robustness looks any different
+
+- but first, try and figure out the weird uppy downy irreuglar times with the robustness tests
+
+- run the graph for the first few instructions? 
+
+- shite, i get different answer than the data :-( something be UP 
+
+- edit the 2nd effort instruction
+
+- run from the interface
+[[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[32,"effort=6.07"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]], 310.137	
+
+- the result from the automated tests
+[[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[32,"effort=6.07"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]],311.959
+
+- tey another
+- from interface 
+[[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[33,"effort=6.07"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]]	  309.965
+
+- from results 
+[[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[33,"effort=6.07"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]],309.965
+
+debug the darn thing with a specfic catch IF
+- in the debug I get 311.959. I feel like... something is NOT being reset or something?
+collect the start order and array and double-check the discrepancy 
+
+2,1,0,3
+
+[[0,"effort=9.46"],[24,"drop=2"],[26,"drop=3"],[32,"effort=6.07"],[38,"drop=3"],[41,"drop=3"],[53,"drop=2"],[59,"drop=3"],[79,"effort=6.91"],[97,"drop=3"],[109,"drop=3"],[135,"drop=1"],[136,"drop=2"],[166,"drop=1"],[196,"effort=5.72"],[212,"drop=2"],[216,"drop=2"],[217,"drop=2"],[234,"effort=9.84"],[240,"effort=7.81"],[241,"drop=2"],[262,"drop=2"]] 310.137
+
+so, something not reset??
+
+--hmmmmm 
+
+  "endurance_fatigue_level": 152.40261952900374,
+        "accumulated_fatigue": 877.3492328353756,
+		
+		    "distance_covered": 4008.114278076573,
+
+- naw, these are reset.... frontal_area_adjusted_for_shelter isn't... should remove it altogether tbh.
+
+
+-nope, still 311.959
+
+- ok, logging everything. it is running a DROP = 2 instruction at timestep 5... where the heck is this coming from??
+
+- ok, so race_r.drop_instruction = drop_value; is run but it is NOT being rest, and the previous run of the race finishes with an un-run drop=2 instruction, sooooooo, i think i found the problem.
+
+- 310.137
+- got it. nasty murk of a bug :-( 
+
+- now, remove the specific debugging code, but first test a few other alterations?
+
+- or, first, generate the graph again... still oscillating?
+
+- run another run of the main experiment, maybe the stats were OFF because of that problem?
+
+Best R.M. label is wrong on the R.R/I.V graph
+
+Align the colours better in both graphs 
+
+- still finding improvements in the robustness tests 
+original
+[[0,"effort=5"],[3,"effort=5.87"],[21,"effort=7.84"],[38,"drop=2"],[40,"effort=6.31"],[74,"drop=3"],[85,"effort=7.65"],[91,"effort=6.81"],[104,"drop=3"],[133,"drop=2"],[134,"drop=2"],[176,"drop=2"],[209,"drop=3"],[224,"effort=8.06"],[235,"drop=2"]]	
+best I.V. a timestep change at [78,"effort=7.65"]
+[[0,"effort=5"],[3,"effort=5.87"],[21,"effort=7.84"],[38,"drop=2"],[40,"effort=6.31"],[74,"drop=3"],[78,"effort=7.65"],[91,"effort=6.81"],[104,"drop=3"],[133,"drop=2"],[134,"drop=2"],[176,"drop=2"],[209,"drop=3"],[224,"effort=8.06"],[235,"drop=2"]]  262.46
+
+
+
+new call to get data for selected generation of both robustness times 
+let selectedGeneration = parseInt($('#selectedGeneration').val());
+
+what data am I looking for 
+
+robustness_mutation_results.mutant_times = population_stats;
+robustness_variation_results.robustness_single_mutation_times_systematic
+
+- data being returned now - add the generation 
+
+- graph now showing... would be good to include the actual best time.
+
+
+
+
+University of Galway,
+University Road,
+Galway, Ireland
+H91 TK33
+T. +353 91 524411
+
+woah, "7) Have you ever been denied a U.S. visa you applied for with your current or previous passport, or have you ever been refused admission to the United States or withdrawn your application for admission at a U.S. port of entry?"
+
+8) Have you traveled to, or been present in Cuba, Iran, Iraq, Libya, North Korea, Somalia, Sudan, Syria or Yemen on or after March 1, 2011?
+
+I have read and understand that I hereby waive for the duration of my travel authorization obtained via ESTA any rights to review or appeal of a U.S. Customs and Border Protection Officer's determination as to my admissibility, or to contest, other than on the basis of an application for asylum, any removal action arising from an application for admission under the Visa Waiver Program.
+
+In addition to the above waiver, as a condition of each admission into the United States under the Visa Waiver Program, I agree that the submission of biometric identifiers (including fingerprints and photographs) during processing upon arrival in the United States shall reaffirm my waiver of any rights to review or appeal of a U.S. Customs and Border Protection Officer's determination as to my admissibility, or to contest, other than on the basis of an application for asylum, any removal action arising from an application for admission under the Visa Waiver Program.
+
+
+gen 1 time 		281.716
+gen 199 time 	257.128 
+
+difference = 281.716 - 257.128 = 24.588 
+
+- make a table 
+
+\begin{table}[h]
+\caption{Caption text}\label{tab1}%
+\begin{tabular}{@{}llll@{}}
+\toprule
+Measure & Gen. 1 & Gen. 10 & Gen. 199\\
+\midrule
+Original Race Time    & data 1   & data 2  & 257.128  \\
+Mean instruct. changes    & data 4   & data 5\footnotemark[1]  & 1.4555  \\
+Max. instruct. changes made    & data 7   & data 8  & 5  \\
+Average race time & XXXX & YYY & 275.8 \\
+Std. Dev. e & XXXX & YYY &  17.27 \\
+% of slower races  & XXXX & YYY &  0.81 \\
+% of equal-time races  & XXXX & YYY &  0.17  \\
+% of faster races  & XXXX & YYY &  0.02  \\
+Average amount that times differ by  & XXXX & YYY &  18.67  \\
+Average % that times differ by  & XXXX & YYY &  0.073  \\
+Best Time found  & XXXX & YYY &  256.749  \\
+Worst Time found  & XXXX & YYY &  336.322  \\
+
+\botrule
+\end{tabular}
+\end{table} 
+
+- added wost RM to graph, but its a bit tooo scale-warpy, can't read anything else now.
+
+- need to compare 2 gens where robustness changes a lot 
+
+- experiment id: 
+-gen 105
+time 246.039
+0,1,3,2
+[[0,"effort=5"],[4,"effort=7.12"],[22,"drop=1"],[37,"effort=5.98"],[43,"drop=1"],[64,"drop=2"],[78,"drop=2"],[81,"drop=1"],[83,"effort=6.92"],[85,"effort=9.67"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=1"],[111,"drop=2"],[121,"drop=3"],[144,"drop=3"],[147,"effort=9.24"],[149,"effort=6.49"],[167,"drop=2"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"]]	
+
+Random Mutant Robustness Check
+Original race time taken 246.039
+Mutants Created 2000
+No. of direct clones 0
+Mean instruct. changes made = 1.443
+Max. instruct. changes made = 5 Strategy: Starting_order: [0,1,3,2], Instructions [[0,"effort=5"],[4,"effort=7.12"],[22,"drop=1"],[37,"effort=5.98"],[43,"drop=1"],[78,"drop=2"],[81,"drop=1"],[83,"effort=6.92"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=1"],[111,"drop=2"],[121,"drop=3"],[144,"drop=3"],[148,"effort=9.24"],[149,"effort=6.49"],[186,"drop=1"],[202,"effort=7.3"],[207,"drop=1"]]
+Average race time 267.012368
+Std. Dev. of mutant race times 18.31228082054703
+% of races that are slower/the same/faster (total): 0.85 / 0.13 / 0.02 (100 %)
+Average amount that times differ by: 20.975879000000045
+Average % that times differ by: 0.08525428488979375
+Best strategy found: [0,1,3,2] / [[0,"effort=5"],[4,"effort=7.12"],[22,"drop=1"],[37,"effort=5.98"],[43,"drop=1"],[64,"drop=2"],[78,"drop=2"],[81,"drop=1"],[83,"effort=6.92"],[85,"effort=9.67"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=1"],[111,"drop=2"],[121,"drop=3"],[144,"drop=3"],[147,"effort=9.24"],[149,"effort=6.49"],[167,"drop=2"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"],[224,"effort=8.48"]] / 245.817
+Worst strategy found: [0,2,1,3] / [[4,"effort=7.12"],[22,"drop=1"],[37,"effort=5.98"],[43,"drop=1"],[64,"drop=2"],[78,"drop=2"],[81,"drop=1"],[83,"effort=6.92"],[85,"effort=9.67"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=1"],[111,"drop=2"],[121,"drop=3"],[144,"drop=3"],[147,"effort=9.24"],[149,"effort=6.49"],[167,"drop=2"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[206,"drop=1"]] / 324.061
+
+Instruction Mutation tests (version 2, SYSTEMATICK)
+Original race finish time: 246.039
+Total variations run: 838
+Average race time: 263.89
+Std. deviation of variation race times: 17.52
+% of races that are slower/the same/faster (total): 0.71 / 0.23 / 0.05(99 %)
+Average amount that times differ by: 17.85
+Average % that times differ by: 0.07
+Best strategy found: [0,1,3,2] / [[0,"effort=5"],[4,"effort=7.12"],[22,"drop=1"],[37,"effort=5.98"],[43,"drop=1"],[64,"drop=2"],[78,"drop=2"],[81,"drop=1"],[83,"effort=6.92"],[85,"effort=9.67"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=1"],[111,"drop=2"],[121,"drop=3"],[144,"drop=3"],[147,"effort=9.24"],[149,"effort=6.49"],[167,"drop=2"],[186,"drop=1"],[188,"drop=3"],[191,"effort=7.3"],[207,"drop=1"]] / 245.572
+Worst strategy found: [0,1,3,2] / [[0,"effort=5"],[4,"effort=10"],[22,"drop=1"],[37,"effort=5.98"],[43,"drop=1"],[64,"drop=2"],[78,"drop=2"],[81,"drop=1"],[83,"effort=6.92"],[85,"effort=9.67"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=1"],[111,"drop=2"],[121,"drop=3"],[144,"drop=3"],[147,"effort=9.24"],[149,"effort=6.49"],[167,"drop=2"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"]] / 328.07
+
+
+-gen 106
+time 245.406
+1,0,2,3
+[[0,"effort=5"],[4,"effort=7.46"],[22,"drop=1"],[37,"effort=6.16"],[42,"drop=1"],[64,"drop=2"],[75,"drop=2"],[76,"drop=2"],[81,"drop=1"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=3"],[121,"drop=3"],[144,"drop=3"],[149,"effort=6.49"],[167,"drop=1"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"]]	
+
+Random Mutant Robustness Check
+Original race time taken 245.406
+Mutants Created 2000
+No. of direct clones 0
+Mean instruct. changes made = 1.362
+Max. instruct. changes made = 4 Strategy: Starting_order: [1,0,2,3], Instructions [[0,"effort=4.98"],[4,"effort=7.46"],[22,"drop=1"],[37,"effort=6.16"],[42,"drop=1"],[64,"drop=2"],[75,"drop=2"],[81,"drop=1"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=3"],[121,"drop=3"],[149,"effort=6.49"],[167,"drop=1"],[186,"drop=1"],[202,"effort=7.3"],[207,"drop=1"]]
+Average race time 260.4701890000004
+Std. Dev. of mutant race times 14.917100820577668
+% of races that are slower/the same/faster (total): 0.8 / 0.19 / 0 (99 %)
+Average amount that times differ by: 15.064425000000027
+Average % that times differ by: 0.061385724065426264
+Best strategy found: [1,0,2,3] / [[0,"effort=5"],[4,"effort=7.46"],[22,"drop=1"],[38,"effort=6.16"],[42,"drop=1"],[64,"drop=2"],[75,"drop=2"],[76,"drop=2"],[81,"drop=1"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=3"],[121,"drop=3"],[144,"drop=3"],[149,"effort=6.49"],[167,"drop=1"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"]] / 245.327
+Worst strategy found: [1,0,2,3] / [[0,"effort=5"],[4,"effort=7.46"],[7,"effort=9.27"],[22,"drop=1"],[37,"effort=6.16"],[42,"drop=1"],[64,"drop=2"],[75,"drop=2"],[76,"drop=2"],[81,"drop=1"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=3"],[121,"drop=3"],[144,"drop=3"],[149,"effort=6.49"],[167,"drop=1"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"]] / 322.313
+
+Instruction Mutation tests (version 2, SYSTEMATICK)
+Original race finish time: 245.406
+Total variations run: 694
+Average race time: 258.19
+Std. deviation of variation race times: 15.47
+% of races that are slower/the same/faster (total): 0.71 / 0.29 / 0(100 %)
+Average amount that times differ by: 12.78
+Average % that times differ by: 0.05
+Best strategy found: [1,0,2,3] / [[0,"effort=5"],[4,"effort=7.46"],[22,"drop=1"],[38,"effort=6.16"],[42,"drop=1"],[64,"drop=2"],[75,"drop=2"],[76,"drop=2"],[81,"drop=1"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=3"],[121,"drop=3"],[144,"drop=3"],[149,"effort=6.49"],[167,"drop=1"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"]] / 245.327
+Worst strategy found: [1,0,2,3] / [[0,"effort=5"],[4,"effort=10"],[22,"drop=1"],[37,"effort=6.16"],[42,"drop=1"],[64,"drop=2"],[75,"drop=2"],[76,"drop=2"],[81,"drop=1"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=3"],[121,"drop=3"],[144,"drop=3"],[149,"effort=6.49"],[167,"drop=1"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"]] / 327.481
+
+
+
+---- compare side by side
+
+[[0,"effort=5"],[4,"effort=7.12"],[22,"drop=1"],[37,"effort=5.98"],[43,"drop=1"],[64,"drop=2"],              [78,"drop=2"],[81,"drop=1"],[83,"effort=6.92"],[85,"effort=9.67"],[88,"effort=6.84"],[103,"drop=2"],[110,"drop=1"],[111,"drop=2"],[121,"drop=3"],[144,"drop=3"],[147,"effort=9.24"],[149,"effort=6.49"],[167,"drop=2"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"]]	
+
+[[0,"effort=5"],[4,"effort=7.46"],[22,"drop=1"],[37,"effort=6.16"],[42,"drop=1"],[64,"drop=2"],[75,"drop=2"],[76,"drop=2"],[81,"drop=1"],                                       [88,"effort=6.84"],[103,"drop=2"],[110,"drop=3"],               [121,"drop=3"],[144,"drop=3"],[149,"effort=6.49"],[167,"drop=1"],[186,"drop=1"],[188,"drop=3"],[202,"effort=7.3"],[207,"drop=1"]]	
+ ------
+ 
+  - Colm meeting 19th June 
+ 
+ 1st sentence, too long. 
+ - split into parts.
+ 
+ - trade off between speed and robustness - mention earlier?
+ 
+ - related work, needs a summary to lead into the model. Finding fit solutions with a robust measure, depending on circumstances. Narrow in on the main topic. Signpost what's coming up.
+ 
+ - try and find my proceedings, can I cite this? 'building on previous work by Kelly' cite and pretend it is by somebody else. to maintain the anonymous review. if I can find a ref to the first paper. reviewer should not know who is submitting.
+ - can't find anything tbh, emailed Colm about it. Selected proceedings were published. My stuff was just too weak?
+ 
+ - "When run by the simulator, this race finishes in 257 seconds, more than 24 seconds faster than the best-in-generation time after the first generation" maybe clearer?
+ - reworked it a bit to try and clarify it.
+ 
+ - "little faster or slower, or earlier or later than asked, likely to lead to a large failure?" reflect this in the intro as well, the motivation 
+ 
+ - "2000 Random Mutants (R.M.) for 4 generations" should be 4.
+	- changed.
+ 
+ - maybe change gen 10 to a later one in the table?
+ - can i find gen. 10 easily? maybe use gen 20?
+ 
+ 
+ BEFORE
+ 
+ Best-in-Gen Race Time    & 281.716   & 272.208  & 257.128  \\
+Mean Instruct. Changes    & 1.2635   & 1.2465  & 1.4555  \\
+Max. Instruct. Changes    & 5   & 4  & 5  \\
+Avg. R.M. Race Time &  291.95 & 291.776  & 275.8 \\
+Std. Dev. of R.M. Times & 15.0 & 27.41  &  17.27 \\
+\% Slower Races  & 63 & 61  &  81 \\
+\% Equal-time Races  & 13  & 24   &  17  \\
+\% Faster Races  & 24  & 15   &   2  \\
+Avg. R.M./Best-in-Gen Diff (Time)  & 11.29 & 19.93   &  18.67  \\
+Avg. R.M./Best-in-Gen Diff (\%)   & 0.04 & 0.073 &  0.073  \\
+Best R.M. Time  & 270.333 & 268.904 &  256.749  \\
+Worst R.M. Time  & 351.048 & 476.751  &  336.322  \\
+
+AFTER. maybe use gen. 40?
+
+Best-in-Gen Race Time    & 281.716   & 265.339  & 257.128  \\
+Mean Instruct. Changes    & 1.2635   & 1.3265  & 1.4555  \\
+Max. Instruct. Changes    & 5   & 5  & 5  \\
+Avg. R.M. Race Time &  291.95 & 285.76  & 275.8 \\
+Std. Dev. of R.M. Times & 15.0 & 25.15  &  17.27 \\
+\% Slower Races  & 63 & 78  &  81 \\
+\% Equal-time Races  & 1  & 16   &  17  \\
+\% Faster Races  & 24  & 6   &   2  \\
+Avg. R.M./Best-in-Gen Diff (Time)  & 11.29 & 20.45   &  18.67  \\
+Avg. R.M./Best-in-Gen Diff (\%)   & 0.04 &  0.077 &  0.073  \\
+Best R.M. Time  & 270.333 & 264.794 &  256.749  \\
+Worst R.M. Time  & 351.048 & 391.035  &  336.322  \\
+
+
+
+ 
+ - "The experimental results show th at strategies vary in the tolerance of their phenotypical performance to perturbation, but the relationship between particular instructions and specific alterations to this final result has not been addressed." confusing.
+ 
+ "We can already note from the design of the simulator some expectations."
+ 
+ "and conversely, an effort instruction"
+ 
+ "neighbourhood of the I.V. search leads" make sure I.V. is clearly introduced before being used.
+ done
+ 
+ 
+ "and is smaller than the"
+ 
+ degrade 
+ 
+ update the image rm_iv_comparison_two_strong_200gens_Jun18 to include a circle around gens 105/106
+ - DONE.
+ 
+ 
+ 
+ -- how do i bring in the other team types in terms of robustness?
+ 
+ -- how do i incorporate the core model? describe it or find some way to post/cite it?
+ 
+ 
+ -- Wed. 25th, Mishawaka, going through changes.
+ 
+ - I included one specific mutation rate value, and mentioned that they are all copied from the GA process. Is this ok?
+ 
+ - added the  missing image
+ 
+ - finished the Colm updates
+ 
+ - need to
+ 
+ - add section on other team types 
+ 
+ - add discussion
+ 
+ - add conclusion 
+ 
+ - read through and look for issues 
+ 
+ - email Colm 
+ 
+ - are drop instructions more sensitive in strategies where the order DOES matter?
+ 
+ - wait, have to reword, that, the previous section used 2 weak/2 strong team... 
+ 
+ - compare 1sgrong/3weak with all equal?
+ 
+ - shoot, that last diagram used gen 1 data! 
+ - no no it didn't, I ran the test from the GA page. The graph data is for the fitness spread data?
+ 
+ - one strong strat has NO early drop instruction, good comparison point  with an all-equal?
+ 
+ - idea, show FOUR, one for each... then discuss a little. anything I can graph gen-by-gen here? can't fit that much tbh.
+ 
+ 0,3,1,2  252.771
+ 
+ 0,3,2,1  252.771
+ 0,2,1,3
+ 0,2,3,1
+ 0,1,2,3
+ 0,1,3,2
+ 
+ 1,2,3,0 281.148
+ 1,3,2,0 281.148
+ 
+ 1,0,3,2 288.045
+1,2,0,3 286.702
+
+
+(288.045-252.771)/252.771 = 0.13954923626
+(281.148-252.771)/252.771 = 0.11226366948
+(286.702-252.771)/252.771 = 0.13423612677
+
+(0.13954923626 + 0.11226366948 + 0.13423612677)/3= 0.12868301083
+
+((5 * 0) + (6*0.13954923626) + (6*0.11226366948) + (6*0.13423612677))/24 = 0.09651225812
+ 
+  i should have added a case for I.V. where the instruction was taken out? but how would that be visualised??
+  
+  (253.48 - 238.58)/238.58 = 0.062452846
+  
+  
+  
+   -- need more references in the AI section, e.g. on search?
+ 
+ - mention explainability? in the conclusion? in that 
+ 
+ 
+ 
+ - get to the noise part... fix up the part written thus far?
+ 
+ here to learn.
+ 
+ - need to read some more on noise in optimization?
+ 
+ @inproceedings{krink2004noisy,
+  title={Noisy optimization problems-a particular challenge for differential evolution?},
+  author={Krink, Thiemo and Filipic, Bogdan and Fogel, Gary B},
+  booktitle={Proceedings of the 2004 Congress on Evolutionary Computation (IEEE Cat. No. 04TH8753)},
+  volume={1},
+  pages={332--339},
+  year={2004},
+  organization={IEEE}
+}
+ 
+ "the performance of heuristics is notoriously problem dependent and parameter sensitive. "
+ 
+ 2005, Jin & Branke, four kinds of noise. 
+ 
+ gradient-based searches can become trapped in a local minima introduced by noise. 
+ 
+ lemma: subsidiary or intermediate theorem
+ 
+ Paper "Noisy Optimization with Evolution Strategies"
+ "We then empirically demonstrate that for a simple but nonetheless
+nontrivial noisy objective function, an evolution strategy outperforms other optimization algorithms designed to be able to cope with noise"
+ 
+ Need to move or remove "Exploring Discovered Instructions" section. could it go in the core model chapter?
+ 
+ For now, put it in an offshoots section, maybe create a new chaper for now, for this kind of work, which may or may not be brought back in.
+ 
+ - piece on robustness here needs to go, but could keep a little of it somehow? 
+ 
+ - need to start running noise experiments. recreate those diagrams. review each of the functions
+ 
+ - try mishearing every instruction
+ 
+ - is it delay OR effort, or possibly delayed + possibly effort? 
+ 
+ - possible diagram: increasing level of mishearing noise, show that the GA gets worse at finding better solutions?
+ - run experiment varying 
+ noise_1_probability_instruction_misheard (go up in .17 since we can only show 7 lines on the graph?)
+ 0,0.17,0.34,0.51,0.68, 0.85, 1
+ 
+ {"iterations":[7,6,5,4,3,2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[0,0.17,0.34,0.51,0.68, 0.85, 1]}
+ 
+ 
+ 
+ {"iterations":7,"active":1,"variations":[{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[0,0.17,0.34,0.51,0.68, 0.85, 1]}],"experiments":[]}
+ {"iterations":3,"active":0,"variations":[{"iterations":[3,2,1],"type":"global","property":"ga_tournament_selection_group_size","values":[2000,2000,2000]},{"iterations":[3,2,1],"type":"global","property":"ga_tournament_roulette_exponent_group_size_divisor","values":[2000,2000,2000]}],"experiments":[{"client_id":"86.45.238.255_2025_4_28_13_4_4","iteration":3,"status":"complete"},{"client_id":"86.45.238.255_2025_4_28_13_4_4","iteration":2,"status":"complete"},{"client_id":"86.45.238.255_2025_4_28_13_4_4","iteration":1,"status":"complete"}]}
+ 
+ - why have multiple kinds of noise? is there any difference between them in terms of their effect on the GA convergence??
+ 
+ - need to run it with all the different kinds of noise and produce some kind of graph
+ 
+ - what happens if we incorporate the noise changes into the genotype? noise happens, record it, update the genotype.
+ 
+ - example of total mishearing noise 
+ 
+ {"0":{"original_instruction":[0,"effort=9.98"],"altered_instruction":[0,"effort=10"],"type":"random_effort"},"1":{"original_instruction":[1,"effort=9.77"],"altered_instruction":[1,"effort=10"],"type":"random_effort"},"2":{"original_instruction":[2,"effort=6.09"],"altered_instruction":[2,"effort=4.436185861757876"],"type":"random_effort"},"12":{"original_instruction":[12,"effort=6.42"],"altered_instruction":[16,"effort=6.42"],"type":"random_delay"},"15":{"original_instruction":[15,"drop=2"],"altered_instruction":[15,"drop=1"],"type":"random_drop"},"23":{"original_instruction":[23,"drop=3"],"altered_instruction":[23,"drop=2"],"type":"random_drop"},"60":{"original_instruction":[60,"drop=1"],"altered_instruction":[60,"drop=2"],"type":"random_drop"},"83":{"original_instruction":[83,"drop=3"],"altered_instruction":[83,"drop=2"],"type":"random_drop"},"85":{"original_instruction":[85,"effort=5.74"],"altered_instruction":[89,"effort=5.74"],"type":"random_delay"},"94":{"original_instruction":[94,"drop=3"],"altered_instruction":[94,"drop=2"],"type":"random_drop"},"112":{"original_instruction":[112,"drop=2"],"altered_instruction":[112,"drop=3"],"type":"random_drop"},"121":{"original_instruction":[121,"effort=6.55"],"altered_instruction":[123,"effort=6.55"],"type":"random_delay"},"145":{"original_instruction":[145,"drop=3"],"altered_instruction":[145,"drop=2"],"type":"random_drop"},"150":{"original_instruction":[150,"drop=3"],"altered_instruction":[150,"drop=2"],"type":"random_drop"},"169":{"original_instruction":[169,"drop=2"],"altered_instruction":[169,"drop=1"],"type":"random_drop"},"183":{"original_instruction":[183,"drop=3"],"altered_instruction":[186,"drop=3"],"type":"random_delay"},"200":{"original_instruction":[200,"drop=2"],"altered_instruction":[204,"drop=2"],"type":"random_delay"},"225":{"original_instruction":[225,"effort=4.9399999999999995"],"altered_instruction":[226,"effort=4.9399999999999995"],"type":"random_delay"},"240":{"original_instruction":[240,"drop=1"],"altered_instruction":[240,"drop=2"],"type":"random_drop"},"244":{"original_instruction":[244,"effort=9.49"],"altered_instruction":[248,"effort=9.49"],"type":"random_delay"},"252":{"original_instruction":[252,"drop=3"],"altered_instruction":[252,"drop=1"],"type":"random_drop"},"265":{"original_instruction":[265,"drop=2"],"altered_instruction":[270,"drop=2"],"type":"random_delay"}}
+ 
+ there are lots more DELAYS here than effort changes, though they should only be 0.3 of the total. Is it a pattern for other generations or experiments?
+ 
+ - need to set up experiments for the other kinds of noise.
+ 
+ {"0":{"original_instruction":[0,"effort=7.85"],"altered_instruction":[0,"effort=5.1989856641316265"],"type":"random_effort"},"2":{"original_instruction":[2,"effort=8.42"],"altered_instruction":[2,"effort=9.527509962818524"],"type":"random_effort"},"7":{"original_instruction":[7,"effort=6.66"],"altered_instruction":[7,"effort=6.264235103751942"],"type":"random_effort"},"17":{"original_instruction":[17,"drop=2"],"altered_instruction":[17,"drop=3"],"type":"random_drop"},"36":{"original_instruction":[36,"drop=2"],"altered_instruction":[36,"drop=1"],"type":"random_drop"},"57":{"original_instruction":[57,"drop=3"],"altered_instruction":[57,"drop=1"],"type":"random_drop"},"68":{"original_instruction":[68,"drop=2"],"altered_instruction":[68,"drop=3"],"type":"random_drop"},"82":{"original_instruction":[82,"drop=2"],"altered_instruction":[82,"drop=1"],"type":"random_drop"},"85":{"original_instruction":[85,"drop=3"],"altered_instruction":[85,"drop=2"],"type":"random_drop"},"86":{"original_instruction":[86,"drop=3"],"altered_instruction":[86,"drop=2"],"type":"random_drop"},"96":{"original_instruction":[96,"drop=1"],"altered_instruction":[96,"drop=3"],"type":"random_drop"},"122":{"original_instruction":[122,"drop=3"],"altered_instruction":[122,"drop=2"],"type":"random_drop"},"145":{"original_instruction":[145,"drop=3"],"altered_instruction":[145,"drop=2"],"type":"random_drop"},"167":{"original_instruction":[167,"drop=2"],"altered_instruction":[172,"drop=2"],"type":"random_delay"},"185":{"original_instruction":[185,"drop=1"],"altered_instruction":[190,"drop=1"],"type":"random_delay"},"188":{"original_instruction":[188,"effort=6.89"],"altered_instruction":[189,"effort=6.89"],"type":"random_delay"},"228":{"original_instruction":[228,"drop=3"],"altered_instruction":[228,"drop=2"],"type":"random_drop"},"237":{"original_instruction":[237,"effort=6.87"],"altered_instruction":[237,"effort=3.156709004153217"],"type":"random_effort"},"240":{"original_instruction":[240,"effort=5.57"],"altered_instruction":[240,"effort=5.288973354646661"],"type":"random_effort"},"244":{"original_instruction":[244,"effort=9.92"],"altered_instruction":[244,"effort=10"],"type":"random_effort"},"251":{"original_instruction":[251,"effort=7.87"],"altered_instruction":[251,"effort=8.952392316983996"],"type":"random_effort"},"252":{"original_instruction":[252,"drop=1"],"altered_instruction":[252,"drop=2"],"type":"random_drop"},"255":{"original_instruction":[255,"effort=4.38"],"altered_instruction":[259,"effort=4.38"],"type":"random_delay"},"262":{"original_instruction":[262,"drop=1"],"altered_instruction":[262,"drop=2"],"type":"random_drop"}}
+ 
+ 
+ - set up a sequence for performance failures 
+ 
+ 
+ {"iterations":7,"active":1,"variations":[{"iterations":[7,6,5,4,3,2,1],"type":"rider","rider_no":0,"property":"performance_failure_rate","values":[0,1.7,3.4,5.1,6.8,8.5,10]},{"iterations":[7,6,5,4,3,2,1],"type":"rider","rider_no":1,"property":"performance_failure_rate","values":[0,1.7,3.4,5.1,6.8,8.5,10]},{"iterations":[7,6,5,4,3,2,1],"type":"rider","rider_no":2,"property":"performance_failure_rate","values":[0,1.7,3.4,5.1,6.8,8.5,10]},{"iterations":[7,6,5,4,3,2,1],"type":"rider","rider_no":3,"property":"performance_failure_rate","values":[0,1.7,3.4,5.1,6.8,8.5,10]}]}
+ 
+ experiment is crashing... target_power < 0.
+ - wierd, performance_failures has an entry that is > 1. surely this is impossible? {
+    "8_1": 0.0122,
+    ...,
+	...,
+    "306_1": 0.3909,
+    "309_2": 1.1116
+}
+
+so, need to look at the calculate_rider_performance_failure_percentage_amount() function.
+
+- what is settings_r.performance_failure_effect_type doing??
+
+####****max_performance_failure_percentage breached****####
+race_function_no_vis.js:207 max_performance_failure_percentage 1.1115879636846455 effort 8.51 effort_max 10 current_fatigue 299.8465601666667 current_fatigue_max 300
+ accumulated_fatigue 1107.272585218885
+ accumulated_fatigue_max 770 rider_performance_failure_multiplier 10 rider_performance_failure_multiplier_max 10
+ performance_failure_base_max_percentage 1 performance_failure_amount_exponent 2
+ performance_failure_effort_importance_multiplier 1 failure_type 2
+ 
+ 
+ accumulated_fatigue_max is MORE than accumulated_fatigue_max... maybe this is the issue??
+ - had previously fixed an issue where the current and max fatigue level 
+ 
+   if (current_fatigue > current_fatigue_max){
+      current_fatigue_max = current_fatigue; //current_fatigue/current_fatigue_max will now max out at 1
+    }
+	
+so, add 
+  if (accumulated_fatigue > accumulated_fatigue_max){
+      accumulated_fatigue_max = accumulated_fatigue;
+      console.log("***dk25: adjusting accumulated_fatigue_max  since it is < accumulated_fatigue");
+    }
+	
+-- this appears to be working? but i want to restart everything now... and need to review how this fatigue works
+
+- they can achieve 'perfect' failure, i.e., where rider_performance_failure__percentage_amount = 1.
+
+-- still getting lots of this:
+####****max_performance_failure_percentage breached****####
+race_function_no_vis.js:217 max_performance_failure_percentage 0.9690563917794073 rider_performance_failure__percentage_amount 0.9709179831944444 p1 0.9980826481255273 effort 9.99 effort_max 10 current_fatigue 265.7015798333333 current_fatigue_max 300
+ accumulated_fatigue 881.0145197642537
+ accumulated_fatigue_max 881.0145197642537 rider_performance_failure_multiplier 10 rider_performance_failure_multiplier_max 10
+ performance_failure_base_max_percentage 1 performance_failure_amount_exponent 1
+ performance_failure_effort_importance_multiplier 2 failure_type 2
+ 
+ where's max_performance_failure_percentage coming from??
+ -- ok, so it;s tracking the max failure level and is being reset... for every race?
+ 
+ -example of failures, after 30 gens, performance_failure_rate 10.
+ 
+ {"4_2":0.3531,"5_2":0.0815,"10_0":0.1419,"11_1":0.1636,"11_0":0.1596,"12_0":0.168,"14_2":0.3644,"15_2":0.0432,"18_2":0.2209,"19_2":0.2261,"19_0":0.1594,"20_2":0.1233,"21_2":0.3872,"22_2":0.0208,"23_3":0.1452,"24_2":0.3072,"25_1":0.1675,"26_1":0.3084,"28_2":0.5012,"30_1":0.1087,"31_1":0.0721,"31_0":0.1311,"32_1":0.2372,"32_3":0.1287,"33_2":0.4867,"34_0":0.1332,"34_2":0.4667,"35_0":0.1317,"36_1":0.3484,"36_2":0.4925,"37_1":0.0821,"37_2":0.4966,"38_1":0.2318,"38_2":0.5006,"39_2":0.5045,"40_2":0.5081,"43_0":0.1355,"44_2":0.577,"44_1":0.5638,"45_3":0.0705,"45_2":0.5312,"46_2":0.4853,"47_3":0.4132,"47_1":0.4721,"49_3":0.2045,"49_2":0.4441,"49_1":0.4544,"50_2":0.4441,"50_1":0.4361,"51_2":0.4441,"52_3":0.2027,"53_3":0.2287,"53_0":0.1369,"54_0":0.1369,"58_3":0.0204,"58_0":0.144,"58_2":0.451,"58_1":0.5748,"59_3":0.2953,"59_0":0.1402,"59_1":0.5704,"60_3":0.0353,"60_0":0.1397,"60_1":0.5246,"61_3":0.1057,"61_0":0.1454,"62_3":0.2167,"62_1":0.47,"63_2":0.4504,"63_1":0.47,"64_0":0.1483,"64_1":0.47,"65_3":0.3678,"65_2":0.4615,"65_1":0.4748,"66_3":0.2122,"66_2":0.4535,"67_2":0.4535,"67_1":0.4828,"67_3":0.5796,"68_2":0.4535,"69_3":0.5337,"70_2":0.4756,"70_1":0.489,"71_3":0.513,"72_1":0.4783,"72_3":0.4917,"73_0":0.1041,"74_1":0.4886,"74_3":0.473,"75_0":0.1553,"76_0":0.4779,"76_2":0.4604,"76_3":0.4983,"77_0":0.2268,"77_2":0.4604,"78_0":0.4205,"78_1":0.481,"79_0":0.0312,"79_2":0.4642,"80_2":0.4615,"80_3":0.5679,"81_0":0.2487,"81_2":0.4615,"81_1":0.4824,"82_0":0.42,"82_2":0.4628,"82_3":0.5858,"84_1":0.4936,"84_0":0.5137,"85_2":0.3704,"85_0":0.4679,"86_1":0.4897,"86_0":0.4464,"87_1":0.4867,"88_2":0.1717,"88_1":0.4867,"88_0":0.4376,"89_2":0.1926,"89_0":0.4365,"89_3":0.4762,"90_2":0.1685,"90_3":0.4762,"91_2":0.3435,"91_0":0.4426,"91_3":0.4762,"92_2":0.4603,"92_1":0.4907,"92_0":0.4486,"92_3":0.4762,"93_2":0.3564,"93_1":0.4907,"94_1":0.4907,"95_1":0.4907,"96_3":0.5167,"97_1":0.5146,"97_3":0.52,"98_2":0.0417,"98_0":0.4994,"98_3":0.5231,"99_1":0.5054,"99_0":0.467,"100_2":0.146,"100_3":0.5444,"101_2":0.2927,"101_1":0.5044,"101_3":0.5466,"102_1":0.501,"103_0":0.4681,"104_2":0.1502,"104_1":0.5145,"104_3":0.5203,"105_2":0.1199,"105_1":0.5048,"106_2":0.4758,"106_0":0.472,"107_2":0.3711,"107_1":0.5103,"108_2":0.5942,"108_0":0.472,"109_3":0.5015,"110_2":0.396,"110_1":0.5063,"111_2":0.5525,"111_3":0.5015,"112_2":0.1888,"112_0":0.472,"113_1":0.5064,"113_3":0.5015,"114_2":0.306,"115_2":0.2938,"116_1":0.2949,"116_3":0.517,"117_0":0.4731,"117_3":0.5059,"117_2":0.5701,"118_2":0.5243,"119_0":0.4818,"119_3":0.5063,"119_2":0.5158,"120_2":0.5158,"122_2":0.5174,"123_0":0.4869,"123_2":0.5162,"124_1":0.2673,"124_0":0.4813,"124_2":0.5195,"126_0":0.4941,"126_2":0.5411,"127_1":0.0231,"127_0":0.4849,"127_3":0.5176,"128_1":0.0027,"128_0":0.4849,"129_1":0.6168,"129_0":0.4884,"129_3":0.5236,"129_2":0.5843,"130_2":0.5849,"131_2":0.5855,"132_1":0.4779,"132_3":0.5223,"133_0":0.1721,"133_1":0.6212,"133_2":0.602,"134_3":0.5219,"135_0":0.0629,"135_3":0.5219,"136_0":0.3249,"136_3":0.5222,"136_1":0.5769,"136_2":0.6403,"137_0":0.3643,"137_3":0.5233,"137_1":0.5524,"137_2":0.6357,"138_0":0.1778,"138_3":0.5222,"139_1":0.5488,"140_0":0.4868,"140_3":0.5316,"140_2":0.6688,"141_0":0.2006,"141_2":0.6609,"142_3":0.5249,"142_1":0.5531,"142_2":0.654,"143_3":0.5249,"143_2":0.6478,"144_3":0.5275,"144_1":0.5574,"144_2":0.6423,"145_0":0.2899,"145_1":0.5543,"146_0":0.0764,"146_3":0.5485,"146_1":0.5561,"146_2":0.6513,"147_3":0.533,"147_1":0.5577,"147_2":0.6454,"148_3":0.5315,"148_1":0.5594,"148_2":0.6402,"149_0":0.0887,"149_2":0.6356,"150_0":0.1353,"150_3":0.5469,"150_1":0.578,"150_2":0.6315,"151_0":0.3614,"151_3":0.5358,"151_2":0.6279,"152_0":0.5996,"152_3":0.5358,"153_3":0.5358,"153_1":0.6183,"153_2":0.6391,"154_0":0.1227,"154_3":0.5358,"154_1":0.5724,"154_2":0.6346,"155_2":0.6306,"156_0":0.5204,"156_3":0.5509,"156_1":0.5722,"156_2":0.6271,"157_0":0.0466,"157_1":0.5722,"157_2":0.624,"158_1":0.5722,"159_3":0.5477,"159_1":0.5725,"159_2":0.6358,"160_3":0.5422,"161_0":0.285,"161_3":0.5422,"161_1":0.5901,"162_0":0.0075,"162_3":0.5439,"162_1":0.5772,"163_1":0.5772,"163_2":0.692,"164_0":0.3771,"164_1":0.5781,"164_2":0.6815,"165_2":0.6722,"166_3":0.5482,"166_1":0.5952,"167_0":0.0162,"167_3":0.5482,"167_1":0.5823,"167_2":0.6765,"168_0":0.2144,"168_3":0.5482,"168_1":0.5823,"169_3":0.5482,"169_1":0.5823,"169_2":0.6803,"170_0":0.0861,"170_1":0.5823,"171_0":0.1682,"171_1":0.583,"172_3":0.5525,"172_1":0.5836,"173_3":0.5525,"173_1":0.5826,"173_2":0.7243,"174_0":0.6807,"174_2":0.7101,"175_3":0.4112,"175_1":0.5856,"176_1":0.5835,"176_0":0.6052,"176_2":0.7055,"177_3":0.2163,"177_1":0.5835,"177_0":0.5593,"178_0":0.5337,"178_2":0.7016,"179_1":0.5882,"181_2":0.6441,"182_3":0.0579,"182_1":0.5995,"182_0":0.5353,"183_1":0.5889,"183_0":0.5378,"184_3":0.3687,"184_1":0.5889,"184_2":0.6656,"185_3":0.3627,"185_1":0.5889,"185_0":0.5581,"185_2":0.6581,"186_2":0.6514,"187_3":0.0594,"187_0":0.5768,"187_2":0.6456,"188_1":0.5922,"188_2":0.6403,"189_1":0.5922,"190_3":0.5188,"190_0":0.5448,"191_3":0.3273,"191_1":0.6082,"191_0":0.5448,"191_2":0.6624,"192_0":0.5448,"192_2":0.6552,"193_0":0.5448,"193_2":0.6489,"194_3":0.0825,"194_0":0.5448,"194_2":0.6433,"195_0":0.5448,"195_2":0.6383,"196_0":0.5448,"196_2":0.6339,"197_3":0.3266,"197_1":0.5973,"197_0":0.5454,"197_2":0.6301,"198_3":0.4072,"198_2":0.6266,"199_3":0.1586,"199_0":0.5501,"200_1":0.5974,"200_2":0.6339,"201_1":0.5974,"201_2":0.63,"202_3":0.4898,"202_0":0.5464,"203_1":0.613,"203_2":0.6369,"204_0":0.5586,"205_1":0.6265,"205_0":0.5602,"205_2":0.6427,"206_3":0.5055,"206_1":0.6234,"206_0":0.5617,"206_2":0.6379,"207_1":0.6207,"207_2":0.6335,"208_3":0.2078,"208_0":0.5801,"208_2":0.6297,"209_3":0.1446,"209_2":0.6263,"210_1":0.6481,"211_1":0.6426,"211_0":0.5583,"212_3":0.2641,"212_2":0.6503,"213_3":0.0283,"213_1":0.6477,"213_0":0.5671,"214_3":0.0368,"214_1":0.6422,"214_0":0.5607,"214_2":0.6543,"215_3":0.579,"215_0":0.5607,"216_3":0.4502,"217_3":0.0168,"217_1":0.664,"217_0":0.5735,"217_2":0.6743,"218_3":0.9129,"218_1":0.6566,"219_3":0.2335,"219_0":0.5883,"219_2":0.6748,"220_3":0.4052,"220_1":0.6597,"221_3":0.0499,"221_1":0.6528,"221_0":0.5685,"221_2":0.6753,"222_3":0.5164,"222_1":0.6468,"222_0":0.5685,"222_2":0.6667,"223_3":0.6715,"223_0":0.5685,"223_2":0.659,"224_3":0.4702,"224_2":0.6523,"225_3":0.6965,"225_1":0.6679,"225_2":0.6463,"226_3":0.8546,"226_0":0.5983,"227_3":0.5328,"227_0":0.5757,"227_2":0.6508,"228_3":0.1489,"228_1":0.686,"228_2":0.645,"229_3":0.5642,"229_2":0.6398,"230_3":0.4814,"230_1":0.6849,"230_0":0.5745,"230_2":0.6353,"231_3":0.0498,"231_1":0.6752,"231_2":0.6312,"232_3":0.5671,"232_1":0.6665,"233_3":0.2852,"233_0":0.5745,"233_2":0.6379,"234_3":0.5868,"234_0":0.5745,"234_2":0.6335,"235_3":0.4246,"235_2":0.6297,"236_3":0.956,"236_1":0.7015,"236_0":0.587,"236_2":0.6263,"237_3":0.7628,"237_1":0.6899,"238_3":0.4342,"238_1":0.6796,"238_2":0.6337,"239_3":0.0426,"239_1":0.6705,"239_2":0.6298,"240_3":0.2136,"240_1":0.6624,"241_3":0.196,"241_0":0.5745,"242_3":0.453,"242_1":0.6646,"242_2":0.6533,"243_3":0.065,"243_1":0.6572,"243_2":0.6472,"244_3":0.2899,"244_1":0.6507,"244_0":0.5745,"245_3":0.0916,"245_1":0.6449,"245_0":0.5745,"245_2":0.6516,"246_3":0.4303,"246_1":0.6397,"246_0":0.5745,"247_3":0.6501,"247_1":0.6352,"247_0":0.5745,"247_2":0.6554,"248_3":0.4023,"248_1":0.6311,"248_2":0.649,"249_3":0.8248,"249_1":0.6276,"249_0":0.5761,"249_2":0.6434,"250_3":0.6638,"250_0":0.5745,"250_2":0.6384,"251_3":0.1967,"251_1":0.6347,"251_0":0.5745,"251_2":0.634,"252_3":0.43,"252_1":0.6308,"252_0":0.5752,"252_2":0.6302,"253_3":0.3099,"253_1":0.6272,"254_3":0.9636,"254_1":0.6241,"254_0":0.5877,"254_2":0.637,"255_3":0.6133,"255_1":0.6214,"255_2":0.6327,"256_3":0.5305,"256_1":0.6189,"256_0":0.5745,"256_2":0.629,"257_3":0.3359,"257_0":0.5745,"257_2":0.6257,"258_3":0.934,"258_1":0.6273,"258_0":0.5745,"259_3":0.3893,"259_1":0.6242,"259_0":0.5745,"259_2":0.6331,"260_3":0.4263,"260_1":0.6214,"260_2":0.6293,"261_3":0.321,"261_0":0.5837,"261_2":0.626,"262_3":0.3255,"262_0":0.5745,"263_3":0.8313,"263_2":0.6334,"264_3":0.4585,"265_3":0.303,"265_1":0.6795,"265_2":0.6397,"266_3":0.4545,"266_1":0.6704,"266_0":0.6204,"266_2":0.6352,"267_3":0.365,"267_1":0.6623,"267_0":0.5745,"267_2":0.6311,"268_3":0.4502,"268_1":0.6552,"268_2":0.6276,"269_3":0.236,"269_1":0.6489,"269_0":0.5745,"269_2":0.6244,"270_3":0.2783,"270_1":0.6433,"270_2":0.6216,"271_3":0.1456,"271_0":0.5745,"271_2":0.6191,"272_3":0.822,"272_1":0.6482,"272_0":0.5745,"272_2":0.617,"273_3":0.8508,"273_1":0.6427,"273_2":0.615}
+ 
+ -- they fail 'harder' towards the end of the race?
+ 
+ - final race with LOTs of failure is very chaotic indeed :-( 
+ 
+ - could add a weight to all of the elements, not just the effort? but weighting the effort essentially de-weights the fatigue??	
+ 
+ - still seems to be an issue with the refs...
+ 
+   Latex found 13 multiply defined reference(s)
+  Latex failed to resolve 1 citation(s)
+  
+  LaTeX Warning: Citation 'Williams2020' on page 5 undefined on input line 65.
+  
+  - this is defo in the file, must be an issue in it somewhere?
+  
+  - weird 
+  LaTeX Warning: Label `fig:y equals x' multiply defined.
+
+LaTeX Warning: Label `sub@fig:y equals x' multiply defined.
+
+
+LaTeX Warning: Label `fig:three sin x' multiply defined.
+
+LaTeX Warning: Label `sub@fig:three sin x' multiply defined.
+
+
+LaTeX Warning: Label `fig:five over x' multiply defined.
+
+LaTeX Warning: Label `sub@fig:five over x' multiply defined.
+
+
+LaTeX Warning: Label `fig:y equals x' multiply defined.
+
+LaTeX Warning: Label `sub@fig:y equals x' multiply defined.
+
+
+LaTeX Warning: Label `fig:three sin x' multiply defined.
+
+LaTeX Warning: Label `sub@fig:three sin x' multiply defined.#
+
+LaTeX Warning: Label `fig:five over x' multiply defined.
+
+LaTeX Warning: Label `sub@fig:five over x' multiply defined.
+
+LaTeX Warning: Label `fig:powerOutputFailure' multiply defined.
+
+
+
+LaTeX Warning: Reference `fig:avg_3_trainTestLandscapeContours3d_3Strong' on page 19 undefined on input line 305.
+
+LaTeX Warning: Reference `fig:avg_3_averageNoOfInstructionsWithDifferentGA_Noise_levels' on page 19 undefined on input line 305.
+
+
+-- hmmmmmmmmmmmmmmmmmm 
+
+
+LaTeX Warning: Reference `fig:finishTimesNoiseSevenLevelsMishearing' on page 5 undefined on input line 75.
+
+-- issue with the williams article citation was the COMMA in the bib listing, I had "Williams, M., A., and Wigmore, T." as the author, the comma in A., was the issue. comibe author names with "and" only.
+
+- should i run a bunch of tests on varying the effect of failure with the rider 'proneness' held firm?
+performance_failure_base_max_percentage
+
+{"iterations":21,"active":0,"variations":[{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"performance_failure_base_max_percentage","values":[0,0.17,0.34,0.51,0.68,0.85,1]}],"experiments":[]}
+
+
+
+- i could create a visual showing examples of failure?
+
+- just have a simple starting level, set a effort changes, then add, manually, some failures.
+
+- instrucitons 
+[[0,"effort=6"],[0,"effort=5"],[0,"effort="],[0,"effort=9.67"],[0,"effort=9.67"],[0,"effort=9.67"],]
+
+- how can i evolve strategies with NO drop instructions??
+
+- hmm, it;s way more complex than I had expected, it accelerates, recovers, etc. Try evolove one 
+
+- made graph using this result: ResultsJuly_2025_Testing_Noise_C_All_Equal_NO_DROP + [ all equal NO drop ] | _id | 688412ef0d5d5a4b28a59081
+- http://127.0.0.1:3003/tpgame.html?source=results&results_id=688412ef0d5d5a4b28a59081&startorder=1,3,0,2&instructions=%5B%5B1,%22effort=7.13%22%5D,%5B35,%22effort=4.13%22%5D,%5B46,%22effort=9.06%22%5D,%5B50,%22effort=1.62%22%5D,%5B56,%22effort=9.16%22%5D,%5B60,%22effort=5.76%22%5D,%5B64,%22effort=7.01%22%5D,%5B89,%22effort=1.32%22%5D,%5B92,%22effort=1.67%22%5D,%5B97,%22effort=7.46%22%5D,%5B110,%22effort=7.13%22%5D,%5B118,%22effort=7.15%22%5D,%5B128,%22effort=1.8599999999999999%22%5D,%5B136,%22effort=6.3%22%5D,%5B142,%22effort=9.45%22%5D,%5B154,%22effort=5.37%22%5D,%5B168,%22effort=3.86%22%5D,%5B175,%22effort=3.08%22%5D,%5B184,%22effort=7.77%22%5D,%5B196,%22effort=5.15%22%5D,%5B197,%22effort=3.73%22%5D,%5B201,%22effort=6.55%22%5D,%5B233,%22effort=1.44%22%5D,%5B240,%22effort=7.53%22%5D,%5B253,%22effort=7.3%22%5D%5D&noise_alterations=%7B%7D&performance_failures=%7B%7D&instruction_noise_choke_under_pressure=%7B%7D&instruction_noise_overeagerness=%7B%7D
+
+
+-- manually add a sequence of failures 
+
+{"20_1":0.5,"40_1":0.5,"60_1":0.5,"80_1":0.5,"100_1":0.5,"120_1":0.5,"140_1":0.5,"160_1":0.5,"180_1":0.5,"200_1":0.5,"220_1":0.5,"240_1":0.5,"260_1":0.5,"280_1":0.5}
+
+{"20_1":0.8,"40_1":0.8,"60_1":0.8,"80_1":0.8,"100_1":0.8,"120_1":0.8,"140_1":0.8,"160_1":0.8,"180_1":0.8,"200_1":0.8,"220_1":0.8,"240_1":0.8,"260_1":0.8,"280_1":0.5}
+
+- create a function (Python?) that spits out a bunch of random failures in a range
+
+- example 
+{"34_1":0.44,"67_1":0.73,"70_1":0.44,"83_1":0.42,"145_1":0.42,"150_1":0.5,"227_1":0.16,"236_1":0.5,"278_1":0.5,"285_1":0.64}
+
+287.789 - 272.885 = 14.904
+
+- july 26th
+
+- run experiment where no drop instructions are added, and there's only one effort, the one at 0 added by default.
+
+- interestingly the best that seems possible is [[0,"effort=5.25"]] with a time of 297.768 seconds
+- if we allow the usual drop and effort mix we get a much faster time, e.g., [[1,"effort=7.13"],[35,"effort=4.13"],[46,"effort=9.06"],[50,"effort=1.62"],[56,"effort=9.16"],[60,"effort=5.76"],[64,"effort=7.01"],[89,"effort=1.32"],[92,"effort=1.67"],[97,"effort=7.46"],[110,"effort=7.13"],[118,"effort=7.15"],[128,"effort=1.8599999999999999"],[136,"effort=6.3"],[142,"effort=9.45"],[154,"effort=5.37"],[168,"effort=3.86"],[175,"effort=3.08"],[184,"effort=7.77"],[196,"effort=5.15"],[197,"effort=3.73"],[201,"effort=6.55"],[233,"effort=1.44"],[240,"effort=7.53"],[253,"effort=7.3"]] with a time of 272.885
+
+- running one more but need to get back to the main noise tests
+
+what values can choke_under_pressure_tendency be?
+
+bbuugg, something is NOT being reset, if I run the race, delete the choke, and run it again, it remembers somethign and the times are BAD
+- n ochoke logged, so it's not resetting the rider's actual capabilities... i guess this doesn't happen in the GA?
+
+- gets set here:
+race_rider.threshold_power -= (race_rider.threshold_power * changes[cup+1]);
+race_rider.max_power -= (race_rider.max_power * changes[cup+1]);
+
+- the real stuff's in load_race() 
+- ok, so it's only ever changed in one place, so right there, could record the original values, and then in load_race(), check to see if those orginal properties are there.. if they are, apply them?
+- load_rider.original_threshold_power
+- load_rider.original_max_power
+
+so, these two lines shoulllld help?
+  race_rider.original_threshold_power = race_rider.threshold_power;
+  race_rider.original_max_power = race_rider.max_power;
+  
+  let choke_under_pressure_value_list = [1, rider_choke_under_pressure_tendency,1,10]; //guessing the values here really
+  let choke_under_pressure_probability_variables = [];
+  prob_choke_under_pressure = calculate_linear_space_value(choke_under_pressure_value_list,choke_under_pressure_probability_variables);
+	// value list contains sets of 4, each set representing a paramter in the expression, which is built using a loop
+    //v1 - multiplier / weighting
+    //v2 - value
+    //v3 - exponent
+    //v4 - max value
+	
+	- sooooooooooo the max value is 10 then, golly that's a lot of work to find out.
+	
+	even at max value they tend to choke only towards the end... this work is unfinished, then?
+	
+	
+	- hmmmm, need to fully understan the choking mechanism 
+	speed_higher_than_best is 1 or 0
+	let end_race_better_time_factor = speed_higher_than_best*(race_rider.distance_covered/race_r.distance);
+	
+	- this means you can't choke near the beginning/ how do i make choking really common? should be a way I can make a rider very very prone to it??
+	
+	
+	- how abouts i make it a fully fledhed 4-param property? i know it maxes out at 1. as a prob it will be 0 unless the race is faster, sooo the choking can NEVER happen unless it is faster, and even then, only really towards the end, even if the rider is at maximum choke-level.
+	
+
+	
+	
+                  

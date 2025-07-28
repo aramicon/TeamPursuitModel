@@ -157,17 +157,23 @@
             <option value = "variants_per_generation">Variants per Generation (LINE)</option>
             <option value = "generation_evolution_breakdown">Crossover/Mutants added per Generations (LINE)</option>
             <option value = "best_fitness_robustness_check">Best Fitness Robustness (LINE)</option>
-            <option value = "robustness_instruction_variation_times">Robustness Instruction Variation Times (RAW)</option>
+            <option value = "robustness_instruction_variation_times">Robustness Random Mutant/Instruction Variation per generation (LINE)</option>
             <option value = "generation_instructions_info">Generation Instruction Info (RAW)</option>
           </select>
           </div>
         <div class="col">
+          <div class="form-group">
+            <label for="starting_order">Selected Generation:</label>
+            <input type="text" class="form-control" id="selected_generation">
+          </div>
+
           <div class="form-group">
             <label for="select_graph_multi">Select a Multi-Results Graph</label>
             <select class="form-control" id="select_graph_multi" onchange = 'draw_multi_line_graph()'>
               <option value = "0">--SELECT--</option>
               <option value = "best_fitness_per_generation">Best Fitness per Generation</option>
                 <option value = "best_in_final_gen_tests">Best in Final Gen Tests (raw Data)</option>
+                <option value = "best_in_gen_robustness_test_times">Best in Final/Selected (one) Gen Test Times (raw Data)</option>
               </select>
             </div>
         </div>
