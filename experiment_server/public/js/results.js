@@ -967,7 +967,7 @@ const draw_multi_line_graph = (graph_name_opt) =>{
 
       let serverURL = 'http://127.0.0.1:3003/'+graph_name+'/' + JSON.stringify(selectedIDs);
       //the best_in_gen_robustness_test_times graph also takes an optional generation... send -1 to indicate a default of the LAST gen
-      if( graph_name == "best_in_gen_robustness_test_times"){
+      if( graph_name == "best_in_gen_robustness_test_times" || graph_name == "cup_noise_events" ){
         let selectedGeneration = parseInt($('#selected_generation').val());
         if (isNaN(selectedGeneration)){
           selectedGeneration = -1;
@@ -1033,6 +1033,15 @@ const draw_multi_line_graph = (graph_name_opt) =>{
             is_raw_data = true;
 
             console.log("|||||||||||| Data for robustness tests for a selected (or final) generation ||||||||||||");
+
+            //output into textarea
+            $("#data_display").val(JSON.stringify(data));
+            break;
+          }
+          case "cup_noise_events":{
+            is_raw_data = true;
+
+            console.log("|||||||||||| Data for CUP event data for a selected (or final by default) generation ||||||||||||");
 
             //output into textarea
             $("#data_display").val(JSON.stringify(data));
@@ -1516,7 +1525,7 @@ const  build_results_table = () =>{
   let ga_results = selected_ga_results;
 
   let results_html = "<div>Start time: "+ga_results.start_time + " End Time: " + ga_results.end_time +  "</div>";
-  results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>Std. Dev.# Instructions</th><th>BEST RACE</th><th>BEST TIME</th><th>BEST START ORDER</th><th>BEST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>OVEREAGERNESS</th><th>VISUALISE</th> <th>POWER GRAPH</th><th> FINISH TIMES GRAPH </th><th>WORST RACE</th><th>WORST TIME</th><th>WORST START ORDER</th><th>WORST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>OVEREAGERNESS</th><th>VISUALISE</th><th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
+  results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>Std. Dev.# Instructions</th><th>BEST RACE</th><th>BEST TIME</th><th>BEST START ORDER</th><th>BEST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>C.U.P %</th><th>C.U.P AVG. TIMESTEP</th><th>OVEREAGERNESS</th><th>VISUALISE</th> <th>POWER GRAPH</th><th> FINISH TIMES GRAPH </th><th>WORST RACE</th><th>WORST TIME</th><th>WORST START ORDER</th><th>WORST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>OVEREAGERNESS</th><th>VISUALISE</th><th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
 
   console.log(ga_results);
   console.log(ga_results.generations);
@@ -1527,6 +1536,10 @@ const  build_results_table = () =>{
     results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\"><strong>" + g + "</strong></td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Standard Deviation of Number of Instructions per race')\">" + ga_results.generations[g].stats_std_dev_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Best Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations) + "</td>" +
     "<td onmouseover=\"showColName('Best Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].best_race_performance_failures) + "</td>" +
     "<td onmouseover=\"showColName('Best Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_choke_under_pressure) + "</td>" +
+    "<td onmouseover=\"showColName('Generation Choke Under Pressure % of Riders that Experience a choke event')\">" + JSON.stringify(ga_results.generations[g].percentage_of_riders_that_choke) + "</td>" +
+    "<td onmouseover=\"showColName('Generation average timestep of Choke Under Pressure event.')\">" + JSON.stringify(ga_results.generations[g].average_timestep_of_choke_event) + "</td>" +
+
+
     "<td onmouseover=\"showColName('Best Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_overeagerness) + "</td>" +
     "<td onmouseover=\"showColName('Run BEST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_instructions)) +
      "&noise_alterations=" + encodeURI(JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations))   +

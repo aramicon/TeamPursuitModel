@@ -1142,4 +1142,103 @@ so, these two lines shoulllld help?
 
 	
 	
-                  
+                  - make it a combo with the new-PB switch and ALSO a 'regular' weighted param.
+				  
+- need to add global settings for choke under pressure (to the two exisiting ones)
+
+  		  
+		"choke_under_pressure_switch": 0,
+        "choke_under_pressure_amount_percentage": 0.5,
+		
+        "choke_under_pressure_rider_tendancy_weight":1,
+        "choke_under_pressure_rider_tendancy_exponent":1,
+        "max_rider_choke_under_pressure_tendency":10,
+        "choke_under_pressure_new_best_speed_pressure_weight":1,
+        "choke_under_pressure_new_best_speed_pressure_max":1,
+        "choke_under_pressure_new_best_speed_pressure_exponent":1,
+		
+
+-- need to copy these changes to the same calc for the chasing rider 
+start at
+
+let prob_choke_under_pressure = 0;
+...
+...
+prob_choke_under_pressure = ...
+
+--hmmmmmmmm not really doing what i want? seems to only fail near the end, and also in a weird consecutieve way
+
+- so, why oh why does it roll like this@
+	{"188":[2,0.5],"189":[1,0.5,3,0.5],"190":[0,0.5]}
+	and
+	{"324":[1,0.5,0,0.5],"325":[3,0.5],"326":[2,0.5]}
+	
+- seems like the effect is always 0.5??
+
+- ah, it is a fixed amount choke_under_pressure_amount_percentage:0.5
+
+- why don't all riders fail on the same timestep??
+- add the rider name to the console log messages.
+
+- perhaps it is working and the search is selecting for strategies that start really slow and the failure happens much later??
+- i can see that failure is indeed happening.... how could i verify this, maybe by looking at all failures for a tiny population of 2 or 3 races?
+
+- should the best time being looked at be the current generation or the GLOBAL? global, no??
+
+yes, generation_best_time is currently being used
+- created a new variable all_generations_best_time
+
+- save some new CUP data 
+
+- for generation population
+    - for each choke event
+	    - timestep of choke and finish time 
+	- can then either work out and save or later work out:
+	- % of riders that choke in a generation 
+	- avg. timestep of a choke event 
+	- avg. finish time of races with at least one choke event
+		
+		
+- adding generation result properties 
+generation_results.percentage_of_riders_that_choke = 0
+generation_results.average_timestep_of_choke_event = 0;
+generation_results.choke_event_timestep_pairs = [];
+
+	- reset a new array for a race to store any choke events 
+  let race_choke_under_pressure_events = [];
+  
+  - log the timestep 
+    race_choke_under_pressure_events.push(race_r.race_clock);
+	
+	- at the end of the race, create pairs of timestep and race finish time
+
+
+    //create choke_under_pressure data points (if they exist)
+      let sum_choke_under_pressure_timesteps = 0;
+      
+      if(race_choke_under_pressure_events.length > 0){
+        for(int cup = 0;cup<race_choke_under_pressure_events.length;cup++){
+          choke_event_timestep_pairs.push([race_choke_under_pressure_events[cup],Math.floor(finish_time)]);
+          sum_choke_under_pressure_timesteps += race_choke_under_pressure_events[cup];
+        }
+      }
+	  
+	  - so, need to move most of this code OUTSIDE the race loop. first need to return results.
+	  
+	  - retuen this 
+	  
+	  race_choke_under_pressure_events_result:race_choke_under_pressure_events
+	  
+	  - need generation level variable(s). ooh they already ar ein this scope. add one more 
+	  let sum_of_choke_events = 0;
+	  
+	  - add three columns after CHOKE UNDER PRESSURE NOISE in the results 
+	  
+	  - issue, weren't logging the chasing rider CUP events.
+	  
+	  - again, the results are BLANK for those nw columns, so something is getting lost?
+	  
+	  - now they're showing, had been zeroing the results values by mistake after setting them 
+	  - need to round the timestep
+	  
+	  - so, the amount of CUP events falls over time, as expected, since fewer races exceed the fastest found, so they don't set new PBs.
