@@ -480,6 +480,50 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
     });
 
 
+    app.get('/over_eagerness_event_arrays/:id/:gen',cors(corsOptions), (req,res)=>{
+      const resultID = req.params.id;
+      const generationID = req.params.gen;
+
+      console.log("over_eagerness_event_arrays with ids " + resultID + " and generation " + generationID);
+      let ids = JSON.parse(resultID);
+      let ids_mongo = [];
+      for(let i = 0; i < ids.length;i++){
+        ids_mongo.push(db.getPrimaryKey(ids[i]));
+      }
+      db.getDB().collection(collectionResults).find({_id : {$in: ids_mongo}},{_id:1,'ga_results':1}).toArray((err,documents)=>{
+        if(err){
+          console.log("error getting results using ID " + err);
+        }
+        else{
+          //console.log(documents);
+          console.log(documents.length + " docs");
+          let return_data = [];
+
+          //aim is to get the robustness data for the selected generation
+
+          for(let i = 0; i < documents.length; i++){
+            let return_data_element = {};
+            return_data_element.experiment_id = documents[i]._id;
+            return_data_element.generation_list_of_overeagerness_affected_effort_timesteps = [];
+            return_data_element.generation_list_of_NON_overeagerness_affected_effort_timesteps = [];
+            let ga_results = JSON.parse(documents[i].ga_results);
+
+            //get the specified generation OR the LAST one if -1 is sent in
+
+            let selected_generationID = generationID;
+            if(generationID == -1){
+              selected_generationID = ga_results.generations.length - 1;            }
+            return_data_element.selected_generation = selected_generationID;
+            return_data_element.generation_list_of_overeagerness_affected_effort_timesteps = ga_results.generations[selected_generationID].generation_list_of_overeagerness_affected_effort_timesteps;
+            return_data_element.generation_list_of_NON_overeagerness_affected_effort_timesteps = ga_results.generations[selected_generationID].generation_list_of_NON_overeagerness_affected_effort_timesteps;
+            console.log(">> returning overeagerness events array <<");
+            return_data.push(return_data_element);
+          }
+
+          res.json(return_data);
+        }
+      });
+    });
 
 
     app.get('/best_fitness_per_generation/:id',cors(corsOptions), (req,res)=>{

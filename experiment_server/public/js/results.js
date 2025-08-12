@@ -967,7 +967,7 @@ const draw_multi_line_graph = (graph_name_opt) =>{
 
       let serverURL = 'http://127.0.0.1:3003/'+graph_name+'/' + JSON.stringify(selectedIDs);
       //the best_in_gen_robustness_test_times graph also takes an optional generation... send -1 to indicate a default of the LAST gen
-      if( graph_name == "best_in_gen_robustness_test_times" || graph_name == "cup_noise_events" ){
+      if( graph_name == "best_in_gen_robustness_test_times" || graph_name == "cup_noise_events" || graph_name == "over_eagerness_event_arrays" ){
         let selectedGeneration = parseInt($('#selected_generation').val());
         if (isNaN(selectedGeneration)){
           selectedGeneration = -1;
@@ -1042,6 +1042,15 @@ const draw_multi_line_graph = (graph_name_opt) =>{
             is_raw_data = true;
 
             console.log("|||||||||||| Data for CUP event data for a selected (or final by default) generation ||||||||||||");
+
+            //output into textarea
+            $("#data_display").val(JSON.stringify(data));
+            break;
+          }
+          case "over_eagerness_event_arrays":{
+            is_raw_data = true;
+
+            console.log("|||||||||||| Data for Overeagerness event data for a selected (or final by default) generation ||||||||||||");
 
             //output into textarea
             $("#data_display").val(JSON.stringify(data));

@@ -1242,3 +1242,94 @@ generation_results.choke_event_timestep_pairs = [];
 	  - need to round the timestep
 	  
 	  - so, the amount of CUP events falls over time, as expected, since fewer races exceed the fastest found, so they don't set new PBs.
+	  - CUP is workign as a direct impediment to fitness-biased convergence? It can be set to heavily punish races that look like they are going to perform well.
+	  
+	  - shoot, had drop instructions turned off
+	  
+	  - how can percentage_of_riders_that_choke be > 1? I see 3.15, for example.
+	  
+	  -- hmmmmm, 432309 for... oh, thats sum_of_choke_events_timestep_in_generation, it shouldn't be that, it should be the count of chokes not the sum of their timesteps
+	  
+	  - what to include then in the writing about CUP...
+	  - compare the fitness bias in the search with the opposing effect of failure when finding a better time. 
+	  
+	  - create a new graph for raw data 
+	  
+	  cup_noise_events
+	  
+	  -  bring back best and average timnes 
+	  stats_average_time
+	  
+	  
+	  - mundee 11th.
+	  
+	  - need to add en example of instruction noise, plus its effect.
+	  
+	  - do i keep all the results in one area as before?	
+	  
+	  - hmmm, the mishearing noise is NOT being rounded... should round it!
+	  
+	  - rounded it, and made effort change range smaller 
+	  
+	  - ran 200 gens and put instructions into text.
+	  
+	  - need to highlight that the GA is not able to search very well.0,0.17,0.34,0.51,0.68,0.85,1
+	  
+	  -ok, so these ran, now i have a new image noise_mishearing_7_levels_2025-7-11_16-42.png
+	  
+	  - no noise 260.574
+	  [[0,"effort=5"],[3,"effort=6.7"],[7,"drop=3"],[8,"drop=3"],[21,"drop=3"],[59,"drop=3"],[77,"drop=2"],[105,"drop=2"],[118,"effort=7.28"],[123,"effort=6.77"],[137,"drop=2"],[142,"effort=8.29"],[156,"effort=6.91"],[162,"drop=3"],[194,"drop=3"],[207,"drop=3"],[231,"effort=8.56"],[239,"drop=3"],[258,"drop=1"]]
+	  
+	  
+	  - maximum noise . with noise 272.794  without noise 281.511 
+	  [[4,"effort=7.06"],[32,"drop=2"],[47,"effort=5.37"],[62,"effort=5.88"],[71,"drop=2"],[90,"drop=1"],[96,"effort=5.85"],[104,"drop=1"],[135,"drop=3"],[163,"effort=6.44"],[169,"drop=3"],[186,"drop=2"],[189,"effort=7.07"],[191,"effort=5.15"],[192,"drop=1"],[199,"effort=4.720000000000001"],[200,"effort=5.45"],[201,"drop=1"],[209,"drop=2"],[212,"effort=5.3"],[215,"drop=3"],[216,"effort=4.59"],[225,"effort=6.93"],[237,"drop=3"],[241,"effort=8.68"],[269,"effort=9.4"],[272,"drop=1"]]
+	  
+	  - would be a good idea to run robustness tests on this... as part of the analysis stage 
+	  
+	  - but first, need to work on the overeagerness part. 
+	  
+	  - add reference about starting too fast 
+	  https://www.runnersworld.com/uk/training/marathon/a62541938/tips-to-avoid-going-out-too-fast-in-a-race/
+	  
+	  - added. now try run the code. 
+	    "overeagerness_switch":1,
+        "overeagerness_race_distance_end_point":0.3,
+        "overeagerness_effort_inflation_min_amount": 0.1,
+        "overeagerness_effort_inflation_max_amount": 0.4,
+        "overeagerness_exponent":2,	
+		
+		-crashes, line 3306 failure_level "is not defined"
+		// prevent overeagerness if the rider is recovering from fatigue
+            if(race_rider.endurance_fatigue_level < failure_level){
+			
+			-- can replace this by looking at the 'new'   race_rider.recovery_mode property (1 for on, 0 for off)
+	  
+	  -- ok, seems to run now. nothing logged. is this feature built? missing a rider property?
+	  -- affects every rider, need to only affect instructions? move it elsewhere in the code? maybe after the instruction delivery mishearing noise section? except it is tied to the rider too, not just the instruction?
+	  
+	    let leadingRider = race_r.riders_r[race_r.current_order[0]];
+    leadingRider.output_level = effort;
+	
+	-- kinda worked? produces this set of events: {"0":6.3,"3":6.9248,"13":5.952,"20":1.3287,"22":6.9688,"88":11.1684,"105":3.9116}
+	- could make these more explainable, or do I really need to store the original values? 
+	- just try to get them working on the replay page
+	
+	in load_race(), the values are loaded into instruction_noise_overeagerness_r
+	
+	- kinnnnda wurks, need to round the new vlaues.
+	
+	- trying to write formula but very confused, not sure how i was trying to build this, needs to be redone?
+	
+	- log the generation overeagerness events, log all effort instructions and whether or not they were altered by the noise?
+	
+	- create two new generation level arryas 
+	generation_list_of_overeagerness_affected_effort_timesteps
+	generation_list_of_NON_overeagerness_affected_effort_timesteps
+	
+	- in results make a new listing and function 
+	over_eagerness_event_arrays
+	
+	- need to create new vars witin the race context/scope, they can't get at the generation level ones
+	race_generation_list_of_overeagerness_affected_effort_timesteps	
+	race_generation_list_of_NON_overeagerness_affected_effort_timesteps
+	

@@ -311,7 +311,7 @@ function randn_bm() {
     }
 
     for(let i = 0;i<time_taken_old;i++){
-    //for(let i = 0;i<r.instructions.length;i++){ what???? this will only loop up to the time of the length of the instrucitons. madness!!
+    //for(let i = 0;i<r.instructions.length;i++){ what???? this will only loop up to the time of the length of the instructions. madness!!
       if(r.instructions.filter(a => a[0] == i).length == 0){
         //no instruction here- add a new one?
         if (Math.random() < p_add_instruction){
@@ -363,7 +363,7 @@ function randn_bm() {
               new_location = time_taken_old;
             }
             */
-            //only move it there is NOT an instruciton already there
+            //only move it there is NOT an instruction already there
             if(r.instructions.filter(a => a[0] == new_location).length==0 && new_race.instructions.filter(a => a[0] == new_location).length==0){
               current_instruction[0] = new_location;
               new_race.stats.number_of_instructions_moved++;
@@ -494,7 +494,7 @@ function randn_bm() {
     let original_time_taken = race_r.time_taken;
 
     // running the race clears the instruction[] array but it is needed for the mutation function
-    race_r.instructions = [...race_r.race_instructions_r]; // added Jan 24, was not creating mutants because race_r.instrucitons was [] :-(
+    race_r.instructions = [...race_r.race_instructions_r]; // added Jan 24, was not creating mutants because race_r.instructions was [] :-(
 
     let original_instructions = [...race_r.instructions];
     let original_start_order = [...race_r.start_order];
@@ -1202,7 +1202,7 @@ function randn_bm() {
       let best_race_instruction_noise_choke_under_pressure = {};
       let worst_race_instruction_noise_choke_under_pressure = {};
 
-          let best_race_instruction_noise_overeagerness = {};
+      let best_race_instruction_noise_overeagerness = {};
       let worst_race_instruction_noise_overeagerness = {};
 
       //donalK25: choke_under_pressure, need generation results
@@ -1210,6 +1210,10 @@ function randn_bm() {
       let percentage_of_riders_that_choke = 0;
       let average_timestep_of_choke_event = 0;
       let choke_event_timestep_pairs = [];
+
+      // create two arrays for overeagerness
+      let generation_list_of_overeagerness_affected_effort_timesteps = [];
+      let generation_list_of_NON_overeagerness_affected_effort_timesteps = [];
 
       //new structs to store generation instructions info, if asked for
       let generation_instructions_info = {effort:{},drop:{}};
@@ -1256,8 +1260,8 @@ function randn_bm() {
         race_r.start_order = [...load_race_properties.start_order];
 
         if(log_generation_instructions_info){
-          //add data to the structure for saving instruciton info
-          //will need to go through each instruciton for each citizen
+          //add data to the structure for saving instruction info
+          //will need to go through each instruction for each citizen
           for (let ii = 0; ii < race_r.race_instructions_r.length; ii++){
             let timestep_ii =  parseInt(race_r.race_instructions_r[ii][0]);
             //split the actual instruction
@@ -1472,6 +1476,22 @@ function randn_bm() {
           }
         }
         }
+        //same for the two overeagerness effort event arrays
+        if(typeof(race_results.race_generation_list_of_overeagerness_affected_effort_timesteps) != "undefined"){
+          if(race_results.race_generation_list_of_overeagerness_affected_effort_timesteps.length > 0){
+            for(let oe = 0;oe<race_results.race_generation_list_of_overeagerness_affected_effort_timesteps.length;oe++){
+              generation_list_of_overeagerness_affected_effort_timesteps.push(race_results.race_generation_list_of_overeagerness_affected_effort_timesteps[oe]);
+            }
+          }
+        }
+        if(typeof(race_results.race_generation_list_of_NON_overeagerness_affected_effort_timesteps) != "undefined"){
+          if(race_results.race_generation_list_of_NON_overeagerness_affected_effort_timesteps.length > 0){
+            for(let oe = 0;oe<race_results.race_generation_list_of_NON_overeagerness_affected_effort_timesteps.length;oe++){
+              generation_list_of_NON_overeagerness_affected_effort_timesteps.push(race_results.race_generation_list_of_NON_overeagerness_affected_effort_timesteps[oe]);
+            }
+          }
+        }
+
       } //end of population loop, can now pocess generation material
 
       //donalK25: choke_under_pressure, work out the average time of choke events and the % of riders that choke in a generation
@@ -1585,6 +1605,9 @@ function randn_bm() {
       //dk23 august
       generation_results.best_race_instruction_noise_overeagerness = best_race_instruction_noise_overeagerness;
       generation_results.worst_race_instruction_noise_overeagerness = worst_race_instruction_noise_overeagerness;
+      //donaK25, also add overeagerness arrays
+      generation_results.generation_list_of_overeagerness_affected_effort_timesteps=generation_list_of_overeagerness_affected_effort_timesteps;
+      generation_results.generation_list_of_NON_overeagerness_affected_effort_timesteps=generation_list_of_NON_overeagerness_affected_effort_timesteps;
 
       //before looking at next generation can work out the robustness check of the current BEST strategy, IF required
       if(settings_r.ga_run_robustness_check==1){
@@ -2985,12 +3008,16 @@ function randn_bm() {
 
     //donalK25: choke_under_pressure, add/reset an array to store choke events during the race (need to add them after linked to the finish time)
     let race_choke_under_pressure_events = [];
+    //also need ones for effort/overeagerness event timesteps
+    let race_generation_list_of_overeagerness_affected_effort_timesteps = [];
+    let race_generation_list_of_NON_overeagerness_affected_effort_timesteps = [];
+
     //now the race begins
     while(continue_racing){
       //update the race clock, check for instructions, then move the riders based on the current order
 
       //add any new instructions if found
-      //dkOct2020: add 'noise' if this is switched on. this represents a small chance that an instruciton is misheard by randomly changing its value
+      //dkOct2020: add 'noise' if this is switched on. this represents a small chance that an instruction is misheard by randomly changing its value
 
       let enable_instruction_noise_1_random = 0;
       let noise_1_probability_instruction_misheard = 0;
@@ -3036,7 +3063,7 @@ function randn_bm() {
 
           if (alteration_selection_sample >= 0 && alteration_selection_sample < noise_1_probability_instruction_delayed){
             let target_delay =  Math.floor(Math.random() * (noise_1_probability_instruction_delay_range) + 1) ; //should provide a value in range (1 - noise_1_probability_instruction_delay_range)
-            //adjust the instruction BUT only if there is NO existing instruciton in that timestep
+            //adjust the instruction BUT only if there is NO existing instruction in that timestep
             //donalK2021: new mechanism to find free timestep (or zero if none is found!)
             let target_timestep = (race_r.race_clock + target_delay);
             let actual_timestep = 0;
@@ -3099,7 +3126,9 @@ function randn_bm() {
                   //make sure the adjustment is in the allowed range! 0 - 9
                   //console.log("NOISE 1: make effort adjustment of " + effort_adjustment + " on to old value of " + effort_value);
                   noise_alteration["original_instruction"] = [race_r.race_clock, "effort=" + effort_value];
-                  effort_value  += effort_adjustment;
+
+                  //donalK25: round this new effort value to 2 places.
+                  effort_value  = DecimalPrecision.round((effort_value + effort_adjustment),2);
                   if (effort_value <  settings_r.minimum_power_output){
                     effort_value =  settings_r.minimum_power_output;
                     //console.log("NOISE 1: settign effort to  settings_r.minimum_power_output " +  settings_r.minimum_power_output);
@@ -3145,7 +3174,7 @@ function randn_bm() {
             }
           }
         }
-      } // loop for found instrucitons
+      } // loop for found instructions
 
       //****DK20201JAN: also need to check the delay queue and add the instruction there (if there is one)
       if(race_r.instruction_noise_delays[race_r.race_clock]){
@@ -3180,19 +3209,105 @@ function randn_bm() {
       //carry out any live_instructions (they are queued)
       while (race_r.live_instructions.length > 0){
         let instruction = race_r.live_instructions.pop();
-        if(instruction[0]=="effort"){
-          //dk2021: adding these IFs to limit the range of instructions in case they go over 9 or under 1 (arbitrary max/min)
-          if(instruction[1] < settings_r.minimum_power_output){
-            instruction[1] = 1;
-          }
-          else if(instruction[1] > settings_r.maximum_effort_value){
-            instruction[1] = settings_r.maximum_effort_value;
-          }
-          setEffort(settings_r, race_r,riders_r, instruction[1]);
-        }
-      }
 
-      //also look at the drop instruciton: this can only be done at the beginnings of bends where the track is banked
+
+        if(instruction[0]=="effort"){
+
+            let instruction_effort_level = instruction[1];
+            //donalK25. We have an instruction to run, here might be a good point to check for overeagerness.
+            //************ #overeagerness start ********
+            //dk2023 overeagerness noise
+            let overeagerness_switch = 0;
+            if (typeof(settings_r.overeagerness_switch) != "undefined"){
+              overeagerness_switch = settings_r.overeagerness_switch;
+            }
+            let overeager_check = 0;
+            if (overeagerness_switch==1){
+
+                //get the rider property and the global amount property
+                let normal_distribution_output_inflation_percentage = 0;
+                let overeagerness_effort_inflation_min_amount = 0;
+                if (typeof(settings_r.overeagerness_effort_inflation_min_amount) != "undefined"){
+                  overeagerness_effort_inflation_min_amount = settings_r.overeagerness_effort_inflation_min_amount;
+                }
+                let overeagerness_effort_inflation_max_amount = 0;
+                if (typeof(settings_r.overeagerness_effort_inflation_max_amount) != "undefined"){
+                  overeagerness_effort_inflation_max_amount = settings_r.overeagerness_effort_inflation_max_amount;
+                }
+
+              let leadingRiderCheck = race_r.riders_r[race_r.current_order[0]];
+              let rider_overeagerness_tendency = 0;
+              if (typeof(leadingRiderCheck.overeagerness_tendency) != "undefined"){
+                rider_overeagerness_tendency = leadingRiderCheck.overeagerness_tendency;
+              }
+              //we also need the distance that the overeagerness extends to, e.g. for the first half of the race
+              let overeagerness_race_distance_end_point = 0.3;
+              if (typeof(settings_r.overeagerness_race_distance_end_point) != "undefined"){
+                overeagerness_race_distance_end_point = settings_r.overeagerness_race_distance_end_point;
+              }
+              //also of course, an exponent
+              let overeagerness_exponent = 1;
+              if (typeof(settings_r.overeagerness_exponent) != "undefined"){
+                overeagerness_exponent = settings_r.overeagerness_exponent;
+              }
+              //need the distance remaining and the race distance
+              let race_percentage_remaining = (race_r.distance-leadingRiderCheck.distance_covered)/race_r.distance;
+              //work out the liklihood of an overeagerness response
+              let probability_of_overeagerness = 0;
+              let maximum_race_remaining = 1;
+              let race_distance_factor = 0;
+              if(leadingRiderCheck.distance_covered < (overeagerness_race_distance_end_point*race_r.distance)){
+                probability_of_overeagerness = rider_overeagerness_tendency*(1-(Math.pow(leadingRiderCheck.distance_covered,overeagerness_exponent)/Math.pow(overeagerness_race_distance_end_point*race_r.distance,overeagerness_exponent)));
+              }
+              //donalK25: commenting out this confusing version that I felt could be made more simples.
+              // if (race_percentage_remaining > overeagerness_race_distance_end_point){
+              //   race_distance_factor = ((Math.pow(((race_percentage_remaining-overeagerness_race_distance_end_point)/(maximum_race_remaining-overeagerness_race_distance_end_point)),overeagerness_exponent))/(Math.pow(maximum_race_remaining,overeagerness_exponent)));
+              //   probability_of_overeagerness = (race_distance_factor * rider_overeagerness_tendency);
+              // }
+              //now get a random and do the actual check
+              if (Math.random() < probability_of_overeagerness){
+                //adjust the rider's output level.
+                let original_output_level = instruction_effort_level;
+                normal_distribution_output_inflation_percentage = (overeagerness_effort_inflation_min_amount + (randn_bm()*(overeagerness_effort_inflation_max_amount-overeagerness_effort_inflation_min_amount)));
+
+                //round it to two places.
+                instruction_effort_level = DecimalPrecision.round((instruction_effort_level + instruction_effort_level*normal_distribution_output_inflation_percentage),2);
+                //normal_distribution_output_inflation_percentage_array.push(normal_distribution_output_inflation_percentage);
+                // console.log("^^^ * OVEREAGERNESS DETECTED * ^^^ ");
+                // console.log("^^^ probability_of_overeagerness " + probability_of_overeagerness);
+                // console.log("^^^ race_percentage_remaining " + race_percentage_remaining + " ^^^");
+                // console.log("^^^ overeagerness_race_distance_end_point " + overeagerness_race_distance_end_point + " ^^^");
+                // console.log("^^^ maximum_race_remaining " + maximum_race_remaining + " ^^^");
+                // console.log("^^^ overeagerness_exponent " + overeagerness_exponent + " ^^^");
+                // console.log("^^^ rider_overeagerness_tendency " + rider_overeagerness_tendency + " ^^^");
+                // console.log("^^^ original_output_level (of instruction) " + original_output_level + " ^^^");
+                // console.log("^^^ instruction_effort_level " + instruction_effort_level + " ^^^");
+                // console.log("^^^ race_distance_factor " + race_distance_factor + " ^^^");
+                //also need to LOG this (to allow replay)
+                race_r.instruction_noise_overeagerness[race_r.race_clock] = instruction_effort_level;
+                //also add it to the generation level list of instruction events (overeager or not, for a histogram)
+                race_generation_list_of_overeagerness_affected_effort_timesteps.push(race_r.race_clock);
+                overeager_check = 1;
+              }
+            }
+
+            if(overeager_check == 0){
+              race_generation_list_of_NON_overeagerness_affected_effort_timesteps.push(race_r.race_clock);
+            }
+
+          //************ #overeagerness end ********
+          //dk2021: adding these IFs to limit the range of instructions in case they go over 9 or under 1 (arbitrary max/min)
+          if(instruction_effort_level < settings_r.minimum_power_output){
+            instruction_effort_level = settings_r.minimum_power_output;
+          }
+          else if(instruction_effort_level > settings_r.maximum_effort_value){
+            instruction_effort_level = settings_r.maximum_effort_value;
+          }
+          setEffort(settings_r, race_r,riders_r, instruction_effort_level);
+      }
+    }
+
+      //also look at the drop instruction: this can only be done at the beginnings of bends where the track is banked
       if(race_r.drop_instruction > 0){
         if (race_r.riders_r.filter(a=>a.current_aim == "drop").length == 0){   //if no  rider is dropping back
           let lead_rider_distance_on_lap = race_r.riders_r[race_r.current_order[0]].distance_covered % settings_r.track_length;
@@ -3295,82 +3410,8 @@ function randn_bm() {
               }
             }
           }
-          //dk2023 overeagerness noise
-          let overeagerness_switch = 0;
-          if (typeof(settings_r.overeagerness_switch) != "undefined"){
-            overeagerness_switch = settings_r.overeagerness_switch;
-          }
-          if (overeagerness_switch==1){
-            // prevent overeagerness if the rider is recovering from fatigue
-            if(race_rider.endurance_fatigue_level < failure_level){
-              //get the rider property and the global amount property
-              let normal_distribution_output_inflation_percentage = 0;
-              let overeagerness_effort_inflation_min_amount = 0;
-              if (typeof(settings_r.overeagerness_effort_inflation_min_amount) != "undefined"){
-                overeagerness_effort_inflation_min_amount = settings_r.overeagerness_effort_inflation_min_amount;
-              }
-              let overeagerness_effort_inflation_max_amount = 0;
-              if (typeof(settings_r.overeagerness_effort_inflation_max_amount) != "undefined"){
-                overeagerness_effort_inflation_max_amount = settings_r.overeagerness_effort_inflation_max_amount;
-              }
-              let rider_overeagerness_tendency = 0;
 
-              if (typeof(race_rider.overeagerness_tendency) != "undefined"){
-                rider_overeagerness_tendency = race_rider.overeagerness_tendency;
-              }
 
-              //we also need the distance that the overeagerness extends to, e.g. for the first half of the race
-              let overeagerness_race_distance_end_point = 0.5;
-              if (typeof(settings_r.overeagerness_race_distance_end_point) != "undefined"){
-                overeagerness_race_distance_end_point = settings_r.overeagerness_race_distance_end_point;
-              }
-              //also of course, an exponent
-              let overeagerness_exponent = 1;
-              if (typeof(settings_r.overeagerness_exponent) != "undefined"){
-                overeagerness_exponent = settings_r.overeagerness_exponent;
-              }
-              //need the distance remaining and the race distance
-              let race_percentage_remaining = (race_r.distance-race_rider.distance_covered)/race_r.distance;
-              //work out the liklihood of an overeagerness response
-              let probability_of_overeagerness = 0;
-              let maximum_race_remaining = 1;
-              let race_distance_factor = 0;
-              if (race_percentage_remaining > overeagerness_race_distance_end_point){
-                race_distance_factor = ((Math.pow(((race_percentage_remaining-overeagerness_race_distance_end_point)/(maximum_race_remaining-overeagerness_race_distance_end_point)),overeagerness_exponent))/(Math.pow(maximum_race_remaining,overeagerness_exponent)));
-                probability_of_overeagerness = (race_distance_factor * rider_overeagerness_tendency);
-              }
-              //now get a random and do the actual check
-              if (Math.random() < probability_of_overeagerness){
-                //adjust the rider's output level.
-                let original_output_level = race_rider.output_level;
-                normal_distribution_output_inflation_percentage = (overeagerness_effort_inflation_min_amount + (randn_bm()*(overeagerness_effort_inflation_max_amount-overeagerness_effort_inflation_min_amount)));
-                //round it to two places.
-                normal_distribution_output_inflation_percentage = DecimalPrecision.round(normal_distribution_output_inflation_percentage,2)
-                race_rider.output_level = race_rider.output_level + (race_rider.output_level*normal_distribution_output_inflation_percentage);
-                //normal_distribution_output_inflation_percentage_array.push(normal_distribution_output_inflation_percentage);
-                // console.log("^^^ * OVEREAGERNESS DETECTED * ^^^ ");
-                // console.log("^^^ probability_of_overeagerness " + probability_of_overeagerness);
-                // console.log("^^^ race_percentage_remaining " + race_percentage_remaining + " ^^^");
-                // console.log("^^^ overeagerness_race_distance_end_point " + overeagerness_race_distance_end_point + " ^^^");
-                // console.log("^^^ maximum_race_remaining " + maximum_race_remaining + " ^^^");
-                // console.log("^^^ overeagerness_exponent " + overeagerness_exponent + " ^^^");
-                // console.log("^^^ rider_overeagerness_tendency " + rider_overeagerness_tendency + " ^^^");
-                // console.log("^^^ original_output_level " + original_output_level + " ^^^");
-                // console.log("^^^ race_rider.output_level " + race_rider.output_level + " ^^^");
-                // console.log("^^^ race_distance_factor " + race_distance_factor + " ^^^");
-                if(race_rider.output_level > settings_r.maximum_effort_value){
-                  race_rider.output_level = settings_r.maximum_effort_value;
-                  //console.log("^^^ OVEREAGERNESS set output level too high! ^^^");
-                }
-                //also need to LOG this
-                race_r.instruction_noise_overeagerness[race_r.race_clock] = normal_distribution_output_inflation_percentage;
-              }
-
-            }
-            else{
-              //console.log("Skipped overeagerness as rider is fatgiued.")
-            }
-          }
           //set the power level based on the effort instruction
 
           race_rider.current_power_effort = mapEffortToPower(settings_r.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power, settings_r.maximum_effort_value );
@@ -4400,5 +4441,5 @@ function randn_bm() {
 
       //return the final finish time (seconds)
 
-      return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep, instruction_noise_alterations: race_r.instruction_noise_alterations, performance_failures:race_r.performance_failures, instruction_noise_choke_under_pressure:race_r.instruction_noise_choke_under_pressure,instruction_noise_overeagerness:race_r.instruction_noise_overeagerness,race_choke_under_pressure_events_result:race_choke_under_pressure_events};
+      return {time_taken: finish_time, power_output:rider_power, distance_2nd_last_timestep: distance_2nd_last_timestep, distance_last_timestep:distance_last_timestep, instruction_noise_alterations: race_r.instruction_noise_alterations, performance_failures:race_r.performance_failures, instruction_noise_choke_under_pressure:race_r.instruction_noise_choke_under_pressure,instruction_noise_overeagerness:race_r.instruction_noise_overeagerness,race_choke_under_pressure_events_result:race_choke_under_pressure_events, race_generation_list_of_overeagerness_affected_effort_timesteps:race_generation_list_of_overeagerness_affected_effort_timesteps,race_generation_list_of_NON_overeagerness_affected_effort_timesteps:race_generation_list_of_NON_overeagerness_affected_effort_timesteps};
     }

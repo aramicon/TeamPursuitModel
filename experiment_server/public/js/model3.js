@@ -9,7 +9,7 @@ import {race_template} from './race_settings_template.js';
 import {riders_template} from './riders_template.js';
 
 //dk23Aug allow for targeted debugging of a rider and a timestep
-let targeted_debugging = 1;
+let targeted_debugging = 0;
 let targeted_debugging_rider_no = 3;
 let targeted_debugging_timestep_range_start = 198;
 let targeted_debugging_timestep_range_end = 198;
@@ -514,19 +514,32 @@ function moveRace(){
   //carry out any live_instructions (they are queued)
   while (race.live_instructions.length > 0){
     let instruction = race.live_instructions.pop();
+
     if(instruction[0]=="effort"){
+      let instruction_effort_level = instruction[1];
+
+      // *********** start #overeagerness *************** donalK25: moved here with new format that affects instructions and not power directly
+      //dk23Aug apply overeagerness noise here if it exists
+      let original_output_level = 0;
+      if (race.instruction_noise_overeagerness_r[race.race_clock]){
+        original_output_level = instruction_effort_level;
+        instruction_effort_level = race.instruction_noise_overeagerness_r[race.race_clock];
+        console.log("^^^ overeagerness to apply, original value " +   original_output_level + " new value " + instruction_effort_level + " ^^^");
+        $("#race_info").html("Overeager Leader <strong>overeager </strong> "+ original_output_level + " to " + instruction_effort_level);
+      }
+      // *********** end #overeagerness ***************
 
       //dk: check for invalid values
-      if(instruction[1] < settings.minimum_power_output){
+      if(instruction_effort_level < settings.minimum_power_output){
         console.log("WARNING! effort instruction < 1, updating to minimum 1");
-        instruction[1] = 1;
+        instruction_effort_level = settings.minimum_power_output;
       }
-      else if(instruction[1] > settings.maximum_effort_value){
+      else if(instruction_effort_level > settings.maximum_effort_value){
           console.log("WARNING!effort instruction > max value, updating to maximum from settings.maximum_effort_value");
-        instruction[1] = settings.maximum_effort_value;
+        instruction_effort_level = settings.maximum_effort_value;
       }
-      setEffort(instruction[1]);
-      $("#instruction_info_text").text(race.race_clock + " - Effort updated to " + instruction[1]);
+      setEffort(instruction_effort_level);
+      $("#instruction_info_text").text(race.race_clock + " - Effort updated to " + instruction_effort_level);
       //console.log(race.race_clock + " Effort instruction " + instruction[1] + " applied ")
     }
   }
@@ -607,28 +620,11 @@ function moveRace(){
           }
           let failure_level = fatigue_failure_level_to_use*accumulated_effect_on_fatigue;
           race_rider.rider_fatigue_failure_level = failure_level;
-
         }
 
         race_rider.output_level = (settings.threshold_power_effort_level-settings.recovery_effort_level_reduction);
       }
       //set the power level based on the effort instruction
-
-      //dk23Aug apply overeagerness noise here if it exists
-      let original_output_level = 0;
-        if (race.instruction_noise_overeagerness_r[race.race_clock]){
-          let overeagerness_amount = race.instruction_noise_overeagerness_r[race.race_clock];
-          console.log("^^^ overeagerness to apply, amount " + overeagerness_amount + " ^^^");
-          original_output_level = race_rider.output_level;
-          race_rider.output_level = race_rider.output_level + (race_rider.output_level * overeagerness_amount);
-          //make sure we don't exceed the maximum
-          if(race_rider.output_level > settings.maximum_effort_value){
-            race_rider.output_level = settings.maximum_effort_value;
-            console.log("^^^ OVEREAGERNESS set output level too high! ^^^");
-          }
-          console.log("^^^ output changed from " + original_output_level + " to " + race_rider.output_level);
-          $("#race_info").html("Leader <strong>overeager </strong> "+ original_output_level + " to " + race_rider.output_level);
-        }
 
       race_rider.current_power_effort = mapEffortToPower(settings.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power, settings.maximum_effort_value);
 
