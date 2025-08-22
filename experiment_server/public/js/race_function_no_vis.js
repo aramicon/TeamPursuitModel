@@ -156,22 +156,15 @@ function randn_bm() {
   }
 
 
-  // performance failure functoions
-  function calculate_rider_performance_failure_probability(effort, effort_max, current_fatigue,current_fatigue_max, accumulated_fatigue,accumulated_fatigue_max, rider_performance_failure_rate,rider_performance_failure_rate_max, performance_failure_probability_exponent,performance_failure_effort_importance_multiplier){
+  // performance failure functions
+  function calculate_rider_performance_failure_probability(effort, effort_max, current_fatigue,current_fatigue_max, accumulated_fatigue,accumulated_fatigue_max, rider_performance_failure_rate,rider_performance_failure_rate_max, performance_failure_effort_exponent,performance_failure_effort_weight,performance_failure_current_fatigue_weight,performance_failure_current_fatigue_exponent,performance_failure_accumulated_fatigue_weight,performance_failure_accumulated_fatigue_exponent,performance_failure_accumulated_random_factor_weight,performance_failure_race_state_weight){
 
     //work out a percentage that this rider is going to fail right now
-    let rider_performance_failure_probability = ((((Math.pow(effort,performance_failure_probability_exponent)/Math.pow(effort_max,performance_failure_probability_exponent))*performance_failure_effort_importance_multiplier + (Math.pow(current_fatigue,performance_failure_probability_exponent)/Math.pow(current_fatigue_max,performance_failure_probability_exponent)) + (Math.pow(accumulated_fatigue,performance_failure_probability_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_probability_exponent)))/(3+(performance_failure_effort_importance_multiplier-1)))*(rider_performance_failure_rate/rider_performance_failure_rate_max));
+    //let rider_performance_failure_probability = ((((Math.pow(effort,performance_failure_effort_exponent)/Math.pow(effort_max,performance_failure_effort_exponent))*performance_failure_effort_weight + (Math.pow(current_fatigue,performance_failure_effort_exponent)/Math.pow(current_fatigue_max,performance_failure_effort_exponent)) + (Math.pow(accumulated_fatigue,performance_failure_effort_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_effort_exponent)))/(3+(performance_failure_effort_weight-1)))*(rider_performance_failure_rate/rider_performance_failure_rate_max));
     // console.log("will this rider fail? probability calced to be " + rider_performance_failure_probability);
-    return DecimalPrecision.round(rider_performance_failure_probability,4);
-  }
 
-  function calculate_rider_performance_failure_percentage_amount(effort, effort_max, current_fatigue, current_fatigue_max, accumulated_fatigue, accumulated_fatigue_max, rider_performance_failure_multiplier,rider_performance_failure_multiplier_max,  performance_failure_base_max_percentage,performance_failure_amount_exponent,performance_failure_effort_importance_multiplier,failure_type ){
+    //donalK25: using a new version that is more aligned with chokeunderpressure
 
-    //how much will the rider fail by?
-    // dk feb 22; adding a new version of this where the % of failure amount is more random
-
-    //dk22 found issue where current_fatigue > current_fatigue_max sometimes... can happen 'legally'
-    //set the upper bound to be current_fatigue_max and just limit current_fatigue
     if (current_fatigue > current_fatigue_max){
       current_fatigue_max = current_fatigue; //current_fatigue/current_fatigue_max will now max out at 1
     }
@@ -182,60 +175,27 @@ function randn_bm() {
       //console.log("***dk25: adjusting accumulated_fatigue_max  since it is < accumulated_fatigue");
     }
 
-    let rider_performance_failure__percentage_amount = (
-      (
-        (
-          (Math.pow(effort,performance_failure_amount_exponent)/Math.pow(effort_max,performance_failure_amount_exponent))*performance_failure_effort_importance_multiplier +
-          (Math.pow(current_fatigue,performance_failure_amount_exponent)/Math.pow(current_fatigue_max,performance_failure_amount_exponent)) +
-          (Math.pow(accumulated_fatigue,performance_failure_amount_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_amount_exponent))
-        )/(3+(performance_failure_effort_importance_multiplier-1))
+    let value_list = [];
+    let probability_variables = [];
+    // add groups of 4 params for each of three factors: effort, current fatigue, and accumulated fatigue
+    //format [weight, value, exponent, max value]
+    value_list.push(performance_failure_effort_weight,effort,performance_failure_effort_exponent,effort_max);
+    value_list.push(performance_failure_current_fatigue_weight,current_fatigue,performance_failure_current_fatigue_exponent,current_fatigue_max);
+    value_list.push(performance_failure_accumulated_fatigue_weight,accumulated_fatigue,performance_failure_accumulated_fatigue_exponent,accumulated_fatigue_max);
 
-      )
-      * (rider_performance_failure_multiplier/rider_performance_failure_multiplier_max)
-    );
+    //generate and add a random factor
+    value_list.push(performance_failure_accumulated_random_factor_weight,Math.random(),1,1);
+    probability_variables.push(rider_performance_failure_rate/rider_performance_failure_rate_max);
 
-    if (rider_performance_failure__percentage_amount > 1){
-      debugger;
-    }
-    //console.log("rider_performance_failure__percentage_amount =  " + rider_performance_failure__percentage_amount + " * " + performance_failure_base_max_percentage + " = " + (rider_performance_failure__percentage_amount*performance_failure_base_max_percentage));
-    rider_performance_failure__percentage_amount  = rider_performance_failure__percentage_amount*performance_failure_base_max_percentage;
+    let race_state_expression_result = calculate_linear_space_value(value_list, probability_variables);
+    // w1(A) + (1-w1)(B)
+    let final_value = ((performance_failure_race_state_weight*race_state_expression_result) + ((1-performance_failure_race_state_weight)*(rider_performance_failure_rate/rider_performance_failure_rate_max)));
+    return final_value;
+  }
 
-    //check the type to applying#
-    let version = 1;
-    if(failure_type){
-      version = failure_type;
-    }
-
-    if(version == 2){
-      // make it a probabilitsic range from 0 to the original amount
-      let p1 = Math.random();
-      let amount1 = (rider_performance_failure__percentage_amount*p1);
-
-      // if (amount1 > max_performance_failure_percentage){
-      //   max_performance_failure_percentage = amount1;
-      //   //log info if this is really high
-      //   console.log("####****max_performance_failure_percentage breached****####");
-      //   console.log("max_performance_failure_percentage " + max_performance_failure_percentage
-      //   + " rider_performance_failure__percentage_amount " +        rider_performance_failure__percentage_amount + " p1 " + p1 + " effort " + effort + " effort_max " + effort_max
-      //   + " current_fatigue " + current_fatigue + " current_fatigue_max " + current_fatigue_max
-      //   + "\n accumulated_fatigue " +  accumulated_fatigue
-      //   + "\n accumulated_fatigue_max " +  accumulated_fatigue_max
-      //   + " rider_performance_failure_multiplier " + rider_performance_failure_multiplier
-      //   + " rider_performance_failure_multiplier_max " + rider_performance_failure_multiplier_max
-      //   + "\n performance_failure_base_max_percentage " + performance_failure_base_max_percentage
-      //   + " performance_failure_amount_exponent " + performance_failure_amount_exponent
-      //   + "\n performance_failure_effort_importance_multiplier " + performance_failure_effort_importance_multiplier
-      //   + " failure_type " + failure_type);
-      //
-      // }
-      //console.log("Performance failure, adjusting from deterministic " + rider_performance_failure__percentage_amount + "to randomised " + amount1);
-      return DecimalPrecision.round(amount1,4);
-
-    }
-    else // assume version == 1, i.e. the standard
-    {
-      return DecimalPrecision.round(rider_performance_failure__percentage_amount,4);
-    }
+  function calculate_rider_performance_failure_percentage_amount(performance_failure_amount_min,performance_failure_amount_max){
+    // returning a uniform random point between a min and max value
+    return DecimalPrecision.round((performance_failure_amount_min + Math.random()*(performance_failure_amount_max-performance_failure_amount_min)),3);
   }
 
   //test mapPowerToEffort() and mapEffortToPower()
@@ -1328,6 +1288,7 @@ function randn_bm() {
           // note that the other aspects of the results will have to come from the final race?
           total_finish_time = 0;
           //console.log("====== Average Multiple Race Times ======");
+          
           for(let a_i = 0; a_i < number_of_races_to_average; a_i++){
             //dk22: pressure noise, send best_race_time_found_thus_far
             settings_r.best_race_time_found_thus_far = best_race_time_found_thus_far;
@@ -2739,6 +2700,12 @@ function randn_bm() {
         continue_check = false;
         break;
       }
+      else if((i+1)%4==0 && value_list[i] == 0){
+        console.log("!!! error in calculate_linear_space_value MAX value is 0 at position " + i + ", will result in NaN!!!");
+        continue_check = false;
+        debugger;
+        break;
+      }
     }
     for(let i = 0; i<probability_variables.length;i++ ){
       if(isNaN(probability_variables[i])){
@@ -2762,7 +2729,13 @@ function randn_bm() {
         sum_multipliers += value_list[i];
       }
 
-      sum_components = (sum_components/sum_multipliers);
+      //be careful not to divide by 0
+      if(sum_multipliers <= 0){
+        sum_components = 0;
+      }
+      else{
+        sum_components = (sum_components/sum_multipliers);
+      }
 
       for(let i = 0; i<probability_variables.length;i++ ){
         probability_modifier_total *= probability_variables[i];
@@ -3427,7 +3400,35 @@ function randn_bm() {
           //donalK2020: performance failure
           if (settings_r.performance_failure_enabled == 1){
             //will the rider fail this time?
-            let performance_failure_probability = calculate_rider_performance_failure_probability(race_rider.output_level, settings_r.maximum_effort_value, race_rider.endurance_fatigue_level, settings_r.fatigue_failure_level, race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_rate, settings_r.rider_performance_failure_rate_max, settings_r.performance_failure_probability_exponent, settings_r.performance_failure_effort_importance_multiplier);
+            //donalK25, note I should protect these values that are being loaded from global settings?
+            let performance_failure_current_fatigue_weight = 1;
+	          let performance_failure_current_fatigue_exponent = 1;
+	          let performance_failure_accumulated_fatigue_weight = 1;
+	          let performance_failure_accumulated_fatigue_exponent = 1;
+            let performance_failure_accumulated_random_factor_weight = 0;
+            let performance_failure_race_state_weight = 0;
+
+            if(typeof(settings_r.performance_failure_current_fatigue_weight) != "undefined"){
+              performance_failure_current_fatigue_weight = settings_r.performance_failure_current_fatigue_weight;
+            }
+            if(typeof(settings_r.performance_failure_current_fatigue_exponent) != "undefined"){
+              performance_failure_current_fatigue_exponent = settings_r.performance_failure_current_fatigue_exponent;
+            }
+            if(typeof(settings_r.performance_failure_accumulated_fatigue_weight) != "undefined"){
+              performance_failure_accumulated_fatigue_weight = settings_r.performance_failure_accumulated_fatigue_weight;
+            }
+            if(typeof(settings_r.performance_failure_accumulated_fatigue_exponent) != "undefined"){
+              performance_failure_accumulated_fatigue_exponent = settings_r.performance_failure_accumulated_fatigue_exponent;
+            }
+            if(typeof(settings_r.performance_failure_accumulated_random_factor_weight) != "undefined"){
+              performance_failure_accumulated_random_factor_weight = settings_r.performance_failure_accumulated_random_factor_weight;
+            }
+            if(typeof(settings_r.performance_failure_race_state_weight) != "undefined"){
+              performance_failure_race_state_weight = settings_r.performance_failure_race_state_weight;
+            }
+
+
+            let performance_failure_probability = calculate_rider_performance_failure_probability(race_rider.output_level, settings_r.maximum_effort_value, race_rider.endurance_fatigue_level, settings_r.fatigue_failure_level, race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_rate, settings_r.rider_performance_failure_rate_max, settings_r.performance_failure_effort_exponent, settings_r.performance_failure_effort_weight,performance_failure_current_fatigue_weight,performance_failure_current_fatigue_exponent,performance_failure_accumulated_fatigue_weight,performance_failure_accumulated_fatigue_exponent,performance_failure_accumulated_random_factor_weight,performance_failure_race_state_weight);
             if (Math.random() < performance_failure_probability){
               //rider fails to perform target power, but by how much?
               //check if new type setting exists #
@@ -3435,7 +3436,16 @@ function randn_bm() {
               if (settings_r.hasOwnProperty('performance_failure_effect_type')){
                 performance_failure_effect_type = settings_r.performance_failure_effect_type;
               }
-              let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, settings_r.performance_failure_effort_importance_multiplier,performance_failure_effect_type);
+              //  let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, settings_r.performance_failure_effort_weight,performance_failure_effect_type);
+              let performance_failure_amount_min = 1;
+              let performance_failure_amount_max = 1;
+              if(typeof(settings_r.performance_failure_amount_min != "undefined")){
+                performance_failure_amount_min = settings_r.performance_failure_amount_min;
+              }
+              if(typeof(settings_r.performance_failure_amount_max != "undefined")){
+                performance_failure_amount_max = settings_r.performance_failure_amount_max;
+              }
+              let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(performance_failure_amount_min,performance_failure_amount_max);
               //add an entry to performance_failures
               let timestep_rider = race_r.race_clock + "_" + race_r.current_order[i];
               race_r.performance_failures[timestep_rider] = performance_failure_percentage;
@@ -4008,15 +4018,50 @@ function randn_bm() {
             //donalK2020: performance failure
             if (settings_r.performance_failure_enabled == 1){
               //will the rider fail this time?
-              let performance_failure_probability = calculate_rider_performance_failure_probability(race_rider.output_level, settings_r.maximum_effort_value, race_rider.endurance_fatigue_level, settings_r.fatigue_failure_level, race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_rate, settings_r.rider_performance_failure_rate_max, settings_r.performance_failure_probability_exponent, settings_r.performance_failure_effort_importance_multiplier);
+              let performance_failure_current_fatigue_weight = 1;
+  	          let performance_failure_current_fatigue_exponent = 1;
+  	          let performance_failure_accumulated_fatigue_weight = 1;
+  	          let performance_failure_accumulated_fatigue_exponent = 1;
+  	          let performance_failure_accumulated_random_factor_weight = 1;
+              let performance_failure_race_state_weight = 1;
+
+              if(typeof(settings_r.performance_failure_current_fatigue_weight) != "undefined"){
+                performance_failure_current_fatigue_weight = settings_r.performance_failure_current_fatigue_weight;
+              }
+              if(typeof(settings_r.performance_failure_current_fatigue_exponent) != "undefined"){
+                performance_failure_current_fatigue_exponent = settings_r.performance_failure_current_fatigue_exponent;
+              }
+              if(typeof(settings_r.performance_failure_accumulated_fatigue_weight) != "undefined"){
+                performance_failure_accumulated_fatigue_weight = settings_r.performance_failure_accumulated_fatigue_weight;
+              }
+              if(typeof(settings_r.performance_failure_accumulated_fatigue_exponent) != "undefined"){
+                performance_failure_accumulated_fatigue_exponent = settings_r.performance_failure_accumulated_fatigue_exponent;
+              }
+              if(typeof(settings_r.performance_failure_accumulated_random_factor_weight) != "undefined"){
+                performance_failure_accumulated_random_factor_weight = settings_r.performance_failure_accumulated_random_factor_weight;
+              }
+              if(typeof(settings_r.performance_failure_race_state_weight) != "undefined"){
+                performance_failure_race_state_weight = settings_r.performance_failure_race_state_weight;
+              }
+
+              let performance_failure_probability = calculate_rider_performance_failure_probability(race_rider.output_level, settings_r.maximum_effort_value, race_rider.endurance_fatigue_level, settings_r.fatigue_failure_level, race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_rate, settings_r.rider_performance_failure_rate_max, settings_r.performance_failure_effort_exponent, settings_r.performance_failure_effort_weight,performance_failure_current_fatigue_weight,performance_failure_current_fatigue_exponent,performance_failure_accumulated_fatigue_weight,performance_failure_accumulated_fatigue_exponent,performance_failure_accumulated_random_factor_weight,performance_failure_race_state_weight);
               if (Math.random() < performance_failure_probability){
                 //rider fails to perform target power, but by how much?
                 let performance_failure_effect_type = 1; //default to 1, the olden deterministic one
                 if (settings_r.hasOwnProperty('performance_failure_effect_type')){
                   performance_failure_effect_type = settings_r.performance_failure_effect_type;
                 }
-                let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, performance_failure_effect_type);
+              //  let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(race_rider.output_level, settings_r.maximum_effort_value,  race_rider.endurance_fatigue_level,settings_r.fatigue_failure_level,  race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, race_rider.performance_failure_multiplier, settings_r.performance_failure_multiplier_max,  settings_r.performance_failure_base_max_percentage, settings_r.performance_failure_amount_exponent, performance_failure_effect_type);
                 //add an entry to performance_failures
+                let performance_failure_amount_min = 1;
+                let performance_failure_amount_max = 1;
+                if(typeof(settings_r.performance_failure_amount_min != "undefined")){
+                  performance_failure_amount_min = settings_r.performance_failure_amount_min;
+                }
+                if(typeof(settings_r.performance_failure_amount_max != "undefined")){
+                  performance_failure_amount_max = settings_r.performance_failure_amount_max;
+                }
+                let performance_failure_percentage = calculate_rider_performance_failure_percentage_amount(performance_failure_amount_min,performance_failure_amount_max);
                 let timestep_rider = race_r.race_clock + "_" + race_r.current_order[i];
                 race_r.performance_failures[timestep_rider] = performance_failure_percentage;
 

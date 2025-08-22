@@ -217,6 +217,7 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
           db.getDB().collection(collectionResults).insertOne(newExperimentResults,(err,result)=>{
             if(err){
               const error = new Error("Failed to insert new experiment settings");
+              console.log("*******ERROR SAVING EXPERIMENT RESULTS*******");
               console.log(err);
               error.status = 400;
               next(error);
@@ -366,7 +367,7 @@ app.post("/new_race_settings",cors(),(req,res,next) => {
             //results are actually a string so need to convert back
             let ga_results = JSON.parse(documents[i].ga_results);
             console.log("*****> ga_results");
-            console.log(ga_results);
+            //console.log(ga_results);
 
             let best_in_final_gen_test_results = ga_results["generations"][ga_results["generations"].length-1]["best_in_gen_tests_results"];
 

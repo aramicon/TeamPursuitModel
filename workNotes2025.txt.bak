@@ -1333,3 +1333,316 @@ generation_results.choke_event_timestep_pairs = [];
 	race_generation_list_of_overeagerness_affected_effort_timesteps	
 	race_generation_list_of_NON_overeagerness_affected_effort_timesteps
 	
+	- seems to work, need to get the graph in sooooooon.
+	
+	- save the 6 diagrams created 
+	overeagernessEffortInstructionsHistNOeffectGen0.png
+	overeagernessEffortInstructionsHistNOeffectGen99.png
+	
+	overeagernessEffortInstructionsHistp3ditancemaxRidereffectGen0.png
+	overeagernessEffortInstructionsHistp3ditancemaxRidereffectGen99.png
+	
+	overeagernessEffortInstructionsHistp5ditancep5RidereffectGen0.png
+	overeagernessEffortInstructionsHistp5ditancep5RidereffectGen99.png
+	
+	# Aggregated effort instruction with overeagerness, Generation 0, $\theta_i=1$, $d_{oe}=4000/3$
+	
+	- create a diagram for the fitness per GA for those 3 tests 
+	
+	fitnessForOvereagernessTestOfThreeLevels
+	
+	ok, so much to do but feel at a loss again... nois enosie nosie noise. noie nosie nosien niosneiznioenisoneiosnioenosnionieo
+	
+	- run a test for each kind of the noise, to create a new comparison graph.
+	
+	
+	
+	- hmmmmmmmm i think i need to rework the performance failure altogether. 
+	
+	1- split out the probability and amount, they don't need to be linked the way I had them.
+	
+	- func calculate_rider_performance_failure_probability()
+		
+	- current version
+	
+	  let rider_performance_failure_probability = ((((Math.pow(effort,performance_failure_probability_exponent)/Math.pow(effort_max,performance_failure_probability_exponent))*performance_failure_effort_importance_multiplier + (Math.pow(current_fatigue,performance_failure_probability_exponent)/Math.pow(current_fatigue_max,performance_failure_probability_exponent)) + (Math.pow(accumulated_fatigue,performance_failure_probability_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_probability_exponent)))/(3+(performance_failure_effort_importance_multiplier-1)))*(rider_performance_failure_rate/rider_performance_failure_rate_max));
+	  
+	  - use the method I built to handle weights etc/ with groups of four params 
+	  
+	  - calculate_linear_space_value(value_list, probability_variables)
+	  
+	  - value list needs groups of 4, [weight multiplier, value, exponent, max value]
+	  - probability_variables is another array of modifiers, can send none. none in this case?
+	  
+	  - create 3 groups of 4, for effort/fatigue_current/fatigue_accumulated 
+	  
+	  - need 3 weights, rename globals 
+	  
+	  - rename performance_failure_effort_importance_multiplier to performance_failure_effort_weight
+	  -rename performance_failure_probability_exponent to performance_failure_effort_exponent,
+	  - need to add 4 new props in the globals 
+	  - performance_failure_current_fatigue_weight
+	  - performance_failure_current_fatigue_exponent
+	  - performance_failure_accumulated_fatigue_weight
+	  - performance_failure_accumulated_fatigue_exponent
+	  performance_failure_current_fatigue_weight,performance_failure_current_fatigue_exponent,performance_failure_accumulated_fatigue_weight,performance_failure_accumulated_fatigue_exponent
+	  
+	  - added these to functino calls to calculate_rider_performance_failure_probability()
+	  
+	  - change in settings.
+	  
+	  - now change how the value is worked out. 
+	  calculate_rider_performance_failure_percentage_amount() 
+	  
+	  - here I want just 2 values? min and max percentage that power is reduced by?? 
+	  - old version is such a mess tbh 
+	  function calculate_rider_performance_failure_percentage_amount(effort, effort_max, current_fatigue, current_fatigue_max, accumulated_fatigue, accumulated_fatigue_max, rider_performance_failure_multiplier,rider_performance_failure_multiplier_max,  performance_failure_base_max_percentage,performance_failure_amount_exponent,performance_failure_effort_weight,failure_type ){
+
+    //how much will the rider fail by?
+    // dk feb 22; adding a new version of this where the % of failure amount is more random
+
+    //dk22 found issue where current_fatigue > current_fatigue_max sometimes... can happen 'legally'
+    //set the upper bound to be current_fatigue_max and just limit current_fatigue
+    if (current_fatigue > current_fatigue_max){
+      current_fatigue_max = current_fatigue; //current_fatigue/current_fatigue_max will now max out at 1
+    }
+
+    //donalK25, try the same for the accumulated fatigue...
+    if (accumulated_fatigue > accumulated_fatigue_max){
+      accumulated_fatigue_max = accumulated_fatigue;
+      //console.log("***dk25: adjusting accumulated_fatigue_max  since it is < accumulated_fatigue");
+    }
+
+    let rider_performance_failure__percentage_amount = (
+      (
+        (
+          (Math.pow(effort,performance_failure_amount_exponent)/Math.pow(effort_max,performance_failure_amount_exponent))*performance_failure_effort_weight +
+          (Math.pow(current_fatigue,performance_failure_amount_exponent)/Math.pow(current_fatigue_max,performance_failure_amount_exponent)) +
+          (Math.pow(accumulated_fatigue,performance_failure_amount_exponent)/Math.pow(accumulated_fatigue_max,performance_failure_amount_exponent))
+        )/(3+(performance_failure_effort_weight-1))
+
+      )
+      * (rider_performance_failure_multiplier/rider_performance_failure_multiplier_max)
+    );
+
+    if (rider_performance_failure__percentage_amount > 1){
+      debugger;
+    }
+    //console.log("rider_performance_failure__percentage_amount =  " + rider_performance_failure__percentage_amount + " * " + performance_failure_base_max_percentage + " = " + (rider_performance_failure__percentage_amount*performance_failure_base_max_percentage));
+    rider_performance_failure__percentage_amount  = rider_performance_failure__percentage_amount*performance_failure_base_max_percentage;
+
+    //check the type to applying#
+    let version = 1;
+    if(failure_type){
+      version = failure_type;
+    }
+
+    if(version == 2){
+      // make it a probabilitsic range from 0 to the original amount
+      let p1 = Math.random();
+      let amount1 = (rider_performance_failure__percentage_amount*p1);
+
+      // if (amount1 > max_performance_failure_percentage){
+      //   max_performance_failure_percentage = amount1;
+      //   //log info if this is really high
+      //   console.log("####****max_performance_failure_percentage breached****####");
+      //   console.log("max_performance_failure_percentage " + max_performance_failure_percentage
+      //   + " rider_performance_failure__percentage_amount " +        rider_performance_failure__percentage_amount + " p1 " + p1 + " effort " + effort + " effort_max " + effort_max
+      //   + " current_fatigue " + current_fatigue + " current_fatigue_max " + current_fatigue_max
+      //   + "\n accumulated_fatigue " +  accumulated_fatigue
+      //   + "\n accumulated_fatigue_max " +  accumulated_fatigue_max
+      //   + " rider_performance_failure_multiplier " + rider_performance_failure_multiplier
+      //   + " rider_performance_failure_multiplier_max " + rider_performance_failure_multiplier_max
+      //   + "\n performance_failure_base_max_percentage " + performance_failure_base_max_percentage
+      //   + " performance_failure_amount_exponent " + performance_failure_amount_exponent
+      //   + "\n performance_failure_effort_weight " + performance_failure_effort_weight
+      //   + " failure_type " + failure_type);
+      //
+      // }
+      //console.log("Performance failure, adjusting from deterministic " + rider_performance_failure__percentage_amount + "to randomised " + amount1);
+      return DecimalPrecision.round(amount1,4);
+
+    }
+    else // assume version == 1, i.e. the standard
+    {
+      return DecimalPrecision.round(rider_performance_failure__percentage_amount,4);
+    }
+  }
+  
+ -- now have calculate_rider_performance_failure_percentage_amount(performance_failure_amount_min,performance_failure_amount_max)
+ - need to add those as globals 
+	       "performance_failure_amount_min":0.1,
+        "performance_failure_amount_max":0.35,
+ - now, update anywhere that calls the func()
+ 
+ - testing. performance_failure_effort_exponent is undefined
+ 
+ - results url fails, maybe toooo long, need to ROUND the failures to 2 or 3 places??
+    
+	
+- weirddd, it finds a very fast strategy, has a stack of failuires 
+
+
+
+- run a sequence with increasing performance_failure_rate (riders)
+
+
+{"iterations":7,"active":1,"variations":[{"iterations":[7,6,5,4,3,2,1],"type":"rider","rider_no":0,"property":"performance_failure_rate","values":[0,1.7,3.4,5.1,6.8,8.5,10]},{"iterations":[7,6,5,4,3,2,1],"type":"rider","rider_no":1,"property":"performance_failure_rate","values":[0,1.7,3.4,5.1,6.8,8.5,10]},{"iterations":[7,6,5,4,3,2,1],"type":"rider","rider_no":2,"property":"performance_failure_rate","values":[0,1.7,3.4,5.1,6.8,8.5,10]},{"iterations":[7,6,5,4,3,2,1],"type":"rider","rider_no":3,"property":"performance_failure_rate","values":[0,1.7,3.4,5.1,6.8,8.5,10]}],"experiments":[]}
+
+
+{"iterations":7,"active":1,"variations":[{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"performance_failure_amount_min","values":[0,0.17,0.34,0.51,0.68,0.85,1]},{"iterations":[7,6,5,4,3,2,1],"type":"global","property":"performance_failure_amount_max","values":[0,0.17,0.34,0.51,0.68,0.85,1]}],"experiments":[]}
+
+- so, if the size of the p. failure gets higher the ability to be better than a non-noise version fades.
+
+- add a random factor to the expression, can then test a 'descent into randomness'. into chaos?
+- add property 
+
+"performance_failure_accumulated_random_factor_weight":1,
+
+- can fix the exponent to 1 and the max to 1.
+
+- why is it FASTER with noise??
+
+- is it becauase they are getting to recover more??
+
+- I could display the amount of recovery in the game viewer??
+
+- also add one more weight, to allow for a form where the result is rider_tendency-driven entirely, so w_x(effort/fatigue/etc)*rider_T )1-
+
+-  "performance_failure_race_state_weight": 0,
+- can this be part of the function call, it needs to be separate, no?
+
+- ok, so can I make every rider fail by an exact percentage at every timestep?
+
+-hmmm, nope nobody failed in the test at all?
+
+- ohhh BUG, division by 0 returning a NaN, this is MAJOR. e.g. when fatigue is 0, failure doesn't happen.
+
+- current_fatigue_max was not being passed in, current_fatigue was being sent in by mistake. yikes on a bikes.
+
+- wait, is my race clock a second wrong, am i forgetting to add 1 since it is zero based??
+
+- ok, so if the ALWAYS fail by 20%, it is basically deterministic and it can find a good result.
+
+- if I set the rider tendency to 0.5 i can get all to fail by 0.2 50% of the time??
+
+- maybe delete all of the existing performance_failure results?? can't relly use them given the NaN bug?
+
+- where does it get the accum. fatigue max from?
+
+- 4 tests 100 gens 
+- A: constant amount of 0.2 every rider every timestep performance_failure_example_A_fixed_amount.png
+- B: accumulated fatigue only, exponent 2, value 0-0.8, all riders 10
+- C: all riders 10, all weights 1 except for w1=0.5, so eery factor is enabled, all exponents 1, value = 0.1-0.9
+- C: 1 rider only, random + effort equal weights, others zero, value 0-0.8.
+
+- still dividing by zero if all the non-random factors are weighted to 0... end up with a NaN again.
+
+- fixed NaN issue, reran the tests of the 4 setups
+- add them as images- need a group of 4 images 
+
+- 4 images in - they are badly positioned though. how can i get them to appear in a better place in the text?
+
+- add the 4 finish times to the graph captions. 
+
+- 4 graphs in and a discussion about each. damn seciton is still not done though.
+
+- create a sequence for 7 levels of all-factor failure. can copy the one I ran in Portland.
+
+- still left to run for six types comparison:
+	- no noise	
+	- mishearing+perf. fail.
+	- mishearing
+	- delays only
+	- performance failure
+	- choke-under-pressure 
+	- overeagerness 
+	
+
+- references not being found again, cursafook on it. 
+- downloaded a bibtex checker python script called /BibLatex-Check, see https://tex.stackexchange.com/questions/173621/how-to-validate-check-a-biblatex-bib-file
+- to run 
+./biblatex_check.py <-b input.bib> [-a input.aux] [-o output.html]
+
+-b (--bib=file.bib) Set the input Bib File
+-a (--aux=file.aux) Set the input Aux File
+-o (--output=file.html) Write results to the HTML Output File.
+-v (--view) Open in Browser. Use together with -o.
+-N (--no-console) Do not print problems to console. An exit code is always returned.
+
+
+
+python C:\\Users\\donak\\Documents\\RESEARCH\\PythonChartsAndAnalysis\\bibtex_checker\\biblatex_check.py -b C:\\Users\\donak\\Documents\\RESEARCH\\thesisDraft1\\repository_files\\research_draft\\8_references.bib -o C:\\Users\\donak\\Documents\\RESEARCH\\PythonChartsAndAnalysis\\bibtex_checker\\biblatex_check_output.html -v
+
+- fixed the bibtex issue, i had commented out most, but not all, of a reference, and it has an incorrect apostrophe in it, too.
+
+- sections still not showing up properly, they are all listed under List of Tables??
+
+- needed to include a chapter and then sections and subsections 
+
+
+- how do i enable the search-test system? 
+
+
+this is in the sequence: best_in_final_gen_tests
+
+here's one sequence
+
+{"iterations":21,"active":0,"variations":[{"iterations":[21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"enable_instruction_noise_1_random","values":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},{"iterations":[21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.95,0.9,0.85,0.8,0.75,0.7,0.65,0.6,0.55,0.5,0.45,0.4,0.35,0.3,0.25,0.2,0.15,0.1,0.05,0]}],"best_in_final_gen_tests":[{"iterations":21,"repeat_each":20,"variations":[{"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.95,0.9,0.85,0.8,0.75,0.7,0.65,0.6,0.55,0.5,0.45,0.4,0.35,0.3,0.25,0.2,0.15,0.1,0.05,0]}]}],"experiments":[]}
+
+- make a little one 
+
+{"iterations":3,"active":1,"variations":[{"iterations":[3,2,1],"type":"global","property":"enable_instruction_noise_1_random","values":[1,1,1]},{"iterations":[3,2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.5,0]}],"best_in_final_gen_tests":[{"iterations":3,"repeat_each":5,"variations":[{"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.5,0]}]}],"experiments":[]}
+
+- only runs on the final generation 
+
+- gets stored in best_in_gen_tests_results 
+
+- ok, well it does... something. encourage
+
+- seeeems to return results, e.g., for 3 levels of search noise and 3 levels of test noise
+
+[[1,1,307.2078],[1,0.5,300.3264],[1,0,305.323],[0.5,1,302.9846],[0.5,0.5,303.3532],[0.5,0,310.642],[0,1,301.4402],[0,0.5,289.265],[0,0,280.45]]
+
+- can I graph this? 
+
+- the graph I'm looking for is LandScapeGraph3dWIthNoiseVersion1.py 
+
+- search with no noise and test with a bunch of values 
+
+[[0.7,1,254.457],[0.7,0.95,254.457],[0.7,0.9,254.457],[0.7,0.85,254.457],[0.7,0.8,254.457],[0.7,0.75,254.457],[0.7,0.7,254.457],[0.7,0.65,254.457],[0.7,0.6,254.457],[0.7,0.55,254.457],[0.7,0.5,254.457],[0.7,0.45,254.457],[0.7,0.4,254.457],[0.7,0.35,254.457],[0.7,0.3,254.457],[0.7,0.25,254.457],[0.7,0.2,254.457],[0.7,0.15,254.457],[0.7,0.1,254.457],[0.7,0.05,254.457],[0.7,0,254.457]]
+
+- ah shit, ahve to rerun that, noise was never turned on :-( 
+
+- run a big one and go to bed 
+{"iterations":21,"active":1,"variations":[{"iterations":[21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"enable_instruction_noise_1_random","values":[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1]},{"iterations":[21,20,19,18,17,16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1],"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.95,0.9,0.85,0.8,0.75,0.7,0.65,0.6,0.55,0.5,0.45,0.4,0.35,0.3,0.25,0.2,0.15,0.1,0.05,0]}],"best_in_final_gen_tests":[{"iterations":21,"repeat_each":20,"variations":[{"type":"global","property":"noise_1_probability_instruction_misheard","values":[1,0.95,0.9,0.85,0.8,0.75,0.7,0.65,0.6,0.55,0.5,0.45,0.4,0.35,0.3,0.25,0.2,0.15,0.1,0.05,0]}]}],"experiments":[]}
+
+- Aug 20,
+
+- sequnce didn't run for the ones over 10??
+
+ok, so i figured it was to do with the SIZE of the results it is trying to save, and this does seem to be the case. 
+- error is 
+{ client_id: '86.45.238.255_2025_7_20_10_44_26', iteration: 21 }
+save new results
+*******ERROR SAVING EXPERIMENT RESULTS*******
+RangeError [ERR_OUT_OF_RANGE]: The value of "offset" is out of range. It must be >= 0 && <= 17825792. Received 17825794
+    at validateOffset (node:buffer:112:3)
+    at Buffer.write (node:buffer:1063:5)
+    at serializeString (C:\Users\donak\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\bson\lib\bson\parser\serializer.js:33:14)
+    at serializeInto (C:\Users\donak\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\bson\lib\bson\parser\serializer.js:919:17)
+    at serializeObject (C:\Users\donak\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\bson\lib\bson\parser\serializer.js:347:18)
+    at serializeInto (C:\Users\donak\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\bson\lib\bson\parser\serializer.js:727:17)
+    at serializeObject (C:\Users\donak\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\bson\lib\bson\parser\serializer.js:347:18)
+    at serializeInto (C:\Users\donak\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\bson\lib\bson\parser\serializer.js:937:17)
+    at BSON.serialize (C:\Users\donak\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\bson\lib\bson\bson.js:64:28)
+    at Msg.serializeBson (C:\Users\donak\Documents\RESEARCH\TeamPursuitModel\experiment_server\node_modules\mongodb\lib\core\connection\msg.js:124:22) {
+  code: 'ERR_OUT_OF_RANGE'
+}
+getting list of active sequences
+
+- redcued gens to 150, trying to run those TEN GAs again.
+
+- theey now seem to be running. yay. Where even is the MongoDB stored?? Need to make sure I back this up!!
+- added it but didn't run it, not sure where i have space :-( 
+
