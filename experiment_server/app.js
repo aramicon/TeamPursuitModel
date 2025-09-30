@@ -86,6 +86,9 @@ app.get('/ga',(req,res)=> {
 app.get('/tpgame',(req,res)=> {
   res.sendFile(path.join(__dirname,'public/tpgame.html'));
 });
+app.get('/tpgamebreakaway',(req,res)=> {
+  res.sendFile(path.join(__dirname,'public/tpgamebreakaway.html'));
+});
 app.get('/results',(req,res)=> {
   res.sendFile(path.join(__dirname,'public/results.html'));
 });

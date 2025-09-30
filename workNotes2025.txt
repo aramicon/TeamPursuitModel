@@ -1654,3 +1654,592 @@ getting list of active sequences
 
 - built this diagram and added it... not a lot of findings tbh, it doesn't agree witht the idea I had before where the number of instructions falls as noise goes up. why??
 
+- try to create the instruction scatterplot with new data 
+
+- issue: it only logs gen 0 and gen 49... surely it should by default log the LAST gen?
+- it's actually in the global settings, tells it which gens to log.
+
+- could default it to alwasy log the last gen? or work with what's there?
+
+- should do a run for a different team setup?
+- ran overnight for 3 more team types, need to collect data, can use 3 graphs for each:
+- 1: 3d landscape of search and test 
+- 2: effort instruction scatterplot, generation 150
+- 3: drop instructions, genertion 150
+
+- bollox, the tests didn't save the instructions for generation 149 :-( 
+
+- bug, if i rn a search-test set with rider props, the output is messed up, all the triples have 0 as the first value
+
+- ah ok, in app.js it assumes we are going to log the mishearing value as the first value, but here we are using the rider property
+
+return_data_element.best_in_final_gen_noise_value = ga_settings_c.noise_1_probability_instruction_misheard;
+
+BUT we don't know that all the riders are set to use the same prop value, it could be anything... i can manually add these values?
+
+- perf fail speeds
+
+- p.f. = 1, best time, last gen = 270.987
+- p.f. = 0.5, best time, last gen = 260.23
+- p.f. = 0, best time, last gen = 260.442
+
+
+- analyse 1 strong/3 weak 
+
+Timestep of the earliest drop instruction for final best-in-gen strategy for GA searches with rising levels of noise. As mishearing becomes common, early lead changes tend to disappear to allow the one strong rider to remain at the front
+
+
+[[2,"effort=6.88"],[53,"drop=1"],[61,"drop=1"],[75,"drop=1"],[102,"effort=5.27"],[108,"effort=5.35"],[109,"effort=5.35"],[129,"drop=2"],[134,"effort=6.37"],[148,"drop=2"],[155,"drop=3"],[158,"drop=3"],[178,"drop=3"],[208,"drop=2"],[221,"drop=1"],[222,"effort=7.96"],[234,"drop=3"],[244,"effort=7.21"]]
+
+
+{"33":{"original_instruction":[33,"drop=2"],"altered_instruction":[33,"drop=3"],"type":"random_drop"}}
+
+
+- cussed references broke agin
+
+- they seem to work in the test file??
+
+- can graduyally add bits of the doc back in to check?
+
+- weird, seems to work if i copy everything to the other file. what was goign wrong then?
+
+- need to add a conclusion to the noise part 
+
+- compare noise 0.4 with and without AVG 
+search_and_test all_equal perf_fail compWithNoAVG
+
+- writing some of the intro.
+
+
+
+The main problem with the
+manuscript is that there are insufficient details to allow for experimental repeatability .
+
+"One thing that is missing is details of the simulation environment. Is the cycling simulation an existing simulation model? If so, cite it . If not, it is important to provide some details on this . What simulation framework/library/etc is it implemented in? Or is it a custom simulation? Is the simulation publicly available , and if so, where?"
+
+
+- describe the GA in more detail, to make it more replicable. need to link to the source code so that the simulation is publically available (GitHub)
+- selection type 
+- elitism 
+- mapping from genotype to phenotype 
+- mention that it is a custom code. how do I cite or include this?
+- from https://academia.stackexchange.com/questions/20358/how-should-i-reference-my-github-repository-with-materials-for-my-paper
+
+: "Such resources, especially if they are a supplementary to the paper, i.e. in some sense a part of it, should be referenced in a footnote and not in bibliography.
+
+Do include not only the URL but also a short description; and do try to keep that URL valid - once you publish that link, it's frozen forever."
+
+url to include; https://github.com/aramicon/TeamPursuitModel/tree/main/experiment_server
+
+
+
+Reviewer 1:
+
+It would be worthwhile to highlight how this approach builds upon existing robustness
+evaluation techniques, and to benchmark the results against some baseline methods (such as manually
+designed strategies, or other optimisers like particle swarm optimisation or reinforcement learning) to
+better show the comparative gains in robustness and performance.
+
+So, to improve its linkage to other research, need a few more references. But how can I benchmark it?
+
+- need to edit the paper on overleaf, not locally... can work on adding the changes to the main doc later.
+
+- added a footnote to link the github. 
+
+- need to add some setup info on the github!
+
+- added a comment describing the example on page 4
+
+"The Related Work section is relevant but can be further improved by including more recent studies on robust evolutionary algorithms as well as applications in sports analytics"
+
+- need to bed the work better into other work, esp. EC/robustness, e.g.,
+@article{he2018robust,
+  title={Robust multiobjective optimization via evolutionary algorithms},
+  author={He, Zhenan and Yen, Gary G and Yi, Zhang},
+  journal={IEEE Transactions on Evolutionary Computation},
+  volume={23},
+  number={2},
+  pages={316--330},
+  year={2018},
+  publisher={IEEE}
+}
+
+This, from 1998 has quite a few citations 
+@inproceedings{branke1998creating,
+  title={Creating robust solutions by means of evolutionary algorithms},
+  author={Branke, J{\"u}rgen},
+  booktitle={International Conference on Parallel Problem Solving from Nature},
+  pages={119--128},
+  year={1998},
+  organization={Springer}
+}
+
+they mention the average quality of the phenotypic neighbourhood of a solution. "a solution on a high plateau should be preferred over a solution on a thin peak"
+
+"The standard EA by nature favors hills over peaks"
+
+I could use a description like this one? "As simple EA we use real-valued, direct encoding of the decision variables, generational replacement with elitism (i.e. the best individual survives), ranking selection, two-point-crossover, mutation rate of 0.1, and an island model 1 with 5 subpopulations, 50 individuals each, run for 500 generations. The same settings are used throughout all experiments unless stated otherwise."
+
+"duplicant avoidance"	w(y) e< p(5) such that y = x + 5.
+
+- how do i find a result used for a specific test? can just search through the results page, and add some specific tag to narrow them down if searching again? 
+- data_used added that as a tag ]
+
+
+- updatign images.
+
+rm_iv_fitness_spread_comparison_two_strong_200gens_Jun18
+
+Fig 1 and Fig 2 have NOT been changed, since they are from the d3 code. Will need to go back to this.
+
+- monday sep 15th, write part of intro to new chapter. 
+
+- find at least one reference to cite- good one from France in 2018 9Scelles, Nicolas and Mignot) studying actual breakaways in le Tour.
+
+scelles2018temporary
+
+"a breakaway can be seen as a coopetitive temporary organizational form"
+
+- coopetitive is mixture of cooperation and competition, a real word.
+
+- design questions for new work.
+
+How do the riders start?
+is it a standing or flying start?
+How is the stratign order defined?
+Will the starting order be part of the genotype?
+Can there be multiple groups or one group?
+How does a group leader decide how fast to go?
+How does a group leader decide when to drop back?
+	- could stay on the front until the acheive a certain percentage that they are happy with... e.g, the group size is 4, they spend 1/4 of some distance there?
+	- 1/4 of what?
+If they drop back, how many spaces do they drop back?
+If a rider chooses to NOT cooperate, do they hide at the back or come to the front and immediately drop back?
+
+Can a rider choose o sprint from any position?
+	- yes, they generally do not sprint from the front.
+What's the difference between a sprint and an attack?
+If a rider attacks, how hard do they go?
+If a rider attacks, how do they transition to a steady 'solo' state? 
+	- perhaps the size of the gap they open up is important?
+If a rider sprints, how far/long do they sprint for?
+	- until they cross the finish line or failure?
+	- what about an intermediate sprint?
+		- maybe don't model that?
+can a sprint, or an attack, be visualized?
+	- sure, the they could pull alongside and have their state displayed somewhere 
+How will a cooperate state be translated into instructions?
+	- need to develop some pseudocode. If they are leading they lead until a certain point then drop back, otherwise if they assume the lead, they begin to copperate 
+	- Again, how do they choose the power/effort level?
+How do attributes translate in general to specific instructions? 
+	- probabilistically. the default state is to be in a group and cooperating to some degree- this degree can be zero, e.g., for a hiding sprinter. however a rider will have some probability at every timestep of attacking or sprinting.
+How are an attack and a sprint related?
+	- closely, but an attack is generally further from the finish and will generally need to transition to a sole state or back to a group state before the race finish.
+	- Could a sprint therefore not just be a very late attack at high ppower?
+		-yes, but I haven't figured out how to model the power and duration of an attack. A rider might attack with less power than their final sprint, and if so, how do manage this? 
+		- Could you include another dynamic property, like "attack-strength" that could change via strategy as the race goes on?
+			Possibly. I might try to build it this way and see if it works.
+When does the race finish?
+	- when all riders have crossed the line: each rider will be given a finish time, and a placing. This should be visualised.
+Why use distance and not time to specify attribute instructions?
+	- well, consider a sprint: a rider will lanuch with a certain distance remaining. This is harder to do with time.
+	- why didn't I use distance for the original?
+		- good question. it seemed to make more sense that riders would be dividing up the time on the front. They are deeply related. A strategy in terms of distance seems to make more sense, it is independent of the speed/time taken. The time seems more relevant in the case of the track pursuit?
+How long will the race be?
+	- can experiment with different values, probbaly somethign like 5km to allow for various happenings?
+How does the bunch catch the breakaway?
+	- the chasing bunch will have a fixed pace. Once it passes a rider that rider's race is over, so when it catches all riders, or all riders ahead have finished, the race ends.
+	- Will this be visualised?
+		- yes, the peleton will appear as a chasing figure, but at a slightly different 'lane'. Riders will change how they look somehow when 'absorbed'. Their race after that is not considered.
+		Is the peloton not much more dynamic than this?
+			- yes but that's being left out of the scope. i may have to simply even more.
+			
+How do I make these groups really dynamic, e.g., with complex rules, e.g.,
+	- a rider will chase down a non-teammate but not a teammate, and it will refuse to work with another rider IF its designated leader is waiting behind.
+		- I could add team designations and roles, and decision making logic for these specfic scenarios? I could later test the GA with these roles, e.g. evolve a teamate, but this means that the propensity to chase down a teammate or non-teammate needs to be IN THE GENOTYPE. This might get way too complex?
+	- a rider will attack with higher liklihood if others are not cooperating. 
+		- again, this couple be rendered as in-game decision-making tied to properties that can be updated in the genotype (and subject to variance).
+	- riders that chase down the strongest rider every time, but are less worried about a lesser-known or weaker rider. I.e., their strategy is tied to specific opponents and has complex rules.
+		- how could I even model this in a genotype? As another 'propensity'? I will have sooo many things to tune?
+
+How do I test basic aspects of racing, e.g. that if all riders are equal, the one who has worked the least in the race, i.e., the freshest, will win the sprint?
+	- can test and tbh, adjust settings to make this so.
+	- in real sprints, riders wait behind until the last possible moment. Will this happen?
+		- maybe, but we may have to express sprints purely in terms of distance. 
+		
+		
+	
+
+What data would I need to record?
+	- When it comes to saving GA results, all the setup config settings, then for each rider, every instruction they are issued during the race: it will need to be fully re-playable, like with the original. I will need to be able to show the power of riders but also some other form of visualisation to 'see' what happened in a race. Maybe some kind of graph that shows the race state as the time passes, like a vertical series of coloured dots?
+what experiments would I need to run?
+	- i need to come up with a sequence, beginning with something very simple.
+	1: no strategy, riders cooperate by default until they finsish 
+	2: cooperation levels: each rider is given a different level of cooperation 
+	3: target group effort level: each rider is given a different level, so that when they are on the front, they rider at this level. The others, for simplicity, may just follow, or they might apply some kind of rule, e.g. "if the group goes too slow i will take over at the front." I might ignore this for now and mayyybe add it later.
+	4: sprints: riders are given property changes near the end to raise their chance of a sprint attack.
+	5: attacks. riders are given earlier property changes to give them a liklihood of attacking.
+	
+	10: can I run an experiment where the fitness function is based on the team, i.e., a win for the team is highly valuable, and the evolving rider has a stronger-finishing teamamte- might they evolve behaviour to cooperate more, and chase down non-temamates?
+	
+	
+	
+What is the core research question?
+	-  Can we model this scenario and use a GA to search for strategies?
+	- Is this enough? Does it need more detail and precision? What domain is it contributing to?
+	- It highlights the delicate scenario and how cycling, and sports as a whole, can include sophisticated problems of coordination and cooperation. it also provides insight into how a simulation migh be built, its limitations too, and perhaps add something to our understanding of breakaways, perhaps even how a rider should act in them.
+	- Do you think the model will be good enough to have something to say at the level of the coach or athelte?
+		No, tbh, I think that would be a bigger project. But it may suggest a way of doing it.
+
+
+
+- create a new game page
+- add it to the mage menus 
+
+- created page and updated menus 
+- original race now does not run (only works when opened via results page via link)
+
+- let's add a dropdown to select a settings config that is then loaded, rather than typing in details here (will help later on, too)
+
+- copied experiment_names control from the GA page.
+- need to inlcude populateNamesDropdown function 
+- and getExperimentNames()
+
+- now make the dropdown selection do what the load_details_from_url() used to do.
+
+
+- key lines 
+  race = JSON.parse(data[0].race_settings);
+          settings = JSON.parse(data[0].global_settings);
+          riders = JSON.parse(data[0].rider_settings);
+
+          $("#global_settings").val(data[0].global_settings);
+          $("#race_settings").val(data[0].race_settings);
+          $("#rider_settings").val(data[0].rider_settings);
+
+          $("#database_connection_label").html("<strong>Loaded Settings "+data[0].name+"</strong> | _id | <span id = 'settings_id'>"+data[0]._id);
+          $("#new_settings_name").val(data[0].name);
+
+          //set the id (global)
+          selected_settings_id = data[0]._id;
+
+- not running, needs a team order at least? and blank instructions? 
+$("#teamorder").val(DEFAULT_TEAM_ORDER);
+
+- race object exists but race.riders is blank, must need to set this... need to run
+
+-- hmmm, so took out all the noise code as best i found, it runs but the power graph looks very wonky indeedy.
+
+- it's wonky because default_starting_effort_level is set to 2. If i set it to 8, it looks very different- looks like it is running as expected.
+
+- try pasting in some instructions.
+
+- yes, if i run the GA then copy/paste the final instructions, the race gets the same time.
+
+- look at code that draws the turns/etc. how do i draw a LINE instead?
+
+- can get the riders to never 'leave' straight1, i.e. go in a stright line, but the quickly leave the screen, start in the wrong place, and are goign the wrong way 
+
+- take out the backgorund image to help visibility.
+
+- if i update "track_centre_x": 10 and "track_centre_y": 370 settings I can better position the start- though it is not a flying start.
+
+- can I use the scale mechanism to keep the whole race 'in the box'
+
+the scale amount is settings.vis_scale. can this by dynamic, to fit in the whole race no matter how big... would take a lot of work to have a moving frame?
+
+- scale works BUT the offset has disappeared.
+- maybe it's 'right' but the dots are too big to show the gaps? in terms of the scale as a whole?
+- tried with a race length of 100m and yes, the gaps are much bigger in this one. so do I need some kind of sliding window?
+
+	Let's draw a finish line...
+    // ************* draw a finish line START *********** 
+    ctx.beginPath();
+    let race_finish_point = DISPLAY_LENGTH;
+    ctx.moveTo(race_finish_point, 0);
+    ctx.lineTo(race_finish_point, 150);
+    ctx.stroke();
+    // ************* draw a finish line END ***********
+	
+- add 2 props to try and model a chasing bunch 
+ "chasing_bunch_starting_gap":200,
+       "chasing_bunch_speed":11, (metres per second)
+	   
+- need to draw a line for this... gets a bit longer each time...
+
+- add a new prop to each rider to signal how many timesteps they will spend at the front of a group 
+                "breakaway_cooperation_time":12,
+- whenever they get to the front of a group, they keep track of how long they spend there, and after the clock expires, they add a new drop instruction, which tells them to go to the back of the group at the next timestep
+
+- do i need to remove the leading/chasing distinction entirely?
+
+- also how the hey am i going to get the instructions code to work if all rider can be issued instructions???
+
+- would need to add an instruct to race.race_instructions_r[]
+// **** cooperation effort check START ****
+
+- addded this to load_race() 
+  load_rider.time_leading_group = 0;
+  
+  
+- note we will need to scrap the limitation on 1 instruction per timestep, will need to be 1 instruction per rider per timestep?
+
+- kinda works, but i think it is still limiting WHEN the drops are allowed- if i set breakaway_cooperation_time to 0 for a rider they still spend quite a while on the front. 
+
+- took out bend material 
+
+- rider told to drop back NOT dropping back because of the rule that only one rider can drop back at a time... what happens if I take this out?
+
+- add a new prop for attacking probability to each rider 
+ "breakaway_attacking_probability":0,
+
+- need to create a new state in the race, called "ATTACK", which is very like "LEAD" but involves 
+- version 1, only attack from a following state (never off the front)
+IF your current state is FOLLOW, at the end of your move, decide if you will attack on your next turn
+1- picking an amount to raise your output level by 
+2- picking a duration of attack, some number of seconds 
+3- holding that output for the duration (if possible) 
+4- then, if you are ahead by some fixed amount, transitioning to a "SOLO" state
+
+
+
+hmmmmmmmmm 
+
+added a random check for attacking at the end of the FOLLOW code. 
+let attack_choice = Math.random();
+      if(attack_choice < race_rider.breakaway_attacking_probability){
+        race_rider.current_aim = "ATTACK";
+        race_rider.breakaway_attack_duration_elapsed = 0;
+      }
+Lots of questions- can you attack right at the beginning as everyone is still accelerating?
+- let's add a basic earliest attack time to allow the riders to get up to speed? 
+
+- add props to the rider for the duraiton and level increase 
+               "breakaway_attack_duration":10,
+                "breakaway_attack_effort_level_increase":2,  
+				
+- now at the beginning of moverace, maybe treat the rider as a LEAD rider and see what happens?
+
+- hmmm, need to have some kind of transition to a SOLO state, so add a basic level to the rider props 
+               "breakaway_solo_effort_level":6,
+			   
+
+- what is he difference between lead and attack and solo???
+
+- maybe create a grouping system, where more than one can form
+- can use an array parallel to race.riders
+race.riders_groups
+
+  "breakaway_riders_groups":[],
+  
+  the position of the rider is i, the rider is race.current_order[i]...  we loop through the current order for each timestep
+  
+- hmmmm, race.breakaway_riders_groups ends up containign a NaN
+
+- works but the attacker almost immediately drops back  
+- is adding a drop instruction from the cooperate check
+- still brokened
+-race_rider.breakaway_attack_duration_elapsed is undefined 
+
+drop is comign form the 'real' leader and switchLead() is being called for the attacker??
+
+- oh crap, now there's no leader, the first rider drops back and nobody takes over. the switch lead is broken?
+
+race distance being overwritten by update_race_settings() - can take this stuff out??
+- commented out all calls to the function for now.
+
+- tuesday 23rd.
+
+work on the CHASE and the SPRINT.
+
+do all riders spritn at the end?
+what influences their decision to sprint?
+
+- create a spreadsheet to model the sprint and chase decision making 
+
+=((C9*(POW(F9,D9)/POW(E9,D9))) + (C10*(POW(F10,D10)/POW(E10,D10)))+ (C11*(POW(F11,D11)/POW(E11,D11))) + (C12*(POW(F12,D12)/POW(E12,D12))))/(SUM(C9:C12))
+
+need lots of params here, exponents, weights, rider props...
+
+// distance to begin considering a sprint 
+"breakaway_max_sprint_distance":400,
+
+copy across the function calculate_linear_space_value(value_list, probability_variables)
+needs quartets of values   //[weight multiplier, value, exponent, max value]
+and a list of modifiers that are multipied in, the probability_variables (empty here, or could put the rider sprint_eagerness in here?)
+
+- added new rider prop 
+              "breakaway_sprint_eagerness":5,
+- need new props for quartets for factors 
+	"breakaway_sprint_inverse_remaining_distance_weight":1,
+	"breakaway_sprint_inverse_remaining_distance_exponent":1,
+
+- how to implement the sprint?
+- assume there is no end, ithey try to sprint until the very end.
+- assume they go all out or almost all out? can add a new prop, e.g.,
+              "breakaway_sprint_effort_level":9,
+- or, couls just go to max? (10).
+
+- ok, so they are launchign a sprint but don't stay in that  mode
+
+
+
+race.current_order should be updated at each step- the rider distance should be used... but riders dropping back should be left as is, in their new target positions.
+
+- need to really improve the visuals of the race finish.
+
+- sprinters get lanes 
+- winner is marked and final positions and times of all are marked.
+- final gap of peleton is marked.
+
+if peloton makes the catch, this is marked.
+
+firstly, stop the riders from disappearing after the end.
+
+- hmm, maybe they are just off the screen and need more space??
+
+- maybe use breakaway_riders_groups and STATUS_LANE_POSITIONS.SPRINT and STATUS_LANE_POSITIONS_LANE_WIDTH to have an idea that-
+
+- when you sprint you get your own lane.
+- this lane is the lowest integer that is not already a lane (so not necessarily a max()) 
+
+- ok, can now kinda see it, need to record the finish time of riders as they cross the line, and then display them- each rider will have a finish time.
+
+  let extra_distance_covered = last_rider.distance_covered - race.distance;
+  let finish_time = DecimalPrecision.round(((race.race_clock-1) - (extra_distance_covered/last_rider.velocity)),3);
+  
+- add a finish_time to rider props. 
+- also added              "finish_position":-1,
+- and need somethign in the race to know how many have already finished?
+race.riders_finished = 0;
+
+- need to work on the finish positions, they seem to be off...
+
+- basic sprint seeems to work, but has only one factor... but let's keep it that simples for now.
+
+- rider who coops cannot set a new power?
+- add a new rider prop to set a power level when they take the group lead??
+
+               "breakaway_cooperation_effort_level":6.2,
+
+- seems to work, gave each rider a different value as a test.
+
+- start looking at bsic CHASE mechanism.
+
+- choose to chase at the end of the timestep
+
+- the ATTACK choice is too simplistic, needs to use the same format as SPRINT? with weights and exponents and multiple factors?
+
+    let race_rider = race.riders[race.current_order[i]];
+	
+- maybe only check sprint prob if breakaway_sprint_eagerness > 0?
+
+- is a rider sprinting, stopping, and sprinting?
+
+- seems to be working ok for now, move back to the CHASE 
+
+note: can create an inverted parabola shape, like a normal cirve, with an expression like (1-((x-m)^2/m^2))
+
+add rider prop 
+              "breakaway_chase_eagerness":3,
+			  
+and global 
+       "breakaway_chase_inverse_distance_weight":1,
+       "breakaway_chase_inverse_distance_exponent":2,
+       "breakaway_chase_eagerness_maximum":10,
+	   
+also, the number of riders ahead 
+       "chase_number_of_riders_ahead_weight":1,
+       "chase_number_of_riders_ahead_exponent:1,
+	   
+add a 3rd property of 'freshness'
+
+1 - (race_rider.endurance_fatigue_level/race_rider.rider_fatigue_failure_level) 
+- have to make sure that endurance_fatigue_level can never be more than rider_fatigue_failure_level?
+
+       "chase_inverse_fatigue_weight":1,
+       "chase_inverse_fatigue_exponent":1,
+
+- test the weights?
+
+- attacks are too hard, the SOLO state leads to failure too quickly? Can I really have realistic attacks, solos, chases, etc???
+- no, obvs 
+
+- Mundee 29thee
+
+- need to make a ton of progress this week.
+
+- add a prop for the rider: the target rider that it will chase
+- breakaway_chase_target_rider
+
+- ok, the chase kinnnnnd runs, but badly. need to log what the target rider is?
+
+- chase riders are not even being drawn. need to rework how the lanes are drawn and use breakaway_riders_groups somehow?
+- need to use a combination of the group and the current_aim.
+
+- added const STATUS_LANE_POSITIONS_BASE_POSITION = 180;
+
+- the chasers are not changing their group properply?
+
+- the GAP is wrong for a chaser 
+- need to round the velocity being shown in the rider display - done 
+
+- one of the riders is not visible. warum?
+- no, it is there, but the gap is too small, the FOLLOW is on top of the LEAD
+
+- how does a chase become organised, i.e., they share the effort? 
+- maybe after some distance they revert to lead and follow?? but they are in the same group as the chasee.
+
+- oh dear,. the bahaviour is so all over the place.
+- rider 1 attacks, later rider 4 chases ctaches passes them, and is now way out in front but still 'chasing'
+
+- fixed one bug.
+- looks liek a rider goes into ATTACK and then immediately goes out of it again? 
+- maybe track their aim from timestep to timestep?
+
+in load_race()
+    load_rider.current_aim_history = [];
+
+- push current aim to this array each time moverace() runs.
+- print these statuses when the race finishes.	
+	
+- need to display the gap to the chasing peloton AND the correct race finish time.
+- ok, it prints, it'sa lot of data. n
+
+- move 
+  "chasing_bunch_starting_gap":400,
+  "chasing_bunch_speed":11,
+  
+  into race from setings
+  
+  - redoing the race finsih, lots of odd code here.
+  - need to mark a rider as caught... could simply make them disappear and stop moving? Go to the back of the bunch with a group of -1??
+  
+  - add a new rider aim/status of CAUGHT
+    if(race.riders[x].distance_covered > race.chasing_bunch_current_position){
+	
+	- ooh, can use the riders_to_sort object to figure out the order/etc.
+	- added a couple more props to that obj 
+		- rider
+		- distance_covered
+		- current_aim
+		- group
+		
+	- winner is either the peloton OR race.riders[riders_to_sort[0]]
+	
+	- we need finish_time, not distance_covered??
+	
+	- lots of changes, kinnnnda works, what happens if the peloton catches them??
+	
+	- hmmm, not picking up the peloton passing riders, maybe it is being updated later than it needs to be
+	- oops, now it catches them right at the beginning!
+	
+	- oh, it updates it insie the rider loop (again) ... move it out. I can move it before or after all of the other logic... maybe move it BEFORE?
+	
+	- better, finishes. 
+	- the caught riders keep moving. warum?
+	- ok, so it just doesn't update the velocity... we could set the velocity to zero?
+	
+	- attack transition should have a factor based on the gap to the peloton? 
+	
+	

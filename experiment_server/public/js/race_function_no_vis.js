@@ -1288,7 +1288,7 @@ function randn_bm() {
           // note that the other aspects of the results will have to come from the final race?
           total_finish_time = 0;
           //console.log("====== Average Multiple Race Times ======");
-          
+
           for(let a_i = 0; a_i < number_of_races_to_average; a_i++){
             //dk22: pressure noise, send best_race_time_found_thus_far
             settings_r.best_race_time_found_thus_far = best_race_time_found_thus_far;
@@ -1755,7 +1755,6 @@ function randn_bm() {
                   // run the darn race and collect the result. may need to run more than once
                   let total_test_time = 0;
                   //generation_results.number_of_mutants_added_total = stats.number_of_mutants_added_total;
-
                   for(let test_race = 0; test_race < repeat_each; test_race++){
                     test_race_r.drop_instruction = 0;
                     test_race_r.live_instructions = [];
@@ -2747,6 +2746,7 @@ function randn_bm() {
 
 
   }
+
   function setEffort(settings_r, race_r,riders_r, effort){ //actually update the effort level
     let leadingRider = race_r.riders_r[race_r.current_order[0]];
     leadingRider.output_level = effort;

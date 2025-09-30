@@ -1374,7 +1374,6 @@ $(document).ready(function() {
       });
     }
   }
-
     // alert(valueSelected);
   );
 }

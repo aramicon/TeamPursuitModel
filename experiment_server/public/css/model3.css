@@ -1,3 +1,9 @@
+.wide_display{
+  width:1200px;
+  overflow: auto;
+  border: 1px solid #cccccc;
+}
+
 .results_list{
   max-height: 440px;
   overflow: auto;
