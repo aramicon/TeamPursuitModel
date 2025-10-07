@@ -29,12 +29,29 @@ STATUS_LANE_POSITIONS.CAUGHT = 1;
 
 const STATUS_LANE_POSITIONS_LANE_WIDTH = 12;
 
+const BREAKAWAY_SWITCH_TO_LEAD_GAP_SIZE = 5;
+const BREAKAWAY_SWITCH_TO_FOLLOW_GAP_SIZE = 5;
+
 let LOG_EACH_STEP_OVERRIDE = 0;
 
 let DEFAULT_recovery_amount_required_after_fatigue = 12;
 
 let DEFAULT_TEAM_ORDER = "0,1,2,3";
-let DISPLAY_LENGTH = 4000; //this is the main vis canvas property
+const DISPLAY_LENGTH = 4800; //this is the main vis canvas property
+const DEFAULT_ZOOM_SEGMENT_SIZE = 1000;
+let CURRENT_ZOOM_SEGMENT_SIZE = 1000; //set this to the race length
+let CURRENT_ZOOM_SEGMENT_NO = 0;
+let SEGMENT_DISTANCE_MARKERS_TO_DRAW = 20;
+
+const DEFAULT_RIDER_CIRCLE_RADIUS = 4;
+const ZOOM_RIDER_CIRCLE_RADIUS = 8;
+
+
+const SEGMENT_INFO_TEXT_Y_POSITION = 20
+const SEGMENT_CHASING_PELOTON_Y_POSITION = 30
+const SEGMENT_INFO_TEXT_FONT = "14px Arial";
+const SEGMENT_INFO_TEXT_COLOUR = "#afdaed";
+const CANVAS_BACKGROUND_COLOUR ="#fcfcf7";
 
 // switch test values on/off
 let USE_TEST_recovery_amount_required_after_fatigue = 0;
@@ -81,6 +98,20 @@ let continue_racing = true; //false when race finishes
 
 let use_lookup_velocity = false;
 
+const toggleZoomMode = (checkboxElem) => {
+  if (checkboxElem) {
+
+    let input_zoom_segment_size = parseInt($('#zoom_segment_size').val());
+    if(Number.isInteger(input_zoom_segment_size)){
+      CURRENT_ZOOM_SEGMENT_SIZE = parseInt(input_zoom_segment_size);
+      console.log("Zooming in with segment size " + CURRENT_ZOOM_SEGMENT_SIZE);
+    }
+  } else {
+    CURRENT_ZOOM_SEGMENT_SIZE = race.distance;
+    console.log("Zoom mode deactivated");
+  }
+}
+
 function convert_to_ordinal(number){
   let number_as_string = ''+number;
   let lastChar = number_as_string.substr(number_as_string.length - 1);
@@ -112,9 +143,6 @@ function isEmpty(obj) {
 }
 
 //*******************
-console.log("Track bend radius = 22m");
-console.log("Track straight ((250-(2*Math.PI*22))/2) = " + (250-(2*Math.PI*22))/2 );
-
 //set up the sim speed.
 
 var range = $('.input-range');
@@ -261,7 +289,7 @@ var DecimalPrecision = (function() {
 
 function addRiderDisplay(){
   $("#riders_info" ).empty();
-  $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column' style='height:50px'>Rider <i class='fas fa-biking'></i></div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph (m/s)</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div><div class='info_column'>Fatigue</div><div class='info_column'>Time On Front</div></div>");
+  $("#riders_info" ).append("<div id='rider_values_header' class='info_row'><div class='info_column' style='height:50px'>Rider <i class='fas fa-biking'></i></div><div class='info_column'>Dist. m</div><div class='info_column'>Vel. kph (m/s)</div><div class='info_column'>Watts</div><div class='info_column'>Gap m</div><div class='info_column'>Fatigue</div><div class='info_column'>Time Leading Race/Group</div><div class='info_column'>Group</div><div class='info_column'>Target</div></div>");
   for(let i=0;i<race.riders.length;i++){
     $("#riders_info" ).append("<div id='rider_values_"+i+"' class='info_row'></div>" );
   }
@@ -445,28 +473,61 @@ function setEffort(effort){ //actually update the effort level
 function switchLeadInstruction(){
   //add an instruction to change the lead
   let positions_to_drop_back = parseInt(event.target.id.replace("switch_lead_",""));
-  race.drop_instruction = positions_to_drop_back;
-
+  // would need to select a rider??
+  race_rider.drop_instruction = positions_to_drop_back;
 }
 
-function switchLead(positions_to_drop_back){
+function switchLead(positions_to_drop_back, rider_no){
+
+  //get position of the rider to drop back
+  let current_leader = rider_no;
+  let rider_position = 0;
+  let my_group = race.breakaway_riders_groups[current_leader];
+  for(let i = 0; i < race.current_order.length; i++){
+    if(current_leader == race.current_order[i]){
+      rider_position = i;
+      break;
+    }
+  }
 
   if (positions_to_drop_back >= (race.current_order.length-1)){
     positions_to_drop_back = (race.current_order.length-1);
   }
 
   if (settings.limit_drop_to_contiguous_group == 1){
-    if ((positions_to_drop_back) > (race.contiguous_group_size-1)){
+
+    //look at the rider's in this rider's group... if the gap is over some agreed preset value, then consider then dropped and don't drop past them.
+    let undropped_riders_behind_me_in_group = 0;
+    for(let i=rider_position;i<race.current_order.length-1;i++){
+      if(race.breakaway_riders_groups[race.current_order[i]] == my_group){
+        let gap_to_next_rider =(race.riders[race.current_order[i]].distance_covered - race.riders[race.current_order[i+1]].distance_covered);
+        if(gap_to_next_rider < settings.contiguous_group_drop_distance ){
+          undropped_riders_behind_me_in_group++;
+        }
+      }
+
+    }
+    // if ((positions_to_drop_back) > (race.contiguous_group_size-1)){
+    //   //e.g. ig group size is 3 you can at most drop back 2 (lead rider is 1)
+    //   console.log("**** rider trying to drop back " + positions_to_drop_back + " but contiguous_group_size is " + race.contiguous_group_size);
+    //   positions_to_drop_back = (race.contiguous_group_size-1);
+    // }
+    if ((positions_to_drop_back) > undropped_riders_behind_me_in_group){
       //e.g. ig group size is 3 you can at most drop back 2 (lead rider is 1)
-      console.log("**** rider trying to drop back " + positions_to_drop_back + " but contiguous_group_size is " + race.contiguous_group_size);
-      positions_to_drop_back = (race.contiguous_group_size-1);
+      console.log("**** rider trying to drop back " + positions_to_drop_back + " but undropped_riders_behind_me_in_group is " + undropped_riders_behind_me_in_group);
+      positions_to_drop_back = undropped_riders_behind_me_in_group;
     }
   }
 
   $("#race_info").html("<strong>Leader Drops Back</strong> by "+  positions_to_drop_back + " places");
 
-  let current_leader = race.current_order[0];
+  if(race.riders[current_leader].current_aim == "LEAD"){
+    race.riders[current_leader].number_of_turns++;
+  }
+
   race.riders[current_leader].current_aim = "DROP"; //separate status whilst dropping back
+
+
   let current_leader_power = race.riders[current_leader].power_out; //try to get the new leader to match this power
   let current_leader_velocity = race.riders[current_leader].velocity;
   // //need to get the theoretical velocity of the current leader for this timestep and use that as the target
@@ -474,99 +535,111 @@ function switchLead(positions_to_drop_back){
   // let current_leader_theoretical_velocity = velocity_from_power_with_acceleration(current_leader_power, settings.rollingRes, (race.riders[current_leader].weight + settings.bike_weight), 9.8, race.riders[current_leader].air_density, settings.frontalArea, current_leader_velocity, settings.transv);
   // //donalK25 #accel ------------ ||
 
-  let new_order = race.current_order.slice(1,positions_to_drop_back+1);
-  new_order.push(race.current_order[0]);
-  new_order.push(...race.current_order.slice(positions_to_drop_back+1,race.current_order.length));
-
-  race.current_order = new_order;
-  //change other rider roles to lead and follow
-  //cannot make a rider in a different group the new leader, need to only look at riders in the current group
-  let my_group = race.breakaway_riders_groups[current_leader];
-  let new_leader = {};
-  let rider_check = 0;
-  while(rider_check < race.current_order.length){
-    if(race.breakaway_riders_groups[new_order[rider_check]] == my_group){
-      new_leader = race.riders[new_order[rider_check]];
-      break;
-    }
-    rider_check++;
+  //adjust positions_to_drop_back if it is too big
+  if((rider_position + positions_to_drop_back) >= race.current_order.length){
+    positions_to_drop_back = (race.current_order.length - (rider_position+1));
+  }
+  if(positions_to_drop_back < 0){
+    positions_to_drop_back = 0;
   }
 
-  if(!isEmpty(new_leader)){
-    new_leader.current_aim = "LEAD";
-    new_leader.current_power_effort = settings.threshold_power_effort_level;
+  if(positions_to_drop_back > 0){
+    let new_order = race.current_order.slice(0,rider_position); //insert any unchanged initial riders.
+    new_order.push(...race.current_order.slice((rider_position+1),(rider_position + 1 + positions_to_drop_back))); //insert the riders that will move ahead of the leader
+    new_order.push(current_leader); //insert the leader again
+    new_order.push(...race.current_order.slice((rider_position + 1 + positions_to_drop_back))); //anything else at the end
+    let original_order = race.current_order;
+    race.current_order = new_order;
+    //change other rider roles to lead and follow
+    //cannot make a rider in a different group the new leader, need to only look at riders in the current group
 
-    //update this rider's power Effort
-    new_leader.current_power_effort = current_leader_power;
-    let current_threshold = new_leader.threshold_power;
-
-    //originally we tried to set the new leader's effort to match the POWER of the former leader... BUT we really should be working it out based on the VELOCITY, i.e. that unless another instruciton is given, the rider will try to go at the same speed.
-
-    //console.log("************ WORK OUT POWER REQUIRED TO MAINTAIN SPEED AFTER SWITCH **********");
-    //console.log("Target Velocity = " + current_leader_velocity + " (" + current_leader_velocity*3.6 + ") new_leader.aero_A2 " + new_leader.aero_A2 + " settings.headwindv " + settings.headwindv + " new_leader.aero_tres " + new_leader.aero_tres + " settings.transv " + settings.transv);
-
-    // should aim for power to produce the target speed WITHOUT SHELTER so need to make sure the correct aero_A2 value is used
-    let aero_A2_no_shelter = Math.round((0.5 * settings.frontalArea * new_leader.air_density)*10000)/10000;
-    let target_power = 0;
-    //console.log("power_from_velocity returns " + target_power + " watts");
-    //donalK25: apply constant-speed drag calc or acceleration-based calc
-
-    //if new leader has a cooperation effort level, set its effort to this
-    if(typeof(new_leader.breakaway_cooperation_effort_level) != "undefined"){
-      new_leader.output_level = new_leader.breakaway_cooperation_effort_level;
-    }
-    else{
-
-      //donLK25: get the target_power using the old leader output level
-      let power_from_output_level_old_leader = mapEffortToPower(settings.threshold_power_effort_level, race.riders[current_leader].output_level, race.riders[current_leader].threshold_power, race.riders[current_leader].max_power, settings.maximum_effort_value);
-
-      new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, power_from_output_level_old_leader, new_leader.threshold_power, new_leader.max_power, settings.maximum_effort_value);
-    }
-    //now take that power and map it to an output for the ne_leader
-
-    // if(power_application_include_acceleration){
-    //   target_power = power_from_velocity_with_acceleration(current_leader_theoretical_velocity, settings.rollingRes, (new_leader.weight + settings.bike_weight), 9.8, new_leader.air_density, settings.frontalArea, new_leader.velocity, settings.transv);
-    //
-    //     //console.log("Change Lead rider " + race.current_order[i] + " power_from_velocity_with_acceleration() " + " target velocity " + current_leader_velocity + " Crr " + settings.rollingRes + " total weight " + (new_leader.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + new_leader.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + new_leader.velocity + " drivetrain efficiency " + settings.transv + " TARGET POWER " + target_power);
-    //
+    let new_leader = {};
+    // if(rider_position > 0){
+    //   debugger;
     // }
-    // else{
-    //   target_power = power_from_velocity(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, current_leader_velocity);
-    // }
-
-
-    //now figure out what effort level will equate to this power, and aim for that
-
-
-    //console.log("Maps to output_level " + new_leader.output_level);
-
-    //test: map this output level back to power and see what velocity it produces
-    //let power_from_effort = mapEffortToPower(settings.threshold_power_effort_level, new_leader.output_level, new_leader.threshold_power, new_leader.max_power );
-    //console.log("power_from_effort " + power_from_effort);
-
-    //let velocity_from_power = newton(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, power_from_effort);
-    //console.log("velocity_from_power " + velocity_from_power + " ("+ velocity_from_power*3.6 +  ")");
-    //console.log("************");
-
-
-    if (new_leader.output_level < 0){
-      console.log("new_leader.output_level < 0");
-      debugger;
+    for(let i = 0; i < new_order.length; i++){
+      if(race.breakaway_riders_groups[new_order[i]] == my_group){
+        new_leader = race.riders[new_order[i]];
+        break;
+      }
     }
 
+    if(!isEmpty(new_leader)){
+      new_leader.current_aim = "LEAD";
+      new_leader.current_power_effort = settings.threshold_power_effort_level;
+
+      //update this rider's power Effort
+      new_leader.current_power_effort = current_leader_power;
+      let current_threshold = new_leader.threshold_power;
+
+      //originally we tried to set the new leader's effort to match the POWER of the former leader... BUT we really should be working it out based on the VELOCITY, i.e. that unless another instruciton is given, the rider will try to go at the same speed.
+
+      //console.log("************ WORK OUT POWER REQUIRED TO MAINTAIN SPEED AFTER SWITCH **********");
+      //console.log("Target Velocity = " + current_leader_velocity + " (" + current_leader_velocity*3.6 + ") new_leader.aero_A2 " + new_leader.aero_A2 + " settings.headwindv " + settings.headwindv + " new_leader.aero_tres " + new_leader.aero_tres + " settings.transv " + settings.transv);
+
+      // should aim for power to produce the target speed WITHOUT SHELTER so need to make sure the correct aero_A2 value is used
+      let aero_A2_no_shelter = Math.round((0.5 * settings.frontalArea * new_leader.air_density)*10000)/10000;
+      let target_power = 0;
+      //console.log("power_from_velocity returns " + target_power + " watts");
+      //donalK25: apply constant-speed drag calc or acceleration-based calc
+
+      //if new leader has a cooperation effort level, set its effort to this
+      if(typeof(new_leader.breakaway_cooperation_effort_level) != "undefined"){
+        new_leader.output_level = new_leader.breakaway_cooperation_effort_level;
+      }
+      else{
+
+        //donLK25: get the target_power using the old leader output level
+        let power_from_output_level_old_leader = mapEffortToPower(settings.threshold_power_effort_level, race.riders[current_leader].output_level, race.riders[current_leader].threshold_power, race.riders[current_leader].max_power, settings.maximum_effort_value);
+
+        new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, power_from_output_level_old_leader, new_leader.threshold_power, new_leader.max_power, settings.maximum_effort_value);
+      }
+      //now take that power and map it to an output for the ne_leader
+
+      // if(power_application_include_acceleration){
+      //   target_power = power_from_velocity_with_acceleration(current_leader_theoretical_velocity, settings.rollingRes, (new_leader.weight + settings.bike_weight), 9.8, new_leader.air_density, settings.frontalArea, new_leader.velocity, settings.transv);
+      //
+      //     //console.log("Change Lead rider " + race.current_order[i] + " power_from_velocity_with_acceleration() " + " target velocity " + current_leader_velocity + " Crr " + settings.rollingRes + " total weight " + (new_leader.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + new_leader.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + new_leader.velocity + " drivetrain efficiency " + settings.transv + " TARGET POWER " + target_power);
+      //
+      // }
+      // else{
+      //   target_power = power_from_velocity(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, current_leader_velocity);
+      // }
+
+
+      //now figure out what effort level will equate to this power, and aim for that
+
+
+      //console.log("Maps to output_level " + new_leader.output_level);
+
+      //test: map this output level back to power and see what velocity it produces
+      //let power_from_effort = mapEffortToPower(settings.threshold_power_effort_level, new_leader.output_level, new_leader.threshold_power, new_leader.max_power );
+      //console.log("power_from_effort " + power_from_effort);
+
+      //let velocity_from_power = newton(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, power_from_effort);
+      //console.log("velocity_from_power " + velocity_from_power + " ("+ velocity_from_power*3.6 +  ")");
+      //console.log("************");
+
+
+      if (new_leader.output_level < 0){
+        console.log("new_leader.output_level < 0");
+        debugger;
+      }
   }
-
   //console.log("new_leader.output_level = "+ new_leader.output_level);
   //update other riders to follow, but only in the same group
 
-  for(let i=1;i<new_order.length;i++){
-    if (new_order[i] != current_leader &&   race.breakaway_riders_groups[new_order[i]] == my_group){ //don't update the dropping back rider
-      race.riders[new_order[i]].current_aim = "FOLLOW";
-      //reset their power levels, though chasing riders will always try to follow
-      race.riders[new_order[i]].current_power_effort = race.riders[new_order[i]].threshold_power;
-    }
+  // for(let i=0;i<new_order.length;i++){
+  //   if (new_order[i] != current_leader && race.breakaway_riders_groups[new_order[i]] == my_group){ //don't update the dropping back rider
+  //     race.riders[new_order[i]].current_aim = "FOLLOW";
+  //     //reset their power levels, though chasing riders will always try to follow
+  //     race.riders[new_order[i]].current_power_effort = race.riders[new_order[i]].threshold_power;
+  //   }
+  // }
+  console.log("||||||||||| DROP: original_order " + original_order + " move " + current_leader + " back " + positions_to_drop_back + " positions, new order " + new_order + " |||||||||||");
+
   }
-  //console.log("Move lead rider back " + positions_to_drop_back + " positions in order, new order " + new_order);
+
 }
 
 function moveRace(){
@@ -596,8 +669,17 @@ function moveRace(){
           console.log(race.race_clock + " **FOUND INSTRUCTION** EFFORT: " + parseFloat(inst[1]));
         }
         else if(inst[0]=="drop"){
-          race.drop_instruction = parseInt(inst[1]);
-          console.log(race.race_clock + " **FOUND INSTRUCTION** DROP: " + parseInt(inst[1]));
+
+          //update the RIDER drop instruciton
+            let rider_no = new_instructions[i][2];
+            if(typeof(rider_no) != "undefined"){
+              race.riders[rider_no].drop_instruction = parseInt(inst[1]);
+            }
+            else{
+                alert("CANNOT ADD DROP INSTRUCTION: NO RIDER SPECIFIED!");
+            }
+
+          console.log(race.race_clock + " **FOUND INSTRUCTION** DROP: " + parseInt(inst[1]) + " rider " + race.riders[rider_no].name);
         }
       }
     }
@@ -625,35 +707,117 @@ function moveRace(){
     }
   }
 
-  //also look at the drop instruciton: this can only be done at the beginnings of bends where the track is banked
-  if(race.drop_instruction > 0){
-  //  console.log(race.race_clock + " drop instruction queued " + race.drop_instruction);
-  //  if (race.riders.filter(a=>a.current_aim == "DROP").length == 0){   //if no  rider is currently dropping back
-      let lead_rider_distance_on_lap = race.riders[race.current_order[0]].distance_covered % settings.track_length;
-      let distance_travelled_last_step = race.riders[race.current_order[0]].velocity;
-      //console.log(race.race_clock + " distance_travelled_last_step " + distance_travelled_last_step + " lead_rider_distance_on_lap " + lead_rider_distance_on_lap + ", race.bend1_switch_start_distance " + race.bend1_switch_start_distance + ", race.bend1_switch_end_distance" + race.bend1_switch_end_distance + ", race.bend2_switch_start_distance" + race.bend2_switch_start_distance + ", race.bend2_switch_end_distance " + race.bend2_switch_end_distance);
+  //also look at the drop instruciton: unlike the track race there can be multiple drops, one per rider per timestep, and they are immediately carried out
+  //unlike on the track, each rider can have their own drop instruction
+  for(let i = 0;i<race.riders.length;i++){
+    if(race.riders[i].drop_instruction > 0){
+    //  console.log(race.race_clock + " drop instruction queued " + race.drop_instruction);
+    //  if (race.riders.filter(a=>a.current_aim == "DROP").length == 0){   //if no  rider is currently dropping back
+        //let lead_rider_distance_on_lap = race.riders[race.current_order[0]].distance_covered % settings.track_length;
+        //let distance_travelled_last_step = race.riders[race.current_order[0]].velocity;
+        //console.log(race.race_clock + " distance_travelled_last_step " + distance_travelled_last_step + " lead_rider_distance_on_lap " + lead_rider_distance_on_lap + ", race.bend1_switch_start_distance " + race.bend1_switch_start_distance + ", race.bend1_switch_end_distance" + race.bend1_switch_end_distance + ", race.bend2_switch_start_distance" + race.bend2_switch_start_distance + ", race.bend2_switch_end_distance " + race.bend2_switch_end_distance);
 
-      // if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend1_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend1_switch_start_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend2_switch_start_distance) ){
-      //   //console.log(race.race_clock +  " OK TO DROP BACK: switchLead(race.drop_instruction) ");
-      //   switchLead(race.drop_instruction);
-      //   $("#instruction_info_text").text(race.race_clock + " - DROP back " + race.drop_instruction);
-      //   race.drop_instruction = 0;
-      // }
-      switchLead(race.drop_instruction);
-      $("#instruction_info_text").text(race.race_clock + " - DROP back " + race.drop_instruction);
-      race.drop_instruction = 0;
-    //}
+        // if ((lead_rider_distance_on_lap > race.bend1_switch_start_distance && lead_rider_distance_on_lap < race.bend1_switch_end_distance) || (lead_rider_distance_on_lap > race.bend1_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend1_switch_start_distance) || (lead_rider_distance_on_lap > race.bend2_switch_start_distance && lead_rider_distance_on_lap < race.bend2_switch_end_distance) || (lead_rider_distance_on_lap > race.bend2_switch_end_distance && (lead_rider_distance_on_lap-distance_travelled_last_step)<=race.bend2_switch_start_distance) ){
+        //   //console.log(race.race_clock +  " OK TO DROP BACK: switchLead(race.drop_instruction) ");
+        //   switchLead(race.drop_instruction);
+        //   $("#instruction_info_text").text(race.race_clock + " - DROP back " + race.drop_instruction);
+        //   race.drop_instruction = 0;
+        // }
+        //note that this function changes race.current_order!
+        switchLead(race.riders[i].drop_instruction,i);
+        $("#instruction_info_text").text(race.race_clock + " " + race.riders[i].name + " - DROP back " + race.riders[i].drop_instruction);
+        race.riders[i].drop_instruction = 0;
+      //}
+    }
   }
-  race.contiguous_group_size = 1;
+  //race.contiguous_group_size = 1;
 
   //need to update the peloton position BEFORE updating rider positions and aims
   race.chasing_bunch_current_position += race.chasing_bunch_speed;
+
+  // ************* draw a segment end line and a finish line START (but only if it will be visible on this segment)***********
+  //set the canvas background colour
+  ctx.fillStyle = CANVAS_BACKGROUND_COLOUR;
+  ctx.fillRect(0, 0, c.width, c.height);
+
+  //draw basic end of segment line
+
+  let distance_end_of_segment = settings.track_centre_x + ((DISPLAY_LENGTH - settings.track_centre_x));
+
+  ctx.setLineDash([]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  let race_finish_point = distance_end_of_segment;
+  ctx.moveTo(race_finish_point, 0);
+  ctx.lineTo(race_finish_point, 200);
+  ctx.strokeStyle = "#FFA500";
+  ctx.stroke();
+
+// draw distance markers
+for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
+  let distance_point = (ix/SEGMENT_DISTANCE_MARKERS_TO_DRAW);
+  let distance_mapped_to_display = settings.track_centre_x + ((distance_point) * (DISPLAY_LENGTH - settings.track_centre_x));
+  ctx.setLineDash([]);
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(distance_mapped_to_display, 0);
+  ctx.lineTo(distance_mapped_to_display, 200);
+  ctx.strokeStyle = "#cccccc";
+  ctx.stroke();
+
+  //draw text
+  ctx.font = SEGMENT_INFO_TEXT_FONT;
+  let metres_point = CURRENT_ZOOM_SEGMENT_NO*CURRENT_ZOOM_SEGMENT_SIZE + distance_point*CURRENT_ZOOM_SEGMENT_SIZE;
+  ctx.fillStyle = SEGMENT_INFO_TEXT_COLOUR;
+  ctx.strokeStyle = SEGMENT_INFO_TEXT_COLOUR;
+  ctx.fillText(metres_point + "m",distance_mapped_to_display + 4,SEGMENT_INFO_TEXT_Y_POSITION);
+}
+
+
+
+  //is the finish line in the current segment?
+  if(race.distance <= ((CURRENT_ZOOM_SEGMENT_NO*CURRENT_ZOOM_SEGMENT_SIZE)+CURRENT_ZOOM_SEGMENT_SIZE)){
+
+    let distance_in_segment = race.distance - (CURRENT_ZOOM_SEGMENT_SIZE*CURRENT_ZOOM_SEGMENT_NO);
+    let distance_mapped_to_display = settings.track_centre_x + ((distance_in_segment/CURRENT_ZOOM_SEGMENT_SIZE) * (DISPLAY_LENGTH - settings.track_centre_x));
+
+    ctx.setLineDash([5, 5]);
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    let race_finish_point = distance_mapped_to_display;
+    ctx.moveTo(race_finish_point, 0);
+    ctx.lineTo(race_finish_point, 200);
+    ctx.strokeStyle = "black";
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ************* draw a finish line END ***********
+
+  // ******** draw Chasing peloton START
+    if(race.chasing_bunch_current_position > ((CURRENT_ZOOM_SEGMENT_NO*CURRENT_ZOOM_SEGMENT_SIZE))){
+
+      let distance_in_segment = race.chasing_bunch_current_position - (CURRENT_ZOOM_SEGMENT_SIZE*CURRENT_ZOOM_SEGMENT_NO);
+      let distance_mapped_to_display = settings.track_centre_x + ((distance_in_segment/CURRENT_ZOOM_SEGMENT_SIZE) * (DISPLAY_LENGTH - settings.track_centre_x));
+
+      if (race.chasing_bunch_current_position > 0){
+        ctx.beginPath();
+        ctx.moveTo(settings.track_centre_x, SEGMENT_CHASING_PELOTON_Y_POSITION);
+        ctx.lineTo(distance_mapped_to_display, SEGMENT_CHASING_PELOTON_Y_POSITION);
+        ctx.strokeStyle = "green";
+        ctx.lineWidth = 10;
+        ctx.stroke();
+      }
+    }
+  // ******** drawing end *******************
 
 
   for(let i=0;i<race.current_order.length;i++){
     let race_rider = race.riders[race.current_order[i]];
     //work out how far the race_rider can go in this time step
     //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
+
+    race_rider.rider_to_follow = {}; //reset this every timestep (following)
 
     //log the rider's current aim
     race_rider.current_aim_history.push(race_rider.current_aim);
@@ -881,7 +1045,8 @@ function moveRace(){
         race_rider.time_leading_group++;
         if(race_rider.time_leading_group > race_rider.breakaway_cooperation_time){
 
-          let new_drop_instruction = [race.race_clock+1,"drop=" + (race.current_order.length-1)];
+          let new_drop_instruction = [race.race_clock+1,"drop=" + (race.current_order.length-1),race.current_order[i]];
+          console.log("||||||||||||| added drop instruction " + new_drop_instruction + " |||||||||||||");
           race.race_instructions_r.push(new_drop_instruction); //what if there's an instruction in there already?
           race_rider.time_leading_group = 0;
         }
@@ -895,6 +1060,10 @@ function moveRace(){
       //*********************************************************************************************************
      //rider may be following or dropping back. Either way they will be basing velocity on that of another rider- normally just following the rider in front of you
 
+
+     if(race_rider.current_aim == "CHASE"){
+       race_rider.chase_period_time_elapsed++;
+     }
       if(targeted_debugging && race.race_clock >= targeted_debugging_timestep_range_start && race.race_clock <= targeted_debugging_timestep_range_end &&  race.current_order[i] == targeted_debugging_rider_no){
         console.log("targeted debugging rider " + race.current_order[i] + " timestep " + race.race_clock + " CHASE ");
         debugger
@@ -940,6 +1109,10 @@ function moveRace(){
       //need to factor in the original offset
       //let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset- settings.start_position_offset) -  (race_rider.distance_covered-race_rider.start_offset);
 
+      // if(race.current_order[i] == 1 && race.race_clock >= 150 && race_rider.current_aim == "DROP"){
+      //   debugger;
+      // }
+
       //donalK25 #accel. -------- need to gradually increase the target_rider_gap from 0 to 2m over a number of steps
       let start_steps_to_reach_target_rider_gap = 0;
       if(power_application_include_acceleration){
@@ -959,7 +1132,7 @@ function moveRace(){
         //who is actually in front of you?
 
         let closest_rider = 0;
-        let min_distance = 100000;
+        let min_distance = race.distance;
 
         for(let i_check = 0; i_check < race.current_order.length; i_check++){
           if (i_check != i && race.riders[race.current_order[i_check]].distance_covered < min_distance && (race.riders[race.current_order[i_check]].distance_covered > race_rider.distance_covered) ){
@@ -967,13 +1140,15 @@ function moveRace(){
             closest_rider = race.riders[race.current_order[i_check]];
           }
         }
-
         //if a rider is closer than the rider dropping that, stay following them for now.
         if(closest_rider != rider_to_follow){
           rider_to_follow = closest_rider;
         }
 
       }
+
+      //assign the ride_to_follow value
+      race_rider.rider_to_follow = rider_to_follow;
 
       let distance_to_cover = (rider_to_follow.distance_covered - rider_to_follow.start_offset - adjusted_target_rider_gap) -  (race_rider.distance_covered - race_rider.start_offset);
       //donalK25 #accel. -------- ||
@@ -1270,9 +1445,10 @@ function moveRace(){
       }
 
       //count the size of the current contiguous group: may affect drop/switchLead() instructions
-      if((race.contiguous_group_size == i) && ((rider_to_follow.distance_covered-rider_to_follow.start_offset) - (race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= settings.contiguous_group_drop_distance)){
-        race.contiguous_group_size++;
-      }
+      //dk25: need a new way to count this... the idea is to prevent dropping back behind non-dropped riders... so, count the non-dropped members of you group... and there are now multiple groups, not one,
+      // if((race.contiguous_group_size == i) && ((rider_to_follow.distance_covered-rider_to_follow.start_offset) - (race_rider.velocity+race_rider.distance_covered-race_rider.start_offset) <= settings.contiguous_group_drop_distance)){
+      //   race.contiguous_group_size++;
+      // }
 
       race_rider.power_out = powerv;
 
@@ -1330,19 +1506,11 @@ function moveRace(){
         race_rider.accumulated_fatigue += fatigue_rise;
       }
 
-      //donalK25: choose if you will ATTACK (in the next timestep)
-      let attack_choice = Math.random();
-      if(race_rider.current_aim == "FOLLOW" && attack_choice < race_rider.breakaway_attacking_probability && race.race_clock >= settings.breakaway_timestep_to_enable_attacks){
-        console.log("*********** timestep " + race.race_clock + " STATUS CHANGE rider " + race_rider.name + " from " +  race_rider.current_aim + " to ATTACK");
-        race_rider.current_aim = "ATTACK";
-        race_rider.breakaway_attack_duration_elapsed = 0;
-        //create a new group for this rider
-        race.breakaway_riders_groups[race.current_order[i]] = Math.max(...race.breakaway_riders_groups) + 1;
-      }
     } //*** end of follow rider block
     else if(race_rider.current_aim == "CAUGHT"){
       //rider is caught... do nothing??
       race_rider.velocity = 0;
+        rider_power_data[race.current_order[i]].push(0);
     }
     else{
       console.log("############# Problemo: rider aim '"+ race_rider.current_aim + "' not accounted for. #############");
@@ -1357,12 +1525,19 @@ function moveRace(){
     let scale_amount = settings.vis_scale;
 
     //Move the rider along on the track (VISUALS)
+    //1 'segment' in each rider's distance since this race is now one straight line
     while(race_rider.distance_this_step_remaining > 0){
-      let distance_this_step_segment =   race_rider.distance_this_step_remaining;
-
-          //can do full step on straight
+          let distance_this_step_segment =   race_rider.distance_this_step_remaining;
           race_rider.straight_distance_travelled += distance_this_step_segment;
-          let distance_mapped_to_display = settings.track_centre_x + ((race_rider.straight_distance_travelled/race.distance) * (DISPLAY_LENGTH - settings.track_centre_x));
+
+          //zoom effect. if the zoom mode is enabled, go through the distance piece by damping_deceleration_distance
+          //CURRENT_ZOOM_SEGMENT_SIZE
+          //what segment are we on?
+          let current_segment = Math.floor(race_rider.straight_distance_travelled/CURRENT_ZOOM_SEGMENT_SIZE);
+          CURRENT_ZOOM_SEGMENT_NO = current_segment;
+          let distance_in_segment = race_rider.straight_distance_travelled - (CURRENT_ZOOM_SEGMENT_SIZE*current_segment);
+          let distance_mapped_to_display = settings.track_centre_x + ((distance_in_segment/CURRENT_ZOOM_SEGMENT_SIZE) * (DISPLAY_LENGTH - settings.track_centre_x));
+
           race_rider.current_position_x = distance_mapped_to_display;
           race_rider.distance_this_step_remaining = 0;
           //console.log(race.race_clock + ": " + race_rider.name + "straight 1 (start) full "+distance_this_step_segment+" to (" + race_rider.current_position_x + "," + race_rider.current_position_y + ")   race_rider.distance_this_step_remaining = " +   race_rider.distance_this_step_remaining  + " with start offset of " + race_rider.start_offset  )
@@ -1394,9 +1569,14 @@ function moveRace(){
     //     race_rider.current_position_y = STATUS_LANE_POSITIONS[race_rider.current_aim] - (race.breakaway_riders_groups[race.current_order[i]]*STATUS_LANE_POSITIONS_LANE_WIDTH);
     // }
 
+    let  circle_radius = DEFAULT_RIDER_CIRCLE_RADIUS;
+    if(CURRENT_ZOOM_SEGMENT_SIZE < race.distance){
+      circle_radius = ZOOM_RIDER_CIRCLE_RADIUS;
+    }
+
     ctx.beginPath();
-    ctx.globalAlpha = 0.5;
-    ctx.arc(race_rider.current_position_x, race_rider.current_position_y, 4, 0, 2 * Math.PI);
+    ctx.globalAlpha = 0.8;
+    ctx.arc(race_rider.current_position_x, race_rider.current_position_y, circle_radius, 0, 2 * Math.PI);
     ctx.fillStyle = race_rider.colour;
     if (race_rider.current_aim == "DROP"){
       ctx.strokeStyle = "#000000";
@@ -1404,15 +1584,29 @@ function moveRace(){
       ctx.stroke();
     }
     ctx.fill();
+    ctx.globalAlpha = 1;
+  } // main rider loop
 
-    //RIDER DECISION-MAKING: CHOOSE YOUR ADVENTURE
+
+  for(let i = 0; i < race.current_order.length;i++)
+  {
+    let race_rider = race.riders[race.current_order[i]];
+
+    // RIDER DECISION-MAKING: CHOOSE YOUR ADVENTURE ---- START -- **************
+    //**************************************************************************
+    //**************************************************************************
+    //**************************************************************************
+
     //first off, if you are cought by the bunch, update this
+    //allow only one decision/posiitve choice/change. use a  bool to cont
+    let choice_made = 0;
     if(race_rider.current_aim != "CAUGHT" && race_rider.distance_covered < race.chasing_bunch_current_position){
       race_rider.current_aim = "CAUGHT";
       //set the group to -1
       race.breakaway_riders_groups[race.current_order[i]] = -1;
+      choice_made = 1;
     }
-    else if (race_rider.current_aim != "SPRINT" && race_rider.current_aim != "CAUGHT"){
+    if (choice_made == 0 && race_rider.current_aim != "SPRINT" && race_rider.current_aim != "CAUGHT"){
       //decide if you will SPRINT
       let breakaway_max_sprint_distance = DEFAULT_BREAKAWAY_MAX_SPRINT_DISTANCE;
       if (typeof(settings.breakaway_max_sprint_distance) != 'undefined'){
@@ -1420,7 +1614,7 @@ function moveRace(){
       }
       let sprint_probability = 0;
       //can sprint from any other status that is not sprint.
-      if(race_rider.current_aim != "SPRINT" && (race.distance-race_rider.distance_covered) < breakaway_max_sprint_distance && race_rider.breakaway_sprint_eagerness > 0){
+      if((race.distance-race_rider.distance_covered) < breakaway_max_sprint_distance && race_rider.breakaway_sprint_eagerness > 0){
         //work out a sprint  probability. This will be affected by a number of tune-able factors
         let value_list = [];
         let probability_variables = [];
@@ -1443,7 +1637,14 @@ function moveRace(){
       }
 
       if(sprint_choice == 1){
+        let original_aim = race_rider.current_aim;
+        let original_group = race.breakaway_riders_groups[race.current_order[i]];
+
+        if(race_rider.current_aim == "LEAD"){
+          race_rider.number_of_turns++;
+        }
         race_rider.current_aim = "SPRINT";
+        choice_made = 1;
         // also give them their OWN LANE
         let lowest_avilable_lane = 0;
         while(race.breakaway_riders_groups.includes(lowest_avilable_lane)){
@@ -1451,11 +1652,90 @@ function moveRace(){
         }
         race.breakaway_riders_groups[race.current_order[i]] = lowest_avilable_lane;
 
+        //if they were leading their group, need to set a new leader now
+        if(original_aim == "LEAD"){
+          //find the follower from this group with the highest distance_covered.
+          let highest_follower_distance_covered = 0;
+          let farthest_follower = -1;
+          for(let iik = 0;iik<race.riders.length;iik++){
+            if(race.current_order[i] != iik && race.breakaway_riders_groups[iik] == original_group && race.riders[iik].current_aim == "FOLLOW" && race.riders[iik].distance_covered > highest_follower_distance_covered){
+              highest_follower_distance_covered = race.riders[iik].distance_covered;
+              farthest_follower = iik;
+            }
+          }
+          //if one was found, update its current aim
+          if(farthest_follower >= 0){
+            race.riders[farthest_follower].current_aim = "LEAD";
+          }
+
+          //update number of turns
+          race_rider.number_of_turns++;
+        }
+
         console.log(race_rider.name + " changing to SPRINT, lane " + lowest_avilable_lane + " sprint_probability " + sprint_probability);
 
       }
     } //end of else for sprint
-    else if(race_rider.current_aim != "CAUGHT" && race_rider.current_aim != "SPRINT" && race_rider.current_aim != "CHASE") {
+    if(choice_made == 0 && race_rider.current_aim == "FOLLOW" && race.race_clock >= settings.breakaway_timestep_to_enable_attacks && race_rider.breakaway_attacking_probability > 0){
+      //donalK25: choose if you will ATTACK (in the next timestep)
+
+      let value_list = [];
+       let probability_variables = [];
+       probability_variables.push(race_rider.breakaway_attacking_probability/settings.breakaway_attacking_probability_max);
+
+       //need quartet of values for remainign distance factor
+       //[weight multiplier, value, exponent, max value]
+
+       //1: group cooperation. find the least cooperative rider
+       let least_cooperative_rider = -1;
+       let least_cooperative_rider_average_turn_length = race.race_clock+1; //can't be more than the amount of time passed?
+       let sum_of_average_turn_length = 0;
+       let count_of_non_zero_riders = 0;
+       for(let ix=0;ix<race.riders.length;ix++){
+         if(ix !== race.current_order[i] && race.riders[ix].number_of_turns > 0){
+           let average_turn_length =  (race.riders[ix].time_on_front_of_group / race.riders[ix].number_of_turns);
+           sum_of_average_turn_length += average_turn_length;
+           count_of_non_zero_riders++;
+           if(average_turn_length < least_cooperative_rider_average_turn_length){
+             least_cooperative_rider_average_turn_length = average_turn_length;
+             least_cooperative_rider = ix;
+           }
+         }
+       }
+       let average_turn_length_all_riders = 0;
+       if(count_of_non_zero_riders > 0){
+         average_turn_length_all_riders =sum_of_average_turn_length/count_of_non_zero_riders;
+       }
+       let worst_rider_compared_to_average_inverse = 0;
+       if(least_cooperative_rider_average_turn_length < 0 || least_cooperative_rider_average_turn_length >= average_turn_length_all_riders){
+         worst_rider_compared_to_average_inverse = 0;
+       }
+       else{
+         worst_rider_compared_to_average_inverse = (1-((average_turn_length_all_riders - least_cooperative_rider_average_turn_length)/average_turn_length_all_riders));
+       }
+
+       let attack_lack_of_cohesion_weight = settings.attack_lack_of_cohesion_weight;
+       let attack_lack_of_cohesion_value = worst_rider_compared_to_average_inverse;
+       let attack_lack_of_cohesion_exponent = settings.attack_lack_of_cohesion_exponent;
+       let attack_lack_of_cohesion_max_value = settings.attack_lack_of_cohesion_max_value;
+       value_list.push(attack_lack_of_cohesion_weight,attack_lack_of_cohesion_value,attack_lack_of_cohesion_exponent,attack_lack_of_cohesion_max_value);
+
+       let attack_probability = calculate_linear_space_value(value_list, probability_variables);
+
+      let attack_choice = Math.random();
+       if(attack_choice < attack_probability){
+        console.log("*********** timestep " + race.race_clock + " STATUS CHANGE rider " + race_rider.name + " from " +  race_rider.current_aim + " to ATTACK");
+        if(race_rider.current_aim == "LEAD"){
+          race_rider.number_of_turns++;
+        }
+        race_rider.current_aim = "ATTACK";
+        race_rider.breakaway_attack_duration_elapsed = 0;
+        //create a new group for this rider
+        race.breakaway_riders_groups[race.current_order[i]] = Math.max(...race.breakaway_riders_groups) + 1;
+        choice_made = 1;
+      }
+    }
+    if(choice_made == 0 && race_rider.current_aim != "CAUGHT" && race_rider.current_aim != "SPRINT" && race_rider.current_aim != "CHASE" && race_rider.current_aim != "ATTACK") {
       //make a choice about CHASING.
       //first, need to figure out if there is a rider or riders ahead.
       let number_of_riders_ahead = 0;
@@ -1464,7 +1744,7 @@ function moveRace(){
 
       // loop through the (other) riders and count who is ahead and 'not in your lane'
       // also mark the one that is the closest - if you chase, you chase this rider?
-    let my_group = race.breakaway_riders_groups[race.current_order[i]];
+      let my_group = race.breakaway_riders_groups[race.current_order[i]];
       for(let iik = 0; iik < race.current_order.length; iik++){
         if (iik != i){
           if(race.riders[race.current_order[iik]].distance_covered > race_rider.distance_covered && race.breakaway_riders_groups[race.current_order[iik]] != my_group){
@@ -1478,7 +1758,7 @@ function moveRace(){
       }
 
       if(number_of_riders_ahead > 0){
-        console.log("***** There is a rider you might chase::: number_of_riders_ahead " + number_of_riders_ahead + " closest_rider_ahead " + closest_rider_ahead + " closest_rider_distance " + closest_rider_distance);
+        //console.log("***** There is a rider "+ race_rider.name +" might chase::: number_of_riders_ahead " + number_of_riders_ahead + " closest_rider_ahead " + race.riders[closest_rider_ahead].name + " closest_rider_distance " + closest_rider_distance);
 
         //Do I chase then?
         //factors: number of riders ahead, inverse distance to rider up to some fixed point, and 'freshness'
@@ -1519,73 +1799,126 @@ function moveRace(){
         let chase_inverse_fatigue_max_value = 1;
         value_list.push(chase_inverse_fatigue_weight,chase_inverse_fatigue_value,chase_inverse_fatigue_exponent,chase_inverse_fatigue_max_value);
 
-
         let chase_probability = calculate_linear_space_value(value_list, probability_variables);
         let chase_choice = Math.random();
         if(chase_choice < chase_probability && closest_rider_ahead != -1){
           //assign a target rider to chase
           race_rider.breakaway_chase_target_rider = closest_rider_ahead;
-          race_rider.current_aim = "CHASE"
+          let original_aim = race_rider.current_aim;
+
+          race_rider.current_aim = "CHASE";
+          race_rider.chase_period_time_elapsed = 0;
+          choice_made =1;
           //put this rider in the same group as the target.
           let my_group = race.breakaway_riders_groups[race.current_order[i]];
           let chase_target_rider_group = race.breakaway_riders_groups[closest_rider_ahead];
           //update the group to that of the chasee
           race.breakaway_riders_groups[race.current_order[i]] = race.breakaway_riders_groups[closest_rider_ahead];
 
+          //if race_rider is LEADing a group, a new leader may need to be assigned.
+          if(original_aim == "LEAD"){
+            //find the follower from this group with the highest distance_covered.
+            let highest_follower_distance_covered = 0;
+            let farthest_follower = -1;
+            for(let iik = 0;iik<race.riders.length;iik++){
+              if(race.current_order[i] != iik && race.breakaway_riders_groups[iik] == my_group && race.riders[iik].current_aim == "FOLLOW" && race.riders[iik].distance_covered > highest_follower_distance_covered){
+                highest_follower_distance_covered = race.riders[iik].distance_covered;
+                farthest_follower = iik;
+              }
+            }
+            //if one was found, update its current aim
+            if(farthest_follower >= 0){
+              race.riders[farthest_follower].current_aim = "LEAD";
+            }
+
+            race_rider.number_of_turns++;
+
+          }
+
           console.log(race_rider.name + " ||||C|H|A|S|E||||| " + race_rider.name + " - chase " + race.riders[closest_rider_ahead].name + " - chase_probability " + chase_probability + " inverse_chase_distance_value " + inverse_chase_distance_value + " chase_number_of_riders_ahead " + chase_number_of_riders_ahead + " chase_inverse_fatigue_value " + chase_inverse_fatigue_value + ". Going from group " + my_group + " to " + chase_target_rider_group);
         }
       } //if there are riders ahead block
     } //end of CHASE block
-    else if(race_rider.current_aim == "SOLO") {
+    if(choice_made == 0 && race_rider.current_aim == "SOLO") {
       // if SOLO, should you change to LEAD, if there's at least one rider close behind you (start workign with them)
       //how close is the nearest rider behind you?
-      let closest_behind_distance_covered = race.distance;
+      let closest_behind_distance_covered = 0;
+      let closest_behind_rider_group = -1;
+      let closest_rider_behind = -1;
       let closest_ahead_distance_covered = race.distance;
+      let closest_ahead_rider_group = -1;
+      let closest_rider_ahead = -1;
       for(let iim = 0; iim < race.riders.length;iim++){
         if(iim != race.current_order[i] && race.riders[iim].distance_covered < race_rider.distance_covered){
-          if(closest_behind_distance_covered < race.riders[iim].distance_covered){
+          if(race.riders[iim].distance_covered > closest_behind_distance_covered){
             closest_behind_distance_covered = race.riders[iim].distance_covered;
+            closest_behind_rider_group = race.breakaway_riders_groups[iim];
+            closest_rider_behind = iim;
           }
         }
           if(iim != race.current_order[i] && race.riders[iim].distance_covered > race_rider.distance_covered){
-            if(closest_ahead_distance_covered > race.riders[iim].distance_covered){
+            if(race.riders[iim].distance_covered < closest_ahead_distance_covered){
               closest_ahead_distance_covered = race.riders[iim].distance_covered;
+              closest_ahead_rider_group = race.breakaway_riders_groups[iim];
+              closest_rider_ahead = iim;
             }
         }
+      }
+      let gap_to_rider_behind = (race_rider.distance_covered - closest_behind_distance_covered);
+      let gap_to_rider_ahead = (closest_ahead_distance_covered - race_rider.distance_covered);
+      if(closest_rider_ahead >= 0 && gap_to_rider_ahead < BREAKAWAY_SWITCH_TO_FOLLOW_GAP_SIZE){
+        race_rider.current_aim = "FOLLOW";
+        race.breakaway_riders_groups[race.current_order[i]] = closest_ahead_rider_group;
+        choice_made = 1;
+      }
+      else if(closest_rider_behind >= 0 && gap_to_rider_behind < BREAKAWAY_SWITCH_TO_LEAD_GAP_SIZE){
+        race_rider.current_aim = "LEAD"; //try to lead a group rather than going solo
+        race.breakaway_riders_groups[race.current_order[i]] = closest_behind_rider_group;
+        choice_made = 1;
+      }
     }
-    //RRRRRRRRRRRRRRRRRRRRR
-    else if(race_rider.current_aim == "CHASE" || race_rider.current_aim == "ATTACK" || race_rider.current_aim == "SOLO") {
+    if(choice_made == 0 && (race_rider.current_aim == "CHASE")) {
       // should you switch to following? if you are catching up to a rider, can join their group. what if this group is goign very slowly??
 
+      //apply a preset period length whereby you do not revert to following the group you are chasing out of.
+      let chase_original_target_period = settings.chase_original_target_period;
+      //do not consider the positions of other riders until this period has elapsed (chase only that original target)
+      let in_initial_chase_period = 0;
+      if(race_rider.chase_period_time_elapsed < chase_original_target_period ){
+        in_initial_chase_period = 1; //only consider the original target rider if this is 1.
+      }
+      let closest_ahead_distance_covered = race.distance;
+      let closest_ahead_rider_group = -1;
+
+      if(in_initial_chase_period){
+        if(race.riders[race_rider.breakaway_chase_target_rider].distance_covered > race_rider.distance_covered){
+          closest_ahead_distance_covered = race.riders[race_rider.breakaway_chase_target_rider].distance_covered;
+          closest_ahead_rider_group = race.breakaway_riders_groups[race_rider.breakaway_chase_target_rider];
+        }
+      }
+      else{
+        for(let iim = 0; iim < race.riders.length;iim++){
+            if(iim != race.current_order[i] && race.riders[iim].distance_covered > race_rider.distance_covered){
+              if(race.riders[iim].distance_covered < closest_ahead_distance_covered){
+                closest_ahead_distance_covered = race.riders[iim].distance_covered;
+                closest_ahead_rider_group = race.breakaway_riders_groups[iim];
+              }
+          }
+        }
+      }
+      //transition to FOLLOW if close enough
+      let gap_to_rider_in_front = (closest_ahead_distance_covered - race_rider.distance_covered);
+      if(gap_to_rider_in_front < BREAKAWAY_SWITCH_TO_FOLLOW_GAP_SIZE){
+        race_rider.current_aim = "FOLLOW";
+        race.breakaway_riders_groups[race.current_order[i]] = closest_ahead_rider_group;
+      }
     }
-  } // main rider loop
-
-  // ************* draw a finish line START ***********
-  ctx.setLineDash([5, 5]);
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  let race_finish_point = DISPLAY_LENGTH;
-  ctx.moveTo(race_finish_point, 0);
-  ctx.lineTo(race_finish_point, 200);
-  ctx.strokeStyle = "black";
-  ctx.stroke();
-  ctx.setLineDash([]);
-  // ************* draw a finish line END ***********
-
-  // ******** draw Chasing peloton START
-
-  let bunch_position_on_display = 0;
-  let peloton_distance_mapped_to_display = settings.track_centre_x + ((race.chasing_bunch_current_position/race.distance) * (DISPLAY_LENGTH - settings.track_centre_x));
-
-  if (race.chasing_bunch_current_position > 0){
-    ctx.beginPath();
-    ctx.moveTo(settings.track_centre_x, 30);
-    ctx.lineTo(peloton_distance_mapped_to_display, 30);
-    ctx.strokeStyle = "green";
-    ctx.lineWidth = 10;
-    ctx.stroke();
+    // RIDER DECISION-MAKING: CHOOSE YOUR ADVENTURE ---- END -- **************
+    //**************************************************************************
+    //**************************************************************************
+    //**************************************************************************
   }
-  // ******** draw Chasing peloton END
+
 
   // After all riders have moved
   // Update each rider's distance value for the rider in front of them (lead is zero)
@@ -1620,16 +1953,64 @@ if(finished_this_timestep.length > 0){
   }
 }
 
+//dksep24: increment time_on_front of leading rider
+
+//dKelly25, ignore the first timestep as they are all starting off together
+//donalK25 - for breakway need to find the rider on the front using their distance_covered property
+let max_distance_covered = -1;
+let leading_rider = -1;
+for(let i_r = 0;i_r < race.riders.length; i_r++){
+  if(race.riders[i_r].distance_covered > max_distance_covered){
+    max_distance_covered = race.riders[i_r].distance_covered;
+    leading_rider = i_r;
+  }
+}
+if(race.race_clock > 1 && leading_rider > -1){
+  race.riders[leading_rider].time_on_front++;
+}
+
+//also, want to add the time leading each group
+//need to go through the distinct groups
+let distinct_groups = [];
+for(let i_r = 0;i_r < race.breakaway_riders_groups.length; i_r++){
+  if(!(distinct_groups.includes(race.breakaway_riders_groups[i_r]))){
+    distinct_groups.push(i_r);
+  }
+}
+//for each group, find the leader and increment their time_on_front_of_group property value
+for(let k_r = 0;k_r < distinct_groups.length; k_r++){
+  let max_distance_covered = -1;
+  let leading_rider = -1;
+  for(let i_r = 0;i_r < race.riders.length; i_r++){
+    if(race.breakaway_riders_groups[i_r] == k_r && race.riders[i_r].distance_covered > max_distance_covered){
+      max_distance_covered = race.riders[i_r].distance_covered;
+      leading_rider = i_r;
+    }
+  }
+  if(race.race_clock > 1 && leading_rider > -1){
+    race.riders[leading_rider].time_on_front_of_group++;
+  }
+}
+//end of leading property value updates
+
+
 //can now draw the rider info for this timestep
     for(let i=0;i<race.current_order.length;i++){
       let ri = race.current_order[i];
       let display_rider = race.riders[ri];
       //is there a rider in front, i.e. who has covered more distance? find the closest rider that is in front of you and use this gap to work out your shelter
+
+      //donalK25: updating this to factor in the group- only consider riders in your own group (a group is like a separate lane)
+
       let rif = -1;
       let min_distance = -1;
       let number_of_riders_in_front = 0;
+      let my_group = race.breakaway_riders_groups[race.current_order[i]];
+      // if(race.race_clock >= 300 && race.current_order[i]==2){
+      //   debugger;
+      // }
       for(let j=0;j<race.current_order.length;j++){
-          if(i!==j){ //ignore distance to self
+          if(i!==j && my_group==race.breakaway_riders_groups[race.current_order[j]]){ //ignore ayone not in your own group
             let distance_to_rider = (race.riders[race.current_order[j]].distance_covered - race.riders[race.current_order[j]].start_offset ) - (display_rider.distance_covered - display_rider.start_offset);
             if(distance_to_rider >= 0){//ignore riders behind you, who will have negative distance
               number_of_riders_in_front++;
@@ -1651,8 +2032,12 @@ if(finished_this_timestep.length > 0){
       }
 
       //display the rider properties
+      let target_rider = " --- "
+      if(typeof(display_rider.rider_to_follow.name) != "undefined"){
+        target_rider = display_rider.rider_to_follow.name;
+      }
 
-       $("#rider_values_"+i).html("<div class='info_column ic_header'><div class='circle' style='background-color:"+display_rider.colour+"'> </div>" + display_rider.name + "<span class = 'rider_aim'>" + display_rider.current_aim.toUpperCase() +  ((display_rider.finish_position!=-1)?' <i class="fas fa-flag-checkered"></i>'+finish_info : '') + "</span></div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph ("+DecimalPrecision.round(display_rider.velocity,4)+" m/s) </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + "(" + Math.round(display_rider.rider_fatigue_failure_level) +  ")</div><div class='info_column'>" + display_rider.time_on_front + " ( " + DecimalPrecision.round((display_rider.time_on_front / race.race_clock)*100,2) + " %) </div>");
+       $("#rider_values_"+i).html("<div class='info_column ic_header'><div class='circle' style='background-color:"+display_rider.colour+"'> </div>" + display_rider.name + "<span class = 'rider_aim'>" + display_rider.current_aim.toUpperCase() +  ((display_rider.finish_position!=-1)?' <i class="fas fa-flag-checkered"></i>'+finish_info : '') + "</span></div><div class='info_column'>"+Math.round(display_rider.distance_covered * 100)/100 + "m</div><div class='info_column'>"+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph ("+DecimalPrecision.round(display_rider.velocity,4)+" m/s) </div><div class='info_column'>"+ Math.round(display_rider.power_out * 100)/100 + " / "  +display_rider.threshold_power + " / " + display_rider.max_power + " watts</div>" + "<div class='info_column'>"+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m</div>" + "<div class='info_column'>" + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + "(" + Math.round(display_rider.rider_fatigue_failure_level) +  ")</div><div class='info_column'>" + display_rider.time_on_front + " ( " + DecimalPrecision.round((display_rider.time_on_front / race.race_clock)*100,2) + " %) / " + display_rider.time_on_front_of_group + " ( " + DecimalPrecision.round((display_rider.time_on_front_of_group / race.race_clock)*100,2) + " % / " + display_rider.number_of_turns +  " turns (avg. " + DecimalPrecision.round(display_rider.time_on_front_of_group/display_rider.number_of_turns,1) + "))</div><div class='info_column'>"+race.breakaway_riders_groups[ri]+"</div><div class='info_column'>" + target_rider + "</div");
 
       if(settings.log_each_step || debug_log_specific_timesteps.includes(race.race_clock)){
         logMessage += " " + race.race_clock + " | " + display_rider.name + " " + display_rider.current_aim.toUpperCase() +  ((i==race.current_order.length-2)?' |F|':'') + " | " + Math.round(display_rider.distance_covered * 100)/100 + "m | "+ Math.round(display_rider.velocity * 3.6 * 100)/100 + " kph | "+ Math.round(display_rider.power_out * 100)/100 + " / "  + display_rider.threshold_power + " / " + display_rider.max_power + " watts | "+ Math.round(display_rider.distance_from_rider_in_front * 100)/100 + " m | " + Math.round(display_rider.endurance_fatigue_level) + "/" + Math.round(display_rider.accumulated_fatigue) + "(" + Math.round(display_rider.rider_fatigue_failure_level) + ") |||| " + display_rider.step_info;
@@ -1679,13 +2064,6 @@ if(finished_this_timestep.length > 0){
   riders_to_sort.sort((a, b) => (a.finish_time > b.finish_time) ? 1 : -1);
 
   //console.log("£££  riders_to_sort after sorting  £££" + JSON.stringify(riders_to_sort));
-
-  //dksep24: increment time_on_front of leading rider
-
-  //dKelly25, ignore the first timestep as they are all starting off together
-  if(race.race_clock > 1){
-    race.riders[riders_to_sort[0].rider].time_on_front++;
-  }
 
   //race is over if the bunch catches ALL of the UNFINISHED riders or ALL riders have crossed the line (though there is but one winner)
 
@@ -1760,17 +2138,18 @@ if(!continue_racing){ //no uncaught rider left on the course
   console.log("##################################################################################");
 
 }
-  if (continue_racing && (race_state == "play" || race_state == "resume" )){
-    //show the remaining distance form the leader?
-    //show distance remaining
-    let max_distance_covered = 0;
-    for(let iim = 0; iim < race.riders.length;iim++){
-      if(race.riders[iim].distance_covered > max_distance_covered){
-        max_distance_covered = race.riders[iim].distance_covered;
-      }
-    }
+//show the remaining distance of the leader?
+//show distance remaining
+max_distance_covered = 0;
+for(let iim = 0; iim < race.riders.length;iim++){
+  if(race.riders[iim].distance_covered > max_distance_covered){
+    max_distance_covered = race.riders[iim].distance_covered;
+  }
+}
 
-    $("#race_info_lap").text(DecimalPrecision.round(max_distance_covered,4));
+$("#race_info_lap").text(DecimalPrecision.round(max_distance_covered,4));
+
+  if (continue_racing && (race_state == "play" || race_state == "resume" )){
       setTimeout(
         function(){
           moveRace(); //recursive call to moveRace() to run the next timestep
@@ -1781,6 +2160,48 @@ if(!continue_racing){ //no uncaught rider left on the course
     console.log("Race Complete/paused");
     d3.select("#current_activity i").attr('class', "fas fa-cog fa-2x");
   }
+
+  //resort the race.current_order array if needed
+  // put riders of each group together, move non-follow riders to the 'front'
+  let current_current_order = [...race.current_order];
+  let current_order_groups = {};
+  let current_groups_list = [];
+  let new_order = [];
+  for(let i = 0;i < current_current_order.length;i++){
+    let i_group = race.breakaway_riders_groups[current_current_order[i]];
+    if(current_order_groups[i_group]){
+      current_order_groups[i_group].push(current_current_order[i]);
+    }
+    else{
+      current_order_groups[i_group] = [current_current_order[i]];
+      current_groups_list.push(i_group);
+    }
+  }
+  current_groups_list.sort();
+  current_groups_list.reverse(); //put bigger number groups first
+  //console.log("current_order_groups " + JSON.stringify(current_order_groups) + " current_groups_list " + current_groups_list);
+
+  for(let i = 0; i < current_groups_list.length; i++){
+    if(current_order_groups[current_groups_list[i]]){
+      let new_list = [];
+      for(let k = 0; k < current_order_groups[current_groups_list[i]].length; k++){
+        let r_aim = race.riders[current_order_groups[current_groups_list[i]][k]].current_aim;
+        if( r_aim != "FOLLOW" && r_aim != "DROP"){
+          new_list.push(current_order_groups[current_groups_list[i]][k]);
+        }
+      }
+      for(let k = 0; k < current_order_groups[current_groups_list[i]].length; k++){
+        let r_aim = race.riders[current_order_groups[current_groups_list[i]][k]].current_aim;
+        if(r_aim == "FOLLOW" || r_aim == "DROP"){
+          new_list.push(current_order_groups[current_groups_list[i]][k]);
+        }
+    }
+    new_order.push(...new_list);
+  }
+}
+    //console.log("old order " + race.current_order + " current_order_groups " + JSON.stringify(current_order_groups) + " current_groups_list " + current_groups_list + " new_order " + new_order);
+    race.current_order = new_order;
+
 } //** end of moverace()
 
 function update_race_settings(){
@@ -1805,13 +2226,16 @@ function load_race(){
   //set up the race using the riders given
   // use the given order
   ctx.clearRect(0, 0, c.width, c.height);
+  ctx.fillStyle = CANVAS_BACKGROUND_COLOUR;
+  ctx.fillRect(0, 0, c.width, c.height);
+
   race.riders = [];
   race.current_order = [];
   race.race_clock = 0;
   settings.race_bend_distance = Math.PI * settings.track_bend_radius;
   race.instructions = [];
   race.instructions_t = [];
-  race.drop_instruction = 0;
+
   race.live_instructions = [];
   race.race_instructions = [];
   race.race_instructions_r = [];
@@ -1900,22 +2324,35 @@ function load_race(){
 
     //add a prop to store how long the rider has been on the front.
     load_rider.time_leading_group = 0;
+    load_rider.breakaway_chase_target_rider = -1;
+    load_rider.rider_to_follow = {};
+    load_rider.chase_period_time_elapsed = 0;
+    load_rider.number_of_turns = 0;
+
 
     //add an array to track their status
     load_rider.current_aim_history = [];
 
     race.current_order.push(race.start_order[i]);
     ctx.beginPath();
-    ctx.arc(load_rider.current_position_x, load_rider.current_position_y, 4, 0, 2 * Math.PI);
+    let circle_radius = DEFAULT_RIDER_CIRCLE_RADIUS;
+    if(CURRENT_ZOOM_SEGMENT_SIZE < race.distance){
+      circle_radius = ZOOM_RIDER_CIRCLE_RADIUS;
+    }
+    ctx.arc(load_rider.current_position_x, load_rider.current_position_y, circle_radius, 0, 2 * Math.PI);
     ctx.fillStyle = load_rider.colour;
     ctx.fill();
 
     console.log("loading rider " + load_rider.name + " at position " + race.start_order[i] + " with start offset of " + load_rider.start_offset);
 
     load_rider.time_on_front = 0; //dksep24: want to track how much time each rider spends at the front.
+    load_rider.time_on_front_of_group = 0; //dk_oct_25: also want to track the leading of groups
     load_rider.breakaway_attack_duration_elapsed = 0; //dksep25: check attack duration.
     load_rider.finish_time = -1; //dksep25: check attack duration.
     load_rider.finish_position = -1; //dksep25: check attack duration.
+
+    //have moved the drop instruction prop to the rider
+    load_rider.drop_instruction = 0;
 
 
     //dk2021 new rider property to add info to the log message
@@ -1965,7 +2402,16 @@ function load_race(){
 
 $(document).ready(function() {
   c = document.getElementById("bikeCanvas");
+
+
+  $('#zoom_segment_size').val(DEFAULT_ZOOM_SEGMENT_SIZE);
+  $('#zoom_mode').change(function() {
+    toggleZoomMode($(this).prop('checked'))
+  })
+
   ctx =c.getContext("2d");
+
+
   $('#input_race_length').val(race.distance);
   $('#frontalArea').val(settings.frontalArea);
   $('#teamorder').val(race.start_order.map(a=>a).join(","));
@@ -2025,6 +2471,8 @@ $(document).ready(function() {
         settings = JSON.parse(data[0].global_settings);
         riders = JSON.parse(data[0].rider_settings);
 
+        CURRENT_ZOOM_SEGMENT_SIZE = race.distance;
+
         load_race();
         //populateNamesDropdown(data);
       });
@@ -2033,6 +2481,7 @@ $(document).ready(function() {
     // alert(valueSelected);
   );
 }
+
 const getExperimentNames = () => {
 
   let serverURL = 'http://127.0.0.1:3003/getExperimentSettingNames/';

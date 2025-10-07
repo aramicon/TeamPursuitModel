@@ -2234,3 +2234,238 @@ in load_race()
 	- hmmm, not picking up the peloton passing riders, maybe it is being updated later than it needs to be
 	- oops, now it catches them right at the beginning!
 	
+	- oh, it updates it insie the rider loop (again) ... move it out. I can move it before or after all of the other logic... maybe move it BEFORE?
+	
+	- better, finishes. 
+	- the caught riders keep moving. warum?
+	- ok, so it just doesn't update the velocity... we could set the velocity to zero?
+	- this seems to work.
+	
+	- attack transition should have a factor based on the gap to the peloton? 
+	
+	- can an attack become a chase? it happens... e.g. LEAD,LEAD,DROP,FOLLOW,FOLLOW,ATTACK,CHASE,CHASE
+	
+	- first, stop the attack-chase case.
+	
+	a- added 2 new consts 
+	const BREAKAWAY_SOLO_TO_LEAD_GAP_SIZE = 5;
+const BREAKAWAY_SOLO_TO_FOLLOW_GAP_SIZE = 5;
+
+- note that in this model a rider might  never get out of failure mode.
+
+- chasing seems to be broken :-( 
+
+-- oops, the IF/ELSE IF makes no sense... it can only go in to ONE.
+- have a rule whereby you can only make one decision, use a boolean to manage. 
+- split it into a bunch of separate IFs rather than one IF/ELSE IF... construct.
+- hmmm, now no chase OR attack.
+
+- the attack has to be moved to the new section
+- was missing () so a rider that attacked immediately went back to follow :-) 
+- now have some CHASE and ATACK, but have single timestep ATTACK- warum?
+- e.g., FOLLOW,FOLLOW,ATTACK,FOLLOW,FOLLOW,FOLLOW
+
+
+ - bit of a mangled pile of poo tbh, how on earth do I get it to calm down?
+ 
+ - show the breakaway group on the rider display 
+ 
+ - show the chasee on the rider display
+- added to display 
+- attacker changing to lead, group becomes undefined. warum?
+- hmmm, gap_to_chaser is -4272.33642092344
+- oh, bugo in code. 
+
+- the power graph only seems to show up to timesrtep 190 or so??
+
+- ah, it expects all datasets to have the same lengths, and drawsn points for the lowest number- when a rider is caught, it stops adding values to the data.
+- add 0 values to the rider_power_data array for riders that are CAUGHT
+
+- good, fixed graph. 
+
+now, big buggo
+chaser goes to follow attacker, from LEAD role... goes into attacker group, but chases last rider in original group.
+
+- if a leader chooses to CHASE, surely another rider must take over as the leader??
+
+- here the issue is with current_order, which originally assumed that the rider to follow was (1) in the same group and (2) ahead of you in the actual array ordering.
+- so, if we change group, we should move to the back of that group in the current_order array??
+- have to be very careful as we are looping through that actual array :-( 
+- can update current_order at the end of moverace()
+
+- it is putting dropped riders in the wrong position, before the followers... not preserving their order
+
+- need to assign a new leder if the leader of a group attacks. if they chase they just drag everyone else up?
+- actually you can't attack from LEAD. But you can CHASE?
+
+- first, maybe look at the transition from CHASE to FOLLOW?
+- oh wait, I did this yesterday. so why is it all so messy?
+
+- chaser 1 seems to go from leading group 1 directly to following group 2? or is that it goes to chase and then directly to follow?
+- choice_made was not being updated?
+
+- improves. but chaser 1 suddenly went from following in group 2 to following in group 0. warum?
+
+- hmm, issue in chase-follow code? and will this not mean that a follower who chases will instantly revert to following?
+- found bugs, it was not assigning the group properly, was using the group as an index to breakaway_riders_groups[]. le yikes.
+
+- hmm, added code to select a new leader for a group, but it's not being reached, maybe because of the last change or changes?
+
+- next issue... the second group is NOT rotating... warum?
+
+- oh shoot... I'm not adding the rider ID to the drop instructions... I thought I already did this??
+
+- need a new way to queue and follow drops 
+- race.drop_instruction currently stores one value with no rider id. since there's only one per rider, could move this prop to the rider??
+
+-- e.g. 
+    race.riders[race.current_order[i]].drop_instruction = 0;
+	
+- kiinnnda works, but only one rider is dropping back? warum?
+
+- technically, there are a couple of DROPs by another rider... but look at this: 
+,LEAD,LEAD,LEAD,LEAD,LEAD,DROP,DROP,LEAD,DROP,DROP,LEAD,DROP,DROP,LEAD,DROP,DROP,LEAD,DROP,DROP,LEAD,DROP,DROP,LEAD,DROP,DROP,LEAD, 
+
+Surely a rider should go from DROP to follow??
+
+
+Oh, it ends up being 2 groups: SOLO/FOLLOw, and FOLLOW/FOLLOW
+
+- why doesn't SOLO go to LEAD?
+
+it seems to be too far ahead of the rider behind... but the gap shown is 2m. what gives? the offset maybe?
+
+- the issue is that the attzacker has already moved, but the chaser has not... need to make this decision AFTER every rider has actually moved.
+
+- tried making a whole new loop after all the riders ahve moved
+
+- code runs but the issue is still there :-( 
+
+- drops ony happen early in the race. warum?
+
+drop=3 now only goes back 1 space when all are in group 0. warum?
+
+i think the re-ordering is causing the problem?
+
+- time on the front makes no sense now? the number is ust wrong
+
+- when you try to chase, don't imeediatley revert to following riders in the group you are in... for some period try to chase the original target, then re-assess.
+
+- need a new global prop.
+
+       "chase_original_target_period":10,
+	   
+	   - need a rider prop to count how long it has been chasing
+	   
+	   load_rider.chase_period_time_elapsed = 0;
+	   
+- it does now chase and follow the attacker, but still very messy.
+- work on getting the ssecond group to also switch the lead.
+- log all drop instructions as they are created.
+- seems to be creating the drops?? but not imping them?
+
+- oops, need to rewrite how the reordering works, it is assuming a drop from position 0
+
+- creates a drop=4 instruction, how is this possible?
+
+- ooops, amkes current_order toooo long 
+||||||||||| DROP: original_order 0,1,2,3 move 3 back 3 positions, new order 0,1,2,3,3 |||||||||||
+
+-tried a fix, but still have 
+||||||||||| DROP: original_order 0,1,2,3 move 3 back 2 positions, new order 0,1,2,3,3 |||||||||||
+
+- Fixed some bugs, but non-chaser now doesn't actually drop at all after attacker 1 attacks.
+
+- hmmmmm, still doign odd stuff 
+||||||||||||| added drop instruction 52,drop=3,3 |||||||||||||
+model3breakaway.js:1923 Race Complete/paused
+model3breakaway.js:2293 button forward invoked.
+model3breakaway.js:630 52 **FOUND INSTRUCTION** DROP: 3 rider Non-Chaser 4
+model3breakaway.js:464 **** rider trying to drop back 3 but contiguous_group_size is 1
+
+So- rebuilt how it works, race.contiguous_group_size is gone, replaced with undropped_riders_behind_me_in_group
+
+- ok, so now a few riders drop?
+
+- well, still when one rider moves from chase to follow, the OLD group does not get  anew leader
+
+-ok, so maybe when a rider drops the wrong oher rider is updated to leader??
+
+- seems to select a new leader BUT it is then changed to FOLLOW by the loop beginning line 600
+- what happens if i remove this loop altogether?
+
+- getting better. still odd transitions though. Attacker 2 goes from DROP to LEAD, without FOLLOW, while Chaser 2 goes from LEAD to FOLLOW,. no DROP
+
+- is race_rider.number_of_riders_in_front wrong??
+
+the gap shown for non-chaser 4 is wrong, way too high. warum?
+- the % of time leading is also wrong, need to recalc it.
+
+- gap i shown using display_rider.distance_from_rider_in_front
+- set here   display_rider.distance_from_rider_in_front = min_distance;
+- just need to factor in the groups here? 
+
+- after one buggo, think it now works better. the slowness of riders to drop back is really noticeable. 
+
+- now fix the time on front stat. related?
+- what does this stat even mean now? leading the group, or leading the whole race? 
+- leading the race may be more useful??
+- stored in display_rider.time_on_front
+- ok, that seeeems to work, what next.... look at the dropping back slownesss again.
+
+- attacker 2 when dropping back stays at 440. 
+- chaser 1 doesn't even go into DROP status, they FOLLOW, and with a power of 0. maybe since the gap is < 2m?
+
+LEAD riders have a GAP until the DROP rider is actually behind them, maybe I should change this- the dropping rider would have pulled alongside?? That was the assump with the track race?
+- hmmm, track model seems to have the same issue? maybe leave for now>
+
+- debug attacker 2 when in DROP mode and timestep is 150+
+
+so, attacker 2 is dropping back but even when this begins it has a lower velocity than chaser 1. is this becuase chaser 1 is stronger and moves to 450 watts when it takes over the lead
+
+- maybe the issue is that attacker 1 keeps attacking whenever they follow?
+
+- maybe i should factorize the attack decision so that they attack less mechanically?
+
+- if there's one sprinter only and they sprint then fail, the oters will not pass it out - the all follow it, though they stay in their original gorup
+- ran this test again and the sprinter comes last
+- it defo happens sometimes 
+
+- found it, happens if the sprinter sprints from a LEAD role. so shodl be fixable?
+
+-- adda time leading group property to each rider
+- time_on_front_of_group added to race_rider
+
+- seeems to work, moved it before the dispolay code to fix a little issue.
+
+- now need to use this to measure group cohesion... groups are fluid, but don't want to lose info on a rider
+
+- record number of turns on front?
+
+race_rider.number_of_turns++;
+
+- update this whenever you transition AWAY from leading.. can then use time_on_front_of_group/number_of_turns to get an average time of turn?
+- seems to be updating it TWICE. warum?
+
+- ok, seems to be useful, round the value shown...
+
+-- adding code to have a zoom switch that runs the race over smaller segments so we can better see what is happenign (want to use a graphic using a screenshot)
+
+- need to link the drawing of the finish line with the race.distance value?
+- can use CURRENT_ZOOM_SEGMENT_NO 
+
+- need to display the current segment value?
+
+- draw some distance lines with text on each segment?
+SEGMENT_DISTANCE_MARKERS_TO_DRAW
+
+- the race distance doesn't adjust when I go step by step. warum?
+race_info_lap
+- moved code a little, works now.
+
+- start looking at the ATTACK choice, need to add factors?
+- add group_cohesiveness
+
+- basic attack form added.... attacks shoudl not happen if the riders are very cohesive?
+
+ 

@@ -936,7 +936,7 @@ const setClientID = () => {
   }
 }
 
-//funciton to check if a sequence is ready to run
+//function to check if a sequence is ready to run
 const check_for_sequences = () => {
   console.log("Check for active sequence");
   //make a call to find an active sequence
