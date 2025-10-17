@@ -2468,5 +2468,214 @@ race_info_lap
 
 - basic attack form added.... attacks shoudl not happen if the riders are very cohesive?
 
+- if a rider is being caught, they will either follow another group, or that group will follow IT, but if it is going slower, it is important that it FOLLOWS- at the back of the bunch?
+- the attacker attacks even though it is fatgiued.
 
+- cohesiveness- test if attacks happen when the riders are all co-operating. 
+
+- weirrrd. have 3 leaders, all in the same group! arrrrg. warum? - fixed, ahd = instead of == :-o 
+
+- added fatigue factor, copied from chase 
+- add a 'are we goign too slow' factor?
+- need to use chasing_bunch_current_position and chasing_bunch_speed
+
+
+- if an exhausted rider gets caught, they need to attempt to follow, they should not become the leader
+
+- if you are caught by a faster rider, you always go to the back of their group 
+- if you pass a slower rider, ignore them, pass them, let them decide to follow you
+- just making it DROP doesn't really work... maybe calling switchLead(positions_to_drop_back, rider_no)??
+
+- fatigue factor needs to consider accumulated fatigue as well as current. in one weighted factor. half half?
+
+how do we measure accumulated fatigue??
+race_rider.accumulated_fatigue, settings_r.accumulated_fatigue_maximum, 
+race_rider.endurance_fatigue_level, settings_r.fatigue_failure_level is for the current fatigue level?
+
+- want to also do this for the chase to keep them the sames 
+
+- group 0 manages to get stuck with one DROP and one FOLLOW, with FOLLOW behind DROP
+
+- Chaser 2 manages to end up in group -1. um. see this again for the same rider after dozens of more tests. how do i debug this?
+
+- drop state is weird- other riders can do stuff while you are dropping. how do you respond?
+
+- if you are dropping back, you FOLLOW again when you are behind the target rider? then you switch to following them? but what if they are now in a different group?
+
+how can you end up as the only member of a group, in a drop state, behind all the other riders?
+
+- what if you are already behind and alone when the drop is begun?
+
+Co-op 4 is leading a group of 3
+sprinter sprints
+chaser chases
+Co-op 4 is now alone leading
+Co-op 4 is issued a DROP instruction
+||||||||||||| added drop instruction 345,drop=3,3 |||||||||||||
+
+- fix: don't issue a drop if there's nobody else in the group!
+
+-also, if you are dropping and for whatever reason there is nobosy else in the group (e.g. they sprinted or chased), need to change into another state 
+
+- if dropping and there is nobody else in the group
+	if there is nobody in front of you, switch to LEAD
+	else follow the nearest rider in front of you and move to their group.
+
+
+- ok to stay DROP but need to move to the group of the sprinter
+
+-- hmmm, this seeems to work, rider does drop for one ts but then converts to SOLO, and from there might rejoin another group
+
+- right, worked on poster for a couple of days. way too slow. Let's do an hout now tryign to make progress.
+
+- work on adding strategy to the rders. need a new rider array 
+     "in_race_updates":[[3000,"breakaway_attack_duration=5"]],
+	 
+- currently use distance in m, could change this. 0-1 % of race distance, or distance remaining (in m?). wondering what happens if the race length changes. I feel like riders are more tuned into the distance remaining? 
+
+- ok, so adjust to distance_remaining in m?
+
+- make a sort funciton to sort using the nested array 
+
+updates_list.sort((a, b) => (a[0] < b[0]) ? 1 : -1);
+
+- can use array.shift() method to 'pop' off the first element, then only need to look forwards for eleemnts to pop based on distance remaining.
+
+- start integrating the GA.
+- add a setting.
+      "race_type":"BREAKAWAY",
+	  
+	  
+	 
+- added a BIG new function, a copy of run_track_race_ga(), and called it breakaway_race_ga().
+
+- shouldn't use max_timestep any more, should use the race.distance: distance will be used instead of time
+
+- need a new version of create_new_race, how's about renaming the old version to create_new_team_pursuit_race
+
+- nopw make a copy called create_new_breakway_race()
+
+- do we still evolve the start order? can we just fix it here for simplicity? we no longer send instructs to the starting rider.
+
+- we can create a discreet number of distance steps by defining one and dividing the total distance by it.
+
+ "breakaway_race_number_of_race_update_distance_slots":100,
  
+ 
+ - have to mark which rider is being evolved... for now at least it can only be the one.
+             "evolve_this_rider":1,
+	  
+ - ok, so where to now? 
+ 
+ - back to create_new_breakway_race()
+ 
+ - need to control the properties that will evolve using a settings array or objects 
+      "ga_properties_to_evolve":
+          [{"name":"breakaway_sprint_eagerness",
+            "min":0,
+            "max":10,
+            "distribution":"linear",
+            "initial_value":0,
+            "mutation_range":2}],
+			
+- let's get this new GA to ga. october 14.
+
+- instruction format 
+
+
+- I guess we can re-use ga_probability_of_instruction_per_timestep_lower and ga_probability_of_instruction_per_timestep_upper here to create the updates?
+
+- what accuracy/decimal places should we use here?/ 3?
+
+- ok, it creates a new race, but the sprint only happens at the end of the race, and this will scatter instructions throughout? maybe in this case there should only be ONE? like, only have the initial one, or perhaps an individual rate of apperance for each kind of instruction?
+
+- seems like we have to include the rider number in the instructions, how else would we ever evolve them for more than 1 rider?
+
+- porting moverace into the GA, yikeses.
+
+- need to fully rework 1) how race finish is used as fitness, and 2) add rank-based selection. but first many many buggos 
+
+race_instructions_r is broken by having the rider inside. need to move things into the correct rider's in_race_updates[] array
+
+- i use a different version of switchLead(), need to include and rename it. 
+- added switchLeadBreakaway(positions_to_drop_back, rider_no, settings_r, race_r,riders_r)
+
+
+	
+
+- oooooh it now crashes at the mutate_race() point, so technically it has RUN SOME RACES! 
+
+  let number_of_update_slots = settings_r.breakaway_race_number_of_race_update_distance_slots;
+  
+    let race_distance_segment_value = race_r.distance;
+
+      let segment_distance = race_r.distance/number_of_update_slots;
+
+      while(race_distance_segment_value > 0){
+	  ...
+	    race_distance_segment_value -= segment_distance;
+      }
+	  
+- r.instructions, not the rider.in_race_updates is what I need to look through. It seems like in_race_updates ends up with duplicates :-( 
+
+instrucitons array is emptied and added to during the race, can't use it as the genotype in the way that it had been.
+
+- try adding a new array to the race and using that? 
+- rider_updates_genotype
+
+- weird, rider_updates_genotype is empty when i get to the mutate part.
+- so, the array is in the population, but these are not 'races', they are little subsets, need to assign it to the race before it is run?
+race_r.rider_updates_genotype = [...load_race_properties.rider_updates_genotype];
+
+-ok, it seems to work now, need to finish writing the mutate code, maybe first do some pseudocode/
+
+scary things aboundant. oh tis all out of date, of joint, a fit kit in night.
+
+have to add more more more props 
+  "mutation_range_for_distance_update":250,
+     "p_change_breakaway_update_value":0.008,
+     "p_change_breakaway_update_distance":0.008,
+	 
+- i have been using segments for the race distance remaining- but what happens if I let mutations apply ANY distance?
+- for now maybe allow any distance in the mutations? 
+
+   "mutation_prob_of_adding_new_update_for_rider_prop":0.001,
+   
+   
+   - need to sort by TWO props, the distance DESC then the property name ASC
+   
+   x.sort((a, b) => (((b[1]-a[1])==0)? (a[2].localeCompare(b[2])) :(b[1]-a[1])));
+   
+   - is my oriignal crossover function even working as expected???????
+   
+   random_array.slice(0,new_instruction_set_size).sort((a,b)=>a-b)
+   
+   test
+   let x = [3,1,8,9,5,7,6,0,2,4];
+   x.slice(0,4).sort((a,b)=>a-b)
+   
+   
+   - ok, so it now seems to have a mutate and crossover step? but what does the population look like at the end of the ga search?
+   
+   - created a simple new fitness funciton idea in google spreadsheet. need to code it in- return it from the race - only need it for the evolving rider(s).
+   
+   - need to use time ahead., not distance ahead, as it is too awkward to work out the distance, but we do already have the finish times. note that if a rider is CAUGHT, this can't be used as they may have finished much earlier!
+    
+	"breakaway_max_time_ahead_from_next_finisher":10,
+    "breakaway_fitness_max_average_speed":20,
+	
+	evolving_rider_fitness
+ is now being returned. e.g., value 0.6768376145657465. shoule all be 0-1.
+ 
+ - now it does run a whole ga and ends up with a population (of 10) that seeeeems ok ok.
+ 
+ - need to look at the selection process...
+
+- let's go ahead and add a brand nwe selection type: tournament_breakaway_linear_rank_selection
+
+    "linear_rank_fitness_selective_pressure":1.5,
+	
+	[[0,5000,"breakaway_sprint_eagerness=0"],[0,4850,"breakaway_sprint_eagerness=5.279"],[0,4800,"breakaway_sprint_eagerness=4.861"],[0,4700,"breakaway_sprint_eagerness=7.36"],[0,4500,"breakaway_sprint_eagerness=3.638"],[0,4450,"breakaway_sprint_eagerness=7.769"],[0,3500,"breakaway_sprint_eagerness=2.025"],[0,1750,"breakaway_sprint_eagerness=3.53"],[0,1350,"breakaway_sprint_eagerness=5.032"]]
+	
+	
+- trying to run a bigger experiment, 50 gens, pop 100, but so so slow, too many console logs?
