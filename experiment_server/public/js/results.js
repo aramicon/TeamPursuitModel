@@ -1533,50 +1533,103 @@ const  build_results_table = () =>{
 
   let ga_results = selected_ga_results;
 
-  let results_html = "<div>Start time: "+ga_results.start_time + " End Time: " + ga_results.end_time +  "</div>";
-  results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>Std. Dev.# Instructions</th><th>BEST RACE</th><th>BEST TIME</th><th>BEST START ORDER</th><th>BEST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>C.U.P %</th><th>C.U.P AVG. TIMESTEP</th><th>OVEREAGERNESS</th><th>VISUALISE</th> <th>POWER GRAPH</th><th> FINISH TIMES GRAPH </th><th>WORST RACE</th><th>WORST TIME</th><th>WORST START ORDER</th><th>WORST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>OVEREAGERNESS</th><th>VISUALISE</th><th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
-
-  console.log(ga_results);
-  console.log(ga_results.generations);
-
-  //for(g=0;g<ga_results.generations.length;g++){
-  for(g=(ga_results.generations.length-1);g>=0;g--){
-
-    results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\"><strong>" + g + "</strong></td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Standard Deviation of Number of Instructions per race')\">" + ga_results.generations[g].stats_std_dev_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Best Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations) + "</td>" +
-    "<td onmouseover=\"showColName('Best Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].best_race_performance_failures) + "</td>" +
-    "<td onmouseover=\"showColName('Best Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_choke_under_pressure) + "</td>" +
-    "<td onmouseover=\"showColName('Generation Choke Under Pressure % of Riders that Experience a choke event')\">" + JSON.stringify(ga_results.generations[g].percentage_of_riders_that_choke) + "</td>" +
-    "<td onmouseover=\"showColName('Generation average timestep of Choke Under Pressure event.')\">" + JSON.stringify(ga_results.generations[g].average_timestep_of_choke_event) + "</td>" +
-
-
-    "<td onmouseover=\"showColName('Best Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_overeagerness) + "</td>" +
-    "<td onmouseover=\"showColName('Run BEST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_instructions)) +
-     "&noise_alterations=" + encodeURI(JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations))   +
-     "&performance_failures=" +  encodeURI(JSON.stringify(ga_results.generations[g].best_race_performance_failures)) +
-     "&instruction_noise_choke_under_pressure=" +  encodeURI(JSON.stringify(ga_results.generations[g].best_race_instruction_noise_choke_under_pressure)) +
-     "&instruction_noise_overeagerness=" +  encodeURI(JSON.stringify(ga_results.generations[g].best_race_instruction_noise_overeagerness)) +
-     "'> Run </a></td>";
-
-    results_html += "<td> <button onclick = 'draw_power_graph("+g+")'>DRAW</button><button type='button' class='btn btn-info' onclick = 'show_power_data("+g+")'><i class='fas fa-info-circle'></i></button></td>";
-    results_html += "<td> <button onclick = 'draw_finish_times_graph("+g+")'>DRAW</button>" + "</td>";
-
-    results_html += "</td><td onmouseover=\"showColName('WORST Populaton index/ID')\">" + ga_results.generations[g].final_worst_race_properties_index + "/" + ga_results.generations[g].worst_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Worst Race Time')\">" + ga_results.generations[g].worst_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_worst_race_start_order + "]</td><td onmouseover=\"showColName('WORST Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_worst_race_instructions) + "</td><td onmouseover=\"showColName('WORST Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations) +
-    "</td><td onmouseover=\"showColName('Worst Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].worst_race_performance_failures)  +
-    "<td onmouseover=\"showColName('Worst Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_choke_under_pressure) + "</td>" +
-    "<td onmouseover=\"showColName('Worst Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_overeagerness) + "</td>" +
-    "</td><td onmouseover=\"showColName('Run WORST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_worst_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_worst_race_instructions)) + "&noise_alterations=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations))   + "&performance_failures=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_performance_failures)) +
-    "&instruction_noise_choke_under_pressure=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_choke_under_pressure)) +
-    "&instruction_noise_overeagerness=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_overeagerness)) +
-    "'> Run </a></td>";
-
-    //stats columns
-    pop = ga_results.generations[g].population_size;
-
-    results_html +="<td onmouseover=\"showColName('Total Number of Crossovers performed')\">" + ga_results.generations[g].number_of_crossovers_total + "/" + pop + "</td><td onmouseover=\"showColName('Average number of instructions added per race')\">" + (ga_results.generations[g].number_of_instructions_added_total/pop) + "</td><td onmouseover=\"showColName('Average number of instructions removed per race')\">" + ga_results.generations[g].number_of_instructions_removed_total/pop + "</td><td>" + ga_results.generations[g].number_of_instructions_moved_total/pop + "</td><td onmouseover=\"showColName('Average number of effort instruction values changed per race')\">" + ga_results.generations[g].number_of_effort_instructions_changed_total/pop + "</td><td onmouseover=\"showColName('Average number of drop instruction values changed per race')\">" + ga_results.generations[g].number_of_drop_instructions_changed_total/pop + "</td><td onmouseover=\"showColName('Number of start order shuffles')\">" + ga_results.generations[g].number_of_start_order_shuffles_total/pop  + "</td><td onmouseover=\"showColName('% of Drop instructions')\">" + ga_results.generations[g].number_of_drop_instructions_total + "/" + ga_results.generations[g].total_number_of_instructions + "</td><td onmouseover=\"showColName('Number of variants')\">" + ga_results.generations[g].variants_size+"</td>";
-
-    results_html += "</tr>";
-
+  let ga_type = "TEAM_PURSUIT";
+  if(typeof(selected_global_settings.race_type) != "undefined"){
+    ga_type = selected_global_settings.race_type;
   }
+  let results_html = "";
+
+  // use a different display for breakawway results
+  if(ga_type == "BREAKAWAY"){
+    results_html = "<div>||" + ga_type + "|| Start time: "+ga_results.start_time + " End Time: " + ga_results.end_time +  "</div>";
+    results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>Std. Dev.# Instructions</th><th>BEST RACE</th><th>BEST FITNESS/TIME</th><th>BEST START ORDER</th><th>BEST R. Updates</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>C.U.P %</th><th>C.U.P AVG. TIMESTEP</th><th>OVEREAGERNESS</th><th>VISUALISE</th> <th>POWER GRAPH</th><th> FINISH TIMES GRAPH </th><th>WORST RACE</th><th>WORST TIME</th><th>WORST START ORDER</th><th>WORST R. Updates</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>OVEREAGERNESS</th><th>VISUALISE</th><th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
+
+    console.log(ga_results);
+    console.log(ga_results.generations);
+
+    //for(g=0;g<ga_results.generations.length;g++){
+    for(g=(ga_results.generations.length-1);g>=0;g--){
+
+      results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\"><strong>" + g + "</strong></td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Standard Deviation of Number of Instructions per race')\">" + ga_results.generations[g].stats_std_dev_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Fitness/Ev. Rider Time')\">" + ga_results.generations[g].best_evolving_rider_fitness + "/" + ga_results.generations[g].best_race_time + " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Rider Updates Genotype')\">" + JSON.stringify(ga_results.generations[g].final_best_race_rider_updates_genotype) + "</td><td onmouseover=\"showColName('Best Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations) + "</td>" +
+      "<td onmouseover=\"showColName('Best Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].best_race_performance_failures) + "</td>" +
+      "<td onmouseover=\"showColName('Best Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_choke_under_pressure) + "</td>" +
+      "<td onmouseover=\"showColName('Generation Choke Under Pressure % of Riders that Experience a choke event')\">" + JSON.stringify(ga_results.generations[g].percentage_of_riders_that_choke) + "</td>" +
+      "<td onmouseover=\"showColName('Generation average timestep of Choke Under Pressure event.')\">" + JSON.stringify(ga_results.generations[g].average_timestep_of_choke_event) + "</td>" +
+
+
+      "<td onmouseover=\"showColName('Best Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_overeagerness) + "</td>" +
+      "<td onmouseover=\"showColName('Run BEST race in breakaway model')\"><a  target='_blank' href = 'tpgamebreakaway.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&race_choices=" + encodeURI(JSON.stringify(ga_results.generations[g].best_race_rider_race_choices)) + "&final_best_race_rider_updates_genotype=" +
+      encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_rider_updates_genotype)) +
+      "'> Run </a></td>";
+
+      results_html += "<td> <button onclick = 'draw_power_graph("+g+")'>DRAW</button><button type='button' class='btn btn-info' onclick = 'show_power_data("+g+")'><i class='fas fa-info-circle'></i></button></td>";
+      results_html += "<td> <button onclick = 'draw_finish_times_graph("+g+")'>DRAW</button>" + "</td>";
+
+      results_html += "</td><td onmouseover=\"showColName('WORST Populaton index/ID')\">" + ga_results.generations[g].final_worst_race_properties_index + "/" + ga_results.generations[g].worst_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Worst Race Time')\">" + ga_results.generations[g].worst_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_worst_race_start_order + "]</td><td onmouseover=\"showColName('WORST Race Rider Updates genotype')\">" + JSON.stringify(ga_results.generations[g].final_worst_race_rider_updates_genotype) + "</td><td onmouseover=\"showColName('WORST Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations) +
+      "</td><td onmouseover=\"showColName('Worst Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].worst_race_performance_failures)  +
+      "<td onmouseover=\"showColName('Worst Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_choke_under_pressure) + "</td>" +
+      "<td onmouseover=\"showColName('Worst Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_overeagerness) + "</td>" +
+      "</td><td onmouseover=\"showColName('Run WORST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_worst_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_worst_race_instructions)) + "&noise_alterations=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations))   + "&performance_failures=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_performance_failures)) +
+      "&instruction_noise_choke_under_pressure=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_choke_under_pressure)) +
+      "&instruction_noise_overeagerness=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_overeagerness)) +
+      "'> Run </a></td>";
+
+      //stats columns
+      pop = ga_results.generations[g].population_size;
+
+      results_html +="<td onmouseover=\"showColName('Total Number of Crossovers performed')\">" + ga_results.generations[g].number_of_crossovers_total + "/" + pop + "</td><td onmouseover=\"showColName('Average number of instructions added per race')\">" + (ga_results.generations[g].number_of_instructions_added_total/pop) + "</td><td onmouseover=\"showColName('Average number of instructions removed per race')\">" + ga_results.generations[g].number_of_instructions_removed_total/pop + "</td><td>" + ga_results.generations[g].number_of_instructions_moved_total/pop + "</td><td onmouseover=\"showColName('Average number of effort instruction values changed per race')\">" + ga_results.generations[g].number_of_effort_instructions_changed_total/pop + "</td><td onmouseover=\"showColName('Average number of drop instruction values changed per race')\">" + ga_results.generations[g].number_of_drop_instructions_changed_total/pop + "</td><td onmouseover=\"showColName('Number of start order shuffles')\">" + ga_results.generations[g].number_of_start_order_shuffles_total/pop  + "</td><td onmouseover=\"showColName('% of Drop instructions')\">" + ga_results.generations[g].number_of_drop_instructions_total + "/" + ga_results.generations[g].total_number_of_instructions + "</td><td onmouseover=\"showColName('Number of variants')\">" + ga_results.generations[g].variants_size+"</td>";
+
+      results_html += "</tr>";
+
+    }
+  }
+  else{
+    results_html = "<div>||" + ga_type + "|| Start time: "+ga_results.start_time + " End Time: " + ga_results.end_time +  "</div>";
+    results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>Std. Dev.# Instructions</th><th>BEST RACE</th><th>BEST TIME</th><th>BEST START ORDER</th><th>BEST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>C.U.P %</th><th>C.U.P AVG. TIMESTEP</th><th>OVEREAGERNESS</th><th>VISUALISE</th> <th>POWER GRAPH</th><th> FINISH TIMES GRAPH </th><th>WORST RACE</th><th>WORST TIME</th><th>WORST START ORDER</th><th>WORST INSTRUCTIONS</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>OVEREAGERNESS</th><th>VISUALISE</th><th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
+
+    console.log(ga_results);
+    console.log(ga_results.generations);
+
+    //for(g=0;g<ga_results.generations.length;g++){
+    for(g=(ga_results.generations.length-1);g>=0;g--){
+
+      results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\"><strong>" + g + "</strong></td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Standard Deviation of Number of Instructions per race')\">" + ga_results.generations[g].stats_std_dev_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Time')\">" + ga_results.generations[g].best_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_best_race_instructions) + "</td><td onmouseover=\"showColName('Best Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations) + "</td>" +
+      "<td onmouseover=\"showColName('Best Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].best_race_performance_failures) + "</td>" +
+      "<td onmouseover=\"showColName('Best Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_choke_under_pressure) + "</td>" +
+      "<td onmouseover=\"showColName('Generation Choke Under Pressure % of Riders that Experience a choke event')\">" + JSON.stringify(ga_results.generations[g].percentage_of_riders_that_choke) + "</td>" +
+      "<td onmouseover=\"showColName('Generation average timestep of Choke Under Pressure event.')\">" + JSON.stringify(ga_results.generations[g].average_timestep_of_choke_event) + "</td>" +
+
+
+      "<td onmouseover=\"showColName('Best Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_overeagerness) + "</td>" +
+      "<td onmouseover=\"showColName('Run BEST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_instructions)) +
+       "&noise_alterations=" + encodeURI(JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations))   +
+       "&performance_failures=" +  encodeURI(JSON.stringify(ga_results.generations[g].best_race_performance_failures)) +
+       "&instruction_noise_choke_under_pressure=" +  encodeURI(JSON.stringify(ga_results.generations[g].best_race_instruction_noise_choke_under_pressure)) +
+       "&instruction_noise_overeagerness=" +  encodeURI(JSON.stringify(ga_results.generations[g].best_race_instruction_noise_overeagerness)) +
+       "'> Run </a></td>";
+
+      results_html += "<td> <button onclick = 'draw_power_graph("+g+")'>DRAW</button><button type='button' class='btn btn-info' onclick = 'show_power_data("+g+")'><i class='fas fa-info-circle'></i></button></td>";
+      results_html += "<td> <button onclick = 'draw_finish_times_graph("+g+")'>DRAW</button>" + "</td>";
+
+      results_html += "</td><td onmouseover=\"showColName('WORST Populaton index/ID')\">" + ga_results.generations[g].final_worst_race_properties_index + "/" + ga_results.generations[g].worst_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Worst Race Time')\">" + ga_results.generations[g].worst_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_worst_race_start_order + "]</td><td onmouseover=\"showColName('WORST Race Instructions')\">" + JSON.stringify(ga_results.generations[g].final_worst_race_instructions) + "</td><td onmouseover=\"showColName('WORST Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations) +
+      "</td><td onmouseover=\"showColName('Worst Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].worst_race_performance_failures)  +
+      "<td onmouseover=\"showColName('Worst Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_choke_under_pressure) + "</td>" +
+      "<td onmouseover=\"showColName('Worst Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_overeagerness) + "</td>" +
+      "</td><td onmouseover=\"showColName('Run WORST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_worst_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_worst_race_instructions)) + "&noise_alterations=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations))   + "&performance_failures=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_performance_failures)) +
+      "&instruction_noise_choke_under_pressure=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_choke_under_pressure)) +
+      "&instruction_noise_overeagerness=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_overeagerness)) +
+      "'> Run </a></td>";
+
+      //stats columns
+      pop = ga_results.generations[g].population_size;
+
+      results_html +="<td onmouseover=\"showColName('Total Number of Crossovers performed')\">" + ga_results.generations[g].number_of_crossovers_total + "/" + pop + "</td><td onmouseover=\"showColName('Average number of instructions added per race')\">" + (ga_results.generations[g].number_of_instructions_added_total/pop) + "</td><td onmouseover=\"showColName('Average number of instructions removed per race')\">" + ga_results.generations[g].number_of_instructions_removed_total/pop + "</td><td>" + ga_results.generations[g].number_of_instructions_moved_total/pop + "</td><td onmouseover=\"showColName('Average number of effort instruction values changed per race')\">" + ga_results.generations[g].number_of_effort_instructions_changed_total/pop + "</td><td onmouseover=\"showColName('Average number of drop instruction values changed per race')\">" + ga_results.generations[g].number_of_drop_instructions_changed_total/pop + "</td><td onmouseover=\"showColName('Number of start order shuffles')\">" + ga_results.generations[g].number_of_start_order_shuffles_total/pop  + "</td><td onmouseover=\"showColName('% of Drop instructions')\">" + ga_results.generations[g].number_of_drop_instructions_total + "/" + ga_results.generations[g].total_number_of_instructions + "</td><td onmouseover=\"showColName('Number of variants')\">" + ga_results.generations[g].variants_size+"</td>";
+
+      results_html += "</tr>";
+
+    }
+  }
+
   results_html += "</table>";
 
   console.log(results_html);

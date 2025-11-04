@@ -2663,4 +2663,209 @@ have to add more more more props
     
 	"breakaway_max_time_ahead_from_next_finisher":10,
     "breakaway_fitness_max_average_speed":20,
-   
+	
+	evolving_rider_fitness
+ is now being returned. e.g., value 0.6768376145657465. shoule all be 0-1.
+ 
+ - now it does run a whole ga and ends up with a population (of 10) that seeeeems ok ok.
+ 
+ - need to look at the selection process...
+
+- let's go ahead and add a brand nwe selection type: tournament_breakaway_linear_rank_selection
+
+    "linear_rank_fitness_selective_pressure":1.5,
+	
+	[[0,5000,"breakaway_sprint_eagerness=0"],[0,4850,"breakaway_sprint_eagerness=5.279"],[0,4800,"breakaway_sprint_eagerness=4.861"],[0,4700,"breakaway_sprint_eagerness=7.36"],[0,4500,"breakaway_sprint_eagerness=3.638"],[0,4450,"breakaway_sprint_eagerness=7.769"],[0,3500,"breakaway_sprint_eagerness=2.025"],[0,1750,"breakaway_sprint_eagerness=3.53"],[0,1350,"breakaway_sprint_eagerness=5.032"]]
+	
+	
+- trying to run a bigger experiment, 50 gens, pop 100, but so so slow, too many console logs?
+
+getting [0,500,"undefined=NaN"] for results after 30 gens. le oops.
+
+- strat not being implemented in the game, rider NOT sprinting if updates are added. warum?
+
+it now runs the instructs, but is the same issue in the GA version of the race????
+
+- seems to run now? but I want to set the update probs to 0, maybe move them to the rider as part of ga_properties_to_evolve ?
+
+            "update_probability_value":0,
+            "update_probability_distance":0,
+			
+			
+breakaway_race_ga()
+create_new_breakway_race()			
+new_population_tournament_selection_breakaway()
+mutate_race_breakaway()
+
+- fixed a couple of things. lots of little buggos in the mutations. now it works but I need to see exactly the fitnesses and how they are applied in the selection. doesn't seem to be directing towards any particualr sprint elvel.
+
+baum1995genetic
+"GA's seem strong on certain problems, especially in the presence of noise or unknown interactions which can be modeled as noise."
+
+- add new results case, show fitness as well as time.
+
+- ok, it kinnnda works. fitness shoudl be rounded? to 4 places?
+
+
+- caught,caught_distance_covered,max_distance,finish_position,average_speed,max_average_speed,time_ahead_from_next_finisher,max_time_ahead_from_next_finisher, team_size
+
+- ran pop of 10 for 3 gens, they all get the same fitness score: 
+breakaway_fitness_score(0,5001.7776807681485,5000,1,14.249886000911992,20,0.08899999999999864,10,4);
+****0 5001.7776807681485 5000 1 14.249886000911992 20 0.08899999999999864 10 4  breakaway_fitness_score 0.6701 ****
+
+if i increase the mutaiton I get some diversity, see 
+
+ ****0 5016.905756119277 5000 3 14.285061254342658 20 0.59699999999998 10 4  breakaway_fitness_score 0.9234 ****
+race_function_no_vis.js:6252   ****0 5001.7776807681485 5000 1 14.249886000911992 20 0.08899999999999864 10 4  breakaway_fitness_score 0.6701 ****
+race_function_no_vis.js:6252   ****0 5019.202210883003 5000 3 14.290205493154993 20 0.7230000000000132 10 4  breakaway_fitness_score 0.9242 ****
+race_function_no_vis.js:6252   ****0 5001.7776807681485 5000 1 14.249886000911992 20 0.08899999999999864 10 4  breakaway_fitness_score 0.6701 ****
+race_function_no_vis.js:6252   ****0 5003.1026760738505 5000 1 14.25309505959219 20 0.09000000000003183 10 4  breakaway_fitness_score 0.6701 ****
+6race_function_no_vis.js:6252   ****0 5001.7776807681485 5000 1 14.249886000911992 20 0.08899999999999864 10 4  breakaway_fitness_score 0.6701 ****
+race_function_no_vis.js:6252   ****0 5043.3804668815255 5000 3 14.356058974690267 20 1.4019999999999868 10 4  breakaway_fitness_score 0.9286 ****
+
+- verify a few of those with the Excel sheet.
+
+finish posiiton confusion aside, they seem to agree.
+- rider only ever finishes first or last.
+
+
+- let's work on making races replayable, and having useful results that show fitness/etc. need to show different resultw if this is a breakaway race
+- want to get the best/average fitness graph to work, too.]
+
+- selected_global_settings contains the race_type
+
+- does final_best_race_instructions prop contain race.rider_updates_genotype ??
+
+- yes,   generation_results.final_best_race_instructions = final_best_race_properties.rider_updates_genotype;
+
+-ok, grand, now perhaps I should look at logging choices and race replays.
+
+- need to record the choices of every rider. add a new rider prop:
+            "race_choices":[],
+
+- make sure to reset race_rider.race_choices in load_race
+-now need to return and add this to a best prop, i.e., best_race_rider_race_choices
+- not logged to DB. warum?
+
+- fitness is positive, higher better, race finish time, lower better, need to switch < with > when finding gen best fitness
+
+- really awkward problem becuase i initialise the best/worst to p[0] but can't initialise the best/worst props to this until after it runs, and then it's possible that p[0] IS the best or worst and the < and > might not happen, so settings might not be updated at all. changed them to >= and <=, though this may also have an effect.
+
+- ok, so it does now seem to be saving something in the db, but I need to to create a new link to open up the race-viz.
+
+"determining the robust region in the high-dimensional decision space by using fewer function evaluations."
+
+- the choke under pressure does not work the way I've described it????
+- there's no actual distance factor?? and it would need to be distance remaining??
+
+-- so, to look at the choke under pressure mechanism again, and check against how it is described in the text.
+
+- how did i create that pair of graphs showing choke events?
+
+- oooooh, wait, the distance IS being used :-) look at this line 
+let end_race_better_time_factor = speed_higher_than_best*(race_rider.distance_covered/race_r.distance);
+- not sure why it is being multiplied by speed_higher_than_best here
+- doesn't really matter since it will be a 1 or a 0, and is also provided as an entry into choke_under_pressure_probability_variables.
+
+- generate a new link for the breakaway race replay 
+
+http://127.0.0.1:3003/tpgamebreakaway.html?source=results&results_id=68fa298ac23bad05f81dfb6f&startorder=0,1,2,3&race_choices=%5B%5B%5B338,%22SPRINT%22%5D%5D,%5B%5B345,%22CHASE%22%5D%5D,%5B%5D,%5B%5D%5D
+
+- ok, it's doing something, does it open the race page?
+
+- yes. it does not load the settings or do anything else.
+
+- first step is that it needs to recognise that it has been opened with info in the url?
+
+- sample results url, regular 'ol track race 
+http://127.0.0.1:3003/tpgame.html?source=results&results_id=68a93032e608023748ea2dd1&startorder=3,1,2,0&instructions=%5B%5B0,%22effort=5%22%5D,%5B1,%22effort=6.35%22%5D,%5B21,%22drop=2%22%5D,%5B23,%22effort=6.95%22%5D,%5B48,%22drop=2%22%5D,%5B51,%22effort=6.63%22%5D,%5B73,%22drop=3%22%5D,%5B101,%22drop=1%22%5D,%5B104,%22drop=1%22%5D,%5B127,%22drop=2%22%5D,%5B144,%22drop=3%22%5D,%5B150,%22drop=3%22%5D,%5B151,%22drop=3%22%5D,%5B154,%22drop=2%22%5D,%5B160,%22effort=8.83%22%5D,%5B162,%22effort=8.83%22%5D,%5B173,%22effort=5.27%22%5D,%5B174,%22effort=7.03%22%5D,%5B184,%22drop=3%22%5D,%5B190,%22drop=2%22%5D,%5B216,%22drop=2%22%5D,%5B224,%22effort=8.25%22%5D,%5B241,%22drop=3%22%5D,%5B242,%22effort=10%22%5D,%5B256,%22drop=1%22%5D%5D&noise_alterations=%7B%7D&performance_failures=%7B%7D&instruction_noise_choke_under_pressure=%7B%7D&instruction_noise_overeagerness=%7B%7D
+
+- ok, so if we load from results, then load up the race?
+
+- ok so it now loads the race_choices into the instructions textarea: 
+[[[338,"SPRINT"]],[[345,"CHASE"]],[],[]]
+
+- note that there are blanks, and no rider number.
+
+- work with no rider number, assign to the evolving rider for now. should stop two riders from having that setting set to true/1/on 
+- no, wait, it needs EVERY rider's choices. oh, oh, that's what we have, it's 4 arrays in that array, 2 riders make NO choices at all.
+- in load_race, load these into a rider property if they exist?
+
+- ok, assigning the race_choices to a rider prop via 
+load_rider.race_choices = race_choices_all_riders[race.start_order[i]];
+
+- now, need to load these, maybe have a global run_type boolean that I can check to know we are running from results? 
+  RACE_RUN_TYPE = "RESULTS";
+  
+  
+-ok, so the race runs, but there's a time discrepancy :-( leave that until tomorrows.
+
+- need to work out and display the fitness of the evolving rider, and try to get this to match the GA race.
+
+- huh, changed nothign and the finish time seems to be the same now? 
+
+- get it to display the FITNESS at the end (of each rider)
+
+- copy across the fitness function 
+breakaway_fitness_score(caught,caught_distance_covered,max_distance,finish_position,average_speed,max_average_speed,time_ahead_from_next_finisher,max_time_ahead_from_next_finisher, team_size)
+
+- ok, so seeeeem to have the same fitness
+
+- is there an issue with the distance covered in the fitness calculation, since they will keep riding past the race distance until all others have finished?? could use the race distance if they aren't caught?
+ - ooh it IS using the race distance and rider finish time, and it is not distance ahead, it is TIME ahead, so I already grappled with this problem :-) 
+ 
+ - mundee nov 3rd
+ - rider on solo that fails doesn't even try to follow the group as it passes?
+ 
+ - also, HUGE discrep in replay race, the evolved rider doesn't win, finishes 3rd. how do i debug??
+
+- it's not going into ATTACk because it is in a DROP state... but it is in a DROP state when it originally goes into attack??
+- or is it possible that it goes into a DROP state later in the timestep? or... well, I guess I need to know what aim a rider is in when they make a choice??
+
+- so there is defo isses, the original aims don't line up with the replay aims. out of sync. 
+
+- do we have thw correct rider?? add the name to the race_rider.race_choices array
+
+- only one rider seems to have race_choices, is that legit?
+
+- are there other random choices being made??
+
+comparing images, it seems that the races differ from the beginning. warum?
+
+- why does the rider begin at power of 400 - is this some kind of default? surely they should begin with their breakaway power level? 
+- is something not being reset in the GA, like the timer for breakway efforts?
+- race_rider.time_leading_group?
+
+- weirddd, that seems to be reset correctly.
+
+also, look at this set of updates,- the last one's distance is < 0:
+[[0,5000,"breakaway_sprint_eagerness=0"],[0,2600,"breakaway_cooperation_time=3.449"],[0,-142.122,"breakaway_cooperation_time=8.474"]]	
+
+- hypothesis 2: the coopertion time is being set in the GA at the beginning becasue there is a weird < 0 instruction, ala 
+[[0,4729.636,"breakaway_cooperation_time=18.254"],[0,-142.122,"breakaway_cooperation_time=8.474"]]	
+AND this is NOT happening in the replay 
+
+rider_updates_genotype is the race level construct 
+load_rider.in_race_updates_stack is what the rider sees during the race, a queue they pop things off, via updates_list via updates_list = [...race_r.rider_updates_genotype.filter(a=>a[0] == race_r.start_order[i])];
+
+- shoot, strugglign to replicate this negative value. maybe look at the mutation code?
+
+- added checks for zero distances, don't see them now, but the initial turn is still really short. warum?
+
+- wait, maybe the breakaway_cooperation_time is not being reset to its original value for when the next race begins??
+
+- ooh i think that's it - caught an example where it is 6... and it is not there in the first generation, so makes sense it gets added.
+
+- how do i make sure all the props are reset? 
+- ned to do some kind of deep copy of the riders from the original ones? 
+
+- 1: store copies of the rider objects before any races are run 
+- 2: restore from these copies before each race.
+
+- could use obj = JSON.parse(JSON.stringify(o));
+
+let riders_r_original = JSON.parse(JSON.stringify(riders_r));
+
+- the replay is not implementing the breakaway_cooperation_time value?? [[0,5000,"breakaway_cooperation_time=2.766"],[0,5000,"breakaway_sprint_eagerness=1.462"]]	
+
+- wait, why is it setting breakaway_sprint_eagerness to 0??

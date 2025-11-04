@@ -316,31 +316,42 @@ function randn_bm() {
         //check for deletion
         let deletion_choice = Math.random();
         //if deletion_choice < deletion_choice we simply ignore it and carry on to the next- we copy across the ones we do not delete
-        if(deletion_choice >= deletion_choice){
-          let selected_update = race_r.rider_updates_genotype[m];
-          //choose to change the value
-          let current_distance = race_r.rider_updates_genotype[m][1]; //distance remaining
-          let current_update_values = race_r.rider_updates_genotype[m][2].split("=");
-          let current_value = parseFloat(current_update_values[1]);
-          let property_name = current_update_values[0];
-          let rider_nombre = race_r.rider_updates_genotype[m][0];
+        //get the deletion prob value from the property object
+        let  probability_delete_instruction = 0;
+        let selected_update = race_r.rider_updates_genotype[m];
+        //choose to change the value
+        let current_distance = race_r.rider_updates_genotype[m][1]; //distance remaining
+        let current_update_values = race_r.rider_updates_genotype[m][2].split("=");
+        let current_value = parseFloat(current_update_values[1]);
+        let property_name = current_update_values[0];
+        let rider_nombre = race_r.rider_updates_genotype[m][0];
+        let mutation_range = 0;
+        let minimum_value = 0;
+        let maximum_value = 0;
+        let update_probability_value = 0;
+        let update_probability_distance = 0;
+        let add_new_probability = 0;
+
+        //find the mutation range of this property
+        for(let mi= 0;mi< settings_r.ga_properties_to_evolve.length; mi++){
+          if(settings_r.ga_properties_to_evolve[mi].name == property_name){
+            mutation_range = settings_r.ga_properties_to_evolve[mi].mutation_range;
+            minimum_value = settings_r.ga_properties_to_evolve[mi].min;
+            maximum_value = settings_r.ga_properties_to_evolve[mi].max;
+            update_probability_value = settings_r.ga_properties_to_evolve[mi].update_probability_value;
+            update_probability_distance = settings_r.ga_properties_to_evolve[mi].update_probability_distance;
+            add_new_probability = settings_r.ga_properties_to_evolve[mi].add_new_probability;
+            probability_delete_instruction = settings_r.ga_properties_to_evolve[mi].probability_delete_instruction;
+            break;
+          }
+        }
+
+        if(deletion_choice >= probability_delete_instruction){
           let update_value_change_choice = Math.random();
           let new_distance =current_distance;
           let new_value = current_value;
-
-          if(update_value_change_choice < p_change_breakaway_update_value){
+          if(update_value_change_choice < update_probability_value){
             //change the value by some amount up or down, constrained by the min and max.
-            let mutation_range = 0;
-            let minimum_value = 0;
-            let maximum_value = 0;
-            //find the mutaiton range of this property
-            for(let mi= 0;mi< settings_r.ga_properties_to_evolve; mi++){
-              if(settings_r.ga_properties_to_evolve[mi].name == property_name){
-                mutation_range = ga_properties_to_evolve[mi].mutation_range;
-                minimum_value = ga_properties_to_evolve[mi].min;
-                maximum_value = ga_properties_to_evolve[mi].max;
-              }
-            }
             if(mutation_range > 0){
               new_value = Math.floor((current_value + ((mutation_range*-1) + (Math.random()*(mutation_range*2))))*1000)/1000;
               if(new_value < minimum_value){
@@ -354,11 +365,22 @@ function randn_bm() {
 
           //choose to change the distance
           let update_distance_change_choice = Math.random();
-          if(update_distance_change_choice < p_change_breakaway_update_distance){
+          if(update_distance_change_choice < update_probability_distance){
             //change the distance by some amount
             new_distance =  Math.floor((current_distance + ((mutation_range_for_distance_update*-1) + (Math.random()*(mutation_range_for_distance_update*2))))*1000)/1000;
+            //distance canot be < 0 or > race distance
+            if(new_distance > race_r.distance){
+              new_distance = race_r.distance;
+            }
+            else if(new_distance < 0){
+              new_distance = 0;
+            }
+
           }
           //rebuild the instruction
+          if(isNaN(new_value)){
+            debugger;
+          }
           let new_instruction = [rider_nombre,new_distance,(property_name + "=" + new_value)];
           selected_update = new_instruction;
           new_race.rider_updates_genotype.push(selected_update);
@@ -372,7 +394,7 @@ function randn_bm() {
         if(typeof(riders_r[i].evolve_this_rider) != "undefined" && riders_r[i].evolve_this_rider == 1){
           for(let k = 0; k < settings_r.ga_properties_to_evolve.length;k++){
             let choice_to_add_new_instruction = Math.random();
-            if ( choice_to_add_new_instruction < settings_r.mutation_prob_of_adding_new_update_for_rider_prop){
+            if ( choice_to_add_new_instruction < settings_r.ga_properties_to_evolve[k].add_new_probability){
               //does an instruction already exist for this rider/property/distance already?
               let found = 0;
               for(let m = 0; m < race_r.rider_updates_genotype.length; m++ ){
@@ -383,7 +405,7 @@ function randn_bm() {
               }
               //if we did not find an instruciton we can add it.
               if(found==0){
-                  new_race.rider_updates_genotype.push(new_random_breakaway_instruction(i,race_distance_segment_value,settings_r.ga_properties_to_evolve[k].name,settings_r));
+                  new_race.rider_updates_genotype.push(new_random_breakaway_instruction(i,race_distance_segment_value,settings_r.ga_properties_to_evolve[k],settings_r));
                 //note, this will affect the ordering
               }
             }
@@ -615,6 +637,9 @@ function randn_bm() {
     new_instruction[1] = distance;
     //what accuracy/decimal places should we use here?/ 3?
     let rand_effort = instruct.min + (Math.round(Math.random()*(instruct.max-instruct.min)*1000)/1000);
+    if(isNaN(rand_effort)){
+      debugger;
+    }
     new_instruction[2] = instruct.name + "=" + rand_effort;
     return new_instruction;
   }
@@ -1248,10 +1273,6 @@ function randn_bm() {
 
     let number_of_update_slots = settings_r.breakaway_race_number_of_race_update_distance_slots;
 
-    const probability_of_instruction_per_timestep_lower = settings_r.ga_probability_of_instruction_per_timestep_lower;
-    const probability_of_instruction_per_timestep_upper =settings_r.ga_probability_of_instruction_per_timestep_upper;
-    let probability_of_instruction_per_timestep = probability_of_instruction_per_timestep_lower + Math.random()*(probability_of_instruction_per_timestep_upper-probability_of_instruction_per_timestep_lower);
-
     //unlike in the team pursuit, we don't randomise the starting order
     for(let i = 0;i<team_size;i++){
       start_order.push(i);
@@ -1276,6 +1297,13 @@ function randn_bm() {
 
       //get the array of properties to be evolved.
       let props_to_evolve = settings_r.ga_properties_to_evolve;
+      //assign a probability per timestep to each prop
+      for(let i = 0; i < props_to_evolve.length;i++){
+        let probability_of_instruction_per_timestep_lower = props_to_evolve[i].probability_of_instruction_per_timestep_lower;
+        let probability_of_instruction_per_timestep_upper =props_to_evolve[i].probability_of_instruction_per_timestep_upper;
+        props_to_evolve[i].probability_of_instruction_per_timestep = probability_of_instruction_per_timestep_lower + Math.random()*(probability_of_instruction_per_timestep_upper-probability_of_instruction_per_timestep_lower);
+
+      }
 
       new_race.start_order =[...start_order];
       let rider_updates_genotype = [];
@@ -1297,7 +1325,7 @@ function randn_bm() {
           //add a new instruction, maybe, for each of the properties involved
             for(let i = 0; i<props_to_evolve.length;i++){
               let rand = Math.random();
-              if(rand <= probability_of_instruction_per_timestep){
+              if(rand <=   props_to_evolve[i].probability_of_instruction_per_timestep){
                 //add an insruction, but whaich type?
                 rider_updates_genotype.push(new_random_breakaway_instruction(rider_to_evolve,race_distance_segment_value,props_to_evolve[i],settings_r));
               }
@@ -1408,6 +1436,9 @@ function randn_bm() {
 
     best_race_time_found_thus_far = -1; //-1 as a default to ignore (1st gen)
 
+    //dk25: record the original rider objects so that they can be restored with original props for each new race
+    let riders_r_original = JSON.parse(JSON.stringify(riders_r));
+
     for(let g=0;g<number_of_generations;g++){
 
       if (g==(number_of_generations-1)){
@@ -1427,12 +1458,14 @@ function randn_bm() {
       let final_best_race_properties_index = 0;
       let final_best_race_properties = population[0];
       let best_race_rider_power = [];
+      let best_race_rider_race_choices = [];
       let best_race_distance_2nd_last_timestep = 0;
       let best_race_distance_last_timestep = 0;
 
       let final_worst_race_properties_index = 0;
       let final_worst_race_properties = population[0];
       let worst_race_rider_power = [];
+      let worst_race_rider_race_choices = [];
 
       let best_race_instruction_noise_alterations = {};
       let worst_race_instruction_noise_alterations = {};
@@ -1579,6 +1612,8 @@ function randn_bm() {
             //dk22: pressure noise, send best_race_time_found_thus_far
             settings_r.best_race_time_found_thus_far = best_race_time_found_thus_far;
 
+            //reset the rider properties
+            riders_r = JSON.parse(JSON.stringify(riders_r_original));
             race_results = run_breakaway_race(settings_r,race_r,riders_r);
             //console.log("====== Race " + a_i + " " + race_results.time_taken + " ======");
             total_time_taken += race_results.time_taken;
@@ -1589,7 +1624,8 @@ function randn_bm() {
         }
         else{
           settings_r.best_race_time_found_thus_far = best_race_time_found_thus_far;
-
+          //reset the rider properties
+          riders_r = JSON.parse(JSON.stringify(riders_r_original));
           race_results = run_breakaway_race(settings_r,race_r,riders_r);
           average_time_taken = race_results.time_taken;
         }
@@ -1623,6 +1659,7 @@ function randn_bm() {
         //load_race_properties.time_taken = race_results.time_taken;
         load_race_properties.time_taken = average_time_taken;
         load_race_properties.evolving_rider_fitness = race_results.evolving_rider_fitness;
+        //RRRRRRRRRRRRRRRR
 
         stats_total_time += load_race_properties.time_taken;
         stats_total_number_of_instructions += load_race_properties.rider_updates_genotype.length;
@@ -1680,10 +1717,11 @@ function randn_bm() {
         //donalK25 print choke under pressure info
         //console.log("Race " + i + "Choke under pressure " + JSON.stringify(race_results.instruction_noise_choke_under_pressure));
 
-        if(population[i].evolving_rider_fitness < final_best_race_properties.evolving_rider_fitness){
+        if(population[i].evolving_rider_fitness >= final_best_race_properties.evolving_rider_fitness){
           final_best_race_properties_index = i;
           final_best_race_properties = population[i];
           best_race_rider_power = race_results.power_output;
+          best_race_rider_race_choices = race_results.rider_race_choices;
           //best_race_distance_2nd_last_timestep = race_results.distance_2nd_last_timestep;
           //best_race_distance_last_timestep = race_results.distance_last_timestep;
 
@@ -1705,10 +1743,11 @@ function randn_bm() {
         }
 
         //DonalK2020 june 25: also track the WORST race to see what kind of instructions it is using
-        if(population[i].evolving_rider_fitness > final_worst_race_properties.evolving_rider_fitness){
+        if(population[i].evolving_rider_fitness <= final_worst_race_properties.evolving_rider_fitness){
           final_worst_race_properties_index = i;
           final_worst_race_properties = population[i];
           worst_race_rider_power = race_results.power_output;
+          worst_race_rider_race_choices = race_results.race_rider_race_choices;
 
           // worst_race_instruction_noise_alterations = race_results.instruction_noise_alterations;
           // worst_race_performance_failures = race_results.performance_failures;
@@ -1795,14 +1834,16 @@ function randn_bm() {
       generation_results.best_race_id = best_race_id;
       generation_results.final_best_race_properties_index = final_best_race_properties_index;
       generation_results.final_best_race_start_order = final_best_race_properties.start_order;
-      generation_results.final_best_race_instructions = final_best_race_properties.rider_updates_genotype;
+      //generation_results.final_best_race_instructions = final_best_race_properties.rider_updates_genotype;
+      generation_results.final_best_race_rider_updates_genotype = final_best_race_properties.rider_updates_genotype;
       generation_results.best_race_time = final_best_race_properties.time_taken;
       generation_results.best_evolving_rider_fitness = final_best_race_properties.evolving_rider_fitness;
 
       generation_results.worst_race_id = worst_race_id;
       generation_results.final_worst_race_properties_index = final_worst_race_properties_index;
       generation_results.final_worst_race_start_order = final_worst_race_properties.start_order;
-      generation_results.final_worst_race_instructions = final_worst_race_properties.rider_updates_genotype;
+      //generation_results.final_worst_race_instructions = final_worst_race_properties.rider_updates_genotype;
+      generation_results.final_worst_race_rider_updates_genotype = final_worst_race_properties.rider_updates_genotype;
       generation_results.worst_race_time = final_worst_race_properties.time_taken;
       generation_results.worst_evolving_rider_fitness = final_worst_race_properties.evolving_rider_fitness;
 
@@ -1833,6 +1874,10 @@ function randn_bm() {
 
       //get the power data of the best race
       generation_results.best_race_rider_power = best_race_rider_power;
+
+      generation_results.best_race_rider_race_choices = best_race_rider_race_choices;
+      generation_results.worst_race_rider_race_choices = worst_race_rider_race_choices;
+
       //get distances covered for last and 2nd last timesteps
       //generation_results.best_race_distance_2nd_last_timestep = best_race_distance_2nd_last_timestep;
       //console.log(g + " generation_results.best_race_distance_2nd_last_timestep " + generation_results.best_race_distance_2nd_last_timestep)
@@ -2091,7 +2136,7 @@ function randn_bm() {
         generation_results.number_of_direct_copies = 0;
         generation_results.number_of_mutants_added_total = 0;
 
-        ga_results.generations.push(generation_results);        
+        ga_results.generations.push(generation_results);
       }
     }
 
@@ -2887,10 +2932,6 @@ function randn_bm() {
       if (typeof(settings_r.ga_selection_type) != "undefined"){
         ga_selection_type = settings_r.ga_selection_type;
       }
-
-
-
-
       //return a new population based on mini-tournaments in current population.
 
       let  count_of_random_new_races_injected = 0;
@@ -4392,7 +4433,7 @@ function randn_bm() {
     }
 
     if(count_of_group_members <= 1){
-      console.log(race_r.race_clock + "** DROP instruction for " + race_r.riders[rider_no].name + " cancelled since group " + my_group + " has only " + count_of_group_members + " member(s).");
+      //console.log(race_r.race_clock + "** DROP instruction for " + race_r.riders[rider_no].name + " cancelled since group " + my_group + " has only " + count_of_group_members + " member(s).");
     }
     else{
 
@@ -4420,7 +4461,7 @@ function randn_bm() {
         // }
         if ((positions_to_drop_back) > undropped_riders_behind_me_in_group){
           //e.g. ig group size is 3 you can at most drop back 2 (lead rider is 1)
-          console.log("**** rider trying to drop back " + positions_to_drop_back + " but undropped_riders_behind_me_in_group is " + undropped_riders_behind_me_in_group);
+          //console.log("**** rider trying to drop back " + positions_to_drop_back + " but undropped_riders_behind_me_in_group is " + undropped_riders_behind_me_in_group);
           positions_to_drop_back = undropped_riders_behind_me_in_group;
         }
       }
@@ -4655,6 +4696,11 @@ function run_breakaway_race(settings_r,race_r,riders_r){
       if (typeof(settings_r.default_starting_effort_level) != 'undefined') {
           load_rider.output_level = settings_r.default_starting_effort_level;
       }
+      //dk, set the output level to breakaway_cooperation_effort_level if the rider has that value/prop
+      if(typeof(load_rider.breakaway_cooperation_effort_level) != "undefined"){
+        load_rider.output_level=load_rider.breakaway_cooperation_effort_level;
+      }
+
 
       load_rider.recovery_mode = 0;
       //set up the aero properties so they don't have to be recalculated
@@ -4673,6 +4719,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
       load_rider.rider_to_follow = {};
       load_rider.chase_period_time_elapsed = 0;
       load_rider.number_of_turns = 0;
+      load_rider.race_choices = [];
 
       //add an array to track their status
       load_rider.current_aim_history = [];
@@ -4699,9 +4746,14 @@ function run_breakaway_race(settings_r,race_r,riders_r){
       }
       //new array to update props based on distance remaining... create a copy, ordered by distance_remaining, from which we pop entries
       //do we assume it is ordered correctly?
-      let updates_list = [...load_rider.in_race_updates];
-      updates_list.sort((a, b) => (a[0] < b[0]) ? 1 : -1); //sorted by distance descending
+      let updates_list = [...race_r.rider_updates_genotype.filter(a=>a[0] == race_r.start_order[i])];
+      updates_list.sort((a, b) => (a[1] < b[1]) ? 1 : -1); //sorted by distance descending
       load_rider.in_race_updates_stack = updates_list;
+
+      if(load_rider.breakaway_cooperation_time < 10){
+        debugger;
+      }
+
   }
 
   //having copied the instructions to the correct rider, can then remove them from the race.
@@ -4779,15 +4831,18 @@ function run_breakaway_race(settings_r,race_r,riders_r){
           }
       }
 
-      //************ update rider properties if entries exist that match their distance cocered ***************
+      //************ update rider properties if entries exist that match their distance covered ***************
       for (let i = 0; i < race_r.riders.length; i++) {
           let distance_remaining = race_r.distance - race_r.riders[i].distance_covered;
           if (race_r.riders[i].in_race_updates_stack.length > 0) {
               let next_change_element = race_r.riders[i].in_race_updates_stack[0];
-              while (next_change_element && next_change_element[0] >= distance_remaining) {
+              if(next_change_element[1] < 0){
+                debugger;
+              }
+              while (next_change_element && next_change_element[1] >= distance_remaining) {
                   //pop from array
                   let change_element = race_r.riders[i].in_race_updates_stack.shift();
-                  let rider_prop_change = change_element[1].split("=");
+                  let rider_prop_change = change_element[2].split("=");
                   //does the rider have the property?
                   if (typeof(race_r.riders[i][rider_prop_change[0]] != "undefined")) {
                       let dataType = typeof(race_r.riders[i][rider_prop_change[0]]);
@@ -4849,12 +4904,12 @@ function run_breakaway_race(settings_r,race_r,riders_r){
               if (race_rider.output_level > settings_r.maximum_effort_value) {
                   race_rider.output_level = settings_r.maximum_effort_value;
               }
-              console.log(race_rider.name + " starting ATTACK with output level " + race_rider.output_level);
+              //console.log(race_rider.name + " starting ATTACK with output level " + race_rider.output_level);
           } else if (race_rider.current_aim == "ATTACK" && race_rider.breakaway_attack_duration_elapsed >= race_rider.breakaway_attack_duration) {
               //attack finishes and the rider needs to transition to "SOLO" mode IF they 'have a gap'
               race_rider.current_aim = "SOLO";
               race_rider.output_level = race_rider.breakaway_solo_effort_level;
-              console.log(race_rider.name + " finishing ATTACK and goign SOLO with output level " + race_rider.output_level);
+              //console.log(race_rider.name + " finishing ATTACK and goign SOLO with output level " + race_rider.output_level);
           }
 
           //********************* LEAD rider. do what yer told! *********************
@@ -5511,13 +5566,16 @@ function run_breakaway_race(settings_r,race_r,riders_r){
 
           //first off, if you are cought by the bunch, update this
           //allow only one decision/positive choice/change. use a  bool to count
+          let original_current_aim = race_rider.current_aim;
           let choice_made = 0;
+          let race_choice = "";
           if (race_rider.current_aim != "CAUGHT" && race_rider.distance_covered < race_r.chasing_bunch_current_position) {
               race_rider.current_aim = "CAUGHT";
               //set the group to -1
               race_r.breakaway_riders_groups[race_r.current_order[i]] = -1;
               //debugger;
               choice_made = 1;
+              race_choice = "CAUGHT";
           }
           if (choice_made == 0 && race_rider.current_aim != "SPRINT" && race_rider.current_aim != "CAUGHT") {
               //decide if you will SPRINT
@@ -5558,6 +5616,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                   }
                   race_rider.current_aim = "SPRINT";
                   choice_made = 1;
+                  race_choice = "SPRINT";
                   // also give them their OWN LANE
                   let lowest_avilable_lane = 0;
                   while (race_r.breakaway_riders_groups.includes(lowest_avilable_lane)) {
@@ -5680,9 +5739,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                   } else {
                       attack_expectation_of_getting_caught_value = (1 - (distance_reached / distance_remaining)); //distance when you are caught should be a fraction of the distance remaining
                   }
-
               }
-
               let attack_expectation_of_getting_caught_weight = settings_r.attack_expectation_of_getting_caught_weight;
               //let attack_expectation_of_getting_caught_value = XXXXXX;
               let attack_expectation_of_getting_caught_exponent = settings_r.attack_expectation_of_getting_caught_exponent;
@@ -5704,6 +5761,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
 
                   race_r.breakaway_riders_groups[race_r.current_order[i]] = new_group;
                   choice_made = 1;
+                  race_choice = "ATTACK";
               }
           }
           if (choice_made == 0 && race_rider.current_aim != "CAUGHT" && race_rider.current_aim != "SPRINT" && race_rider.current_aim != "CHASE" && race_rider.current_aim != "ATTACK") {
@@ -5788,6 +5846,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                       race_rider.current_aim = "CHASE";
                       race_rider.chase_period_time_elapsed = 0;
                       choice_made = 1;
+                      race_choice = "CHASE";
                       //put this rider in the same group as the target.
                       let my_group = race_r.breakaway_riders_groups[race_r.current_order[i]];
                       let chase_target_rider_group = race_r.breakaway_riders_groups[closest_rider_ahead];
@@ -5851,6 +5910,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                   race_rider.current_aim = "FOLLOW";
                   race_r.breakaway_riders_groups[race_r.current_order[i]] = closest_ahead_rider_group;
                   choice_made = 1;
+                  race_choice = "SOLO_TO_FOLLOW";
               } else if (closest_rider_behind >= 0 && gap_to_rider_behind < BREAKAWAY_SWITCH_TO_LEAD_GAP_SIZE && race_r.riders[closest_rider_behind].velocity > race_rider.velocity) {
                   //join this group but DROP back - only if going SLOWER than it.
                   //race_rider.current_aim = "DROP"; //try to lead a group rather than going solo
@@ -5863,7 +5923,9 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                       }
                   }
                   switchLeadBreakaway(group_count - 1, race_r.current_order[i], settings_r, race_r, riders_r);
+                  // in that function the current_aim gets set to DROP
                   choice_made = 1;
+                  race_choice = "SOLO_TO_DROP";
                   //console.log(race_r.race_clock + ", " + race_rider.name + " changing to group " + closest_behind_rider_group + " and DROP role.");
 
               }
@@ -5902,6 +5964,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                   race_rider.current_aim = "FOLLOW";
                   race_r.breakaway_riders_groups[race_r.current_order[i]] = closest_ahead_rider_group;
                   choice_made = 1;
+                  race_choice = "CHASE_TO_FOLLOW";
               }
           }
           if (choice_made == 0 && (race_rider.current_aim == "DROP")) {
@@ -5917,13 +5980,19 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                   //change to SOLO
                   race_rider.current_aim = "SOLO";
                   choice_made = 1;
+                  race_choice = "CHASE_TO_SOLO";
               }
+          }
+          if(race_choice.length > 0){
+            race_rider.race_choices.push([race_r.race_clock,race_choice, original_current_aim,race_rider.name]);
           }
           // RIDER DECISION-MAKING: CHOOSE YOUR ADVENTURE ---- END -- **************
           //**************************************************************************
           //**************************************************************************
           //**************************************************************************
       }
+
+
 
       // After all riders have moved
       // Update each rider's distance value for the rider in front of them (lead is zero)
@@ -6200,12 +6269,18 @@ function run_breakaway_race(settings_r,race_r,riders_r){
     let max_distance = race_r.distance;
     let max_time_ahead_from_next_finisher = settings_r.breakaway_max_time_ahead_from_next_finisher;
     let max_average_speed = settings_r.breakaway_fitness_max_average_speed;
-    //need to flip the finish posiiton
-    finish_position = (race_r.riders.length - finish_position);
 
     evolving_rider_fitness = breakaway_fitness_score(caught,caught_distance_covered,max_distance,finish_position,average_speed,max_average_speed,time_ahead_from_next_finisher,max_time_ahead_from_next_finisher, race_r.riders.length); //winner is e.g., 3 for winner in race of 4. 0 is last.
   }
-    return {time_taken: finish_time, power_output:rider_power_data,evolving_rider_fitness:evolving_rider_fitness };
+  //need to return the rider choices, too.
+  let rider_race_choices = [];
+  for(let i = 0; i < race_r.riders.length; i++){
+    if(race_r.riders[i].race_choices.length > 0){
+    }
+    rider_race_choices.push(race_r.riders[i].race_choices);
+  }
+
+    return {time_taken: finish_time, power_output:rider_power_data,evolving_rider_fitness:evolving_rider_fitness,rider_race_choices:rider_race_choices };
 }
 //****************************** end of run_breakaway_race() *********************
 function breakaway_fitness_score(caught,caught_distance_covered,max_distance,finish_position,average_speed,max_average_speed,time_ahead_from_next_finisher,max_time_ahead_from_next_finisher, team_size){
@@ -6215,15 +6290,20 @@ function breakaway_fitness_score(caught,caught_distance_covered,max_distance,fin
   let factor_steps = 2;
   let factor_step_size = 1;
   let max_value = (team_size*factor_step_size*factor_steps);
+  let adjusted_finish_position = (team_size - finish_position);
 
   if(caught==1){
     fitness_score = (((0-min_fitness) + (min_fitness*((max_distance-caught_distance_covered)/max_distance)))/(max_fitness - min_fitness));
   }
   else{
-    let finish_fitness_score_unnormalised = (((finish_position*factor_steps*factor_step_size) + (factor_step_size*(Math.min(average_speed/max_average_speed,1))) + (factor_step_size*(Math.min(time_ahead_from_next_finisher/max_time_ahead_from_next_finisher,1))))/max_value);
+    let finish_fitness_score_unnormalised = (((adjusted_finish_position*factor_steps*factor_step_size) + (factor_step_size*(Math.min(average_speed/max_average_speed,1))) + (factor_step_size*(Math.min(time_ahead_from_next_finisher/max_time_ahead_from_next_finisher,1))))/max_value);
     fitness_score = (((0-min_fitness) + finish_fitness_score_unnormalised )/(max_fitness - min_fitness));
   }
-  return fitness_score;
+
+  let f_score = DecimalPrecision.round(fitness_score,4);
+  //console.log("  ****" + caught + " " + caught_distance_covered + " " + max_distance + " " + finish_position,average_speed + " " + max_average_speed + " " + time_ahead_from_next_finisher + " " + max_time_ahead_from_next_finisher + " " + team_size + "  breakaway_fitness_score " + f_score + " ****");
+
+  return f_score;
 }
 
   function run_race(settings_r,race_r,riders_r){
