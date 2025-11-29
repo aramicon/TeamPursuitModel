@@ -2900,3 +2900,167 @@ http://127.0.0.1:3003/tpgamebreakaway.html?source=results&results_id=690a753755b
 - getting maybe closer to 'real' results.
 
 - get the race to begin with the coop level
+
+- add the ability to run repeats of the best-in-gen races, to record a best_in_gen_win_ratio value. 
+
+-     "best_in_gen_win_ratio_test_quantity": 50,
+
+- could put this where the robustness tests went?
+
+
+
+- try a really dumb scenario where the rider always wins 
+
+- try a secnario where they can't really win 
+
+- try a scenario where the bunch catches them 
+
+- try a scenario where the evolving rider has no sprint but can attack.
+
+- could also record the average fitness of the win ratio testing.
+
+- try one where opponents chase?
+
+- work on witing up a description of the race state transition mechanisms, maybe a flowchart?
+
+- chase distance factor seems wrong, shouldn't i be subtracint it from the max distance, i.e. distance_max-distance instead of just distance?
+
+- group cohesion, could extend this to also be high if the rider is doing longer turns than the others? like, they might be all going slower but by the same amount? or will this already be captured? it's just a bit diluted- if one is going slower it'll be more obvious... if all 3 are going slower? maybe i could compare the rider's own turns with others, not the average with others??
+
+- retest basic sprinter GA, and work on creating a new diagram: best fitness, average fitness, and win ratio.
+
+- am i recording the average fitness of each generation??
+
+- old graph uses stats_average_time, need to re-use or add something new here.
+
+- stats_total_fitness, based on stats_total_time
+- ok, so create a new graph, a copy of the fitness graph.
+
+- what is the best race fitness called? best_evolving_rider_fitness
+- also need the win ratio: best_in_gen_win_ratio_test_result
+
+- new results save but the graph doens't show up. warum??
+
+- why doesn't the average fitness converge to 1- in  both tests it goes to .95 and stays there
+
+- ga_percentage_of_random_new_strategies_to_inject_each_gen is 0 
+
+- i can't run the worst-in-gen race, didn't update the code... why would a seemingly constant % of races have a lower fitness, why is the average so consistent?
+
+- oh wait, i'm confused, the average does change. the BEST is static. the average increases. The BEST maxes at < 1. why is it so static?
+
+- look at the actual choices made for the best-in-gen races, and the fitness values 
+25 [[[320,"SPRINT","LEAD","EVOLVE 1"]],[],[],[]] fitness 0.9372/346.32
+20 [[[316,"SPRINT","LEAD","EVOLVE 1"]],[],[],[]] fitness: 0.9377/346.231
+15 [[[320,"SPRINT","LEAD","EVOLVE 1"]],[],[],[]] fitness: 0.9372/346.32
+10 [[[316,"SPRINT","LEAD","EVOLVE 1"]],[],[],[]] fitness: 0.9377/346.231
+5 [[[320,"SPRINT","LEAD","EVOLVE 1"]],[],[],[]] fitness: 0.9372/346.32
+0 [[],[],[],[]] fitness: 0.67/349.184
+
+- ok, so the two fastest moments to sprint at are 316 and 320. both can occur for various sprint abilities in a big population. what if i have a tiny population, would there not be more variance?
+
+- could also record the average fitness in the win ratio tests, and include these in the graph?
+
+- useful reference about drafting savings here: https://en.wikipedia.org/wiki/Peloton
+
+- back to the breakaway work... add the average fitness to the win ratio testing? 
+
+- add this best_in_gen_win_ratio_test_average_fitness_result to best_in_gen_win_ratio_test_result
+
+- isssues with the graph, 4th label not showing, gaps too big? and the lines under the legends are not working
+
+- is this line a problem: let legend_line_segment_y = -32;
+
+- graph looks better - replace the current one with this one, abd write a bit more about it...
+
+- month on file image  names is zero-based.
+
+- maybe create a win-ratio test that can be run from the GA screen manually? could then check the ratios for a bunch of values of sprint eagerness, and create a graph?
+
+- do i also need a way to visualise the genotype convergence? like the bubble scatter plots? but that plot can only have 1 y range to be readable? would need a new plot for every gene type?
+
+- added a new button with button_run_win_ratio_test name, based on button_play_race
+
+run_win_ratio_test, LIKE run_single_race or maybe more like run_robustness_check?
+
+- need to set race_r.rider_updates_genotype
+
+in the worker I can't call run_single_race, I need to create something new here. Better to make ONE call for all runs rather than one each?
+
+- created a new function and messageType run_breakaway_win_ratio_test
+
+hitting a bug- it will not run if the textareas are left blank, maybe because of the start order? If this is blank it shoul dnot be set??
+
+- return and display win_ratio and average_fitness
+
+- edited code in the wrong function :-( fix!
+
+- kinnnnda workign but getting undefined for both results
+
+- ok, seeems to wurk. test for a 'real' example.
+[0,1,2,3]
+[[0,5000,"breakaway_sprint_eagerness=6.941"]]	
+
+- need to ad the WORST race playability to see what's happening there... is it that the sprint never happens, or they go too early??
+
+are the losses due to a sprint NEVER happening??
+
+- bug- had an incorrect variable name, the correct one is rider_race_choices, for the worst race... updated this, will need to run a new experiment to test?
+
+- ok, progress, can now see the worst race choices. it is never empty, but contains 4 empty arrays.
+- run a win ratio test for the worst strategy?
+-create a worst_in_gen_win_ratio_test_quantity variable, same as best_in_gen_win_ratio_test_quantity
+
+- rename best_in_gen_win_ratio_test_quantity to breakaway_strategy_win_ratio_test_quantity
+
+- ok, so it now seems to work, I can see thw worst race, the rider sprints but too late.
+
+- now, also need to save some generattion genotypes, so that we can look at the convergence.
+- had used log_generation_instructions_info for this. can reuse. 
+
+- shoudl be stored in generation_instructions_info
+
+- it's wonky, has mostly nulls, two empty {} objectsd for effoprt and drop, and some zeros (they are correct?
+
+Huh, it stores 0 but then they become null? warum??
+
+- wrong data format, [] instead of {}. fixed, saves now.
+
+- create new 'graph' to get out the data. does it not already exist?
+
+- ok, so here's the format we get:
+{"0":{"breakaway_sprint_eagerness":{"5000":[0,0,0,0,0,0,0,0,0,0]}},"9":{"breakaway_sprint_eagerness":{"5000":[0,1.901,0,0,0,0,0,0,0,0]}}}
+
+- weird, why so many 0s??
+
+- crap, can't save results, too big... pop 1000, gens 50, bit saving info for 5 gens. this could get tricky.
+
+- there is huge convergence to very specfic values... i feel like this is a bug tbh, it's like a bunch of entries are being duplicated, or all point to the same value. need to debug, very big deal!
+
+- weird, after 100 g ens we have all 0s. warum???
+
+- look at this, bottom fitness rank for the ONLY non-zero sprint race in a group:
+  >> race 3, genotype [[0,5000,"breakaway_sprint_eagerness=0"]] fitness 0.67, fitness rank 4, prop. fitness 0.15000000000000002
+  >> race 4, genotype [[0,5000,"breakaway_sprint_eagerness=0.565"]] fitness 0.67, fitness rank 5, prop. fitness 0.1
+  - why do they both have identical fitness??
+  - maybe it's just random- it may have not sprinted 
+  here's 2 that are TOp of the rankings 
+     >> race 0, genotype [[0,5000,"breakaway_sprint_eagerness=0.565"]] fitness 0.9237, fitness rank 1, prop. fitness 0.30000000000000004
+race_function_no_vis.js:3179    >> race 1, genotype [[0,5000,"breakaway_sprint_eagerness=0.565"]] fitness 0.7954, fitness rank 2, prop. fitness 0.25
+
+- now look at this: is somethign being set to 0??? 
+    >> mutate parent 1: genotype [[0,5000,"breakaway_sprint_eagerness=0.565"]], prop fitness 0.30000000000000004, rank 1
+	*** old_genotype	[[0,5000,"breakaway_sprint_eagerness=0"]]
+	*** new_genotype	[[0,5000,"breakaway_sprint_eagerness=0"]]
+    >> new race: genotype [[0,5000,"breakaway_sprint_eagerness=0"]]
+
+- huh, looks like I was referring to race object in mutate() instead of the passed in parent object: they will both have a rider_updates_genotype array
+
+- now, is elitism working??
+- oooh it looks like NOPE, that I had a < instead of a >. geeeeeeez. Run again.
+
+- ok, finally, much improved, it ends up with almsot all 10s in the population.
+
+- comment out the console logs and run again. need to re-run all tests :-( I guess it was still convergign before despite the "anti-elitism"
+
+- now run it for a bigger test, see can it save?

@@ -2022,7 +2022,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
        let sum_of_average_turn_length = 0;
        let count_of_non_zero_riders = 0;
        for(let ix=0;ix<race.riders.length;ix++){
-         if(ix !== race.current_order[i] && race.riders[ix].number_of_turns > 0){
+         if(race.riders[ix].number_of_turns > 0){
            let num_turns = race.riders[ix].number_of_turns;
            if(race.riders[ix].current_aim == "LEAD"){
              num_turns+=0.5; //so, if the rider is currently leading, it will on average be halfway through a new turn.
@@ -2046,6 +2046,11 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
        }
        else{
          worst_rider_compared_to_average = (((average_turn_length_all_riders - least_cooperative_rider_average_turn_length)/average_turn_length_all_riders));
+       }
+
+       //dk25Nov change, if the rider IS the least cooperative, this factor value goes to 0, i.e. they do not punish others
+       if(least_cooperative_rider == race.current_order[i]){
+         worst_rider_compared_to_average = 0;
        }
 
        let attack_lack_of_cohesion_weight = settings.attack_lack_of_cohesion_weight;
@@ -2099,7 +2104,6 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
          else{
            attack_expectation_of_getting_caught_value = (1-(distance_reached/distance_remaining)); //distance when you are caught should be a fraction of the distance remaining
          }
-
        }
 
        let attack_expectation_of_getting_caught_weight = settings.attack_expectation_of_getting_caught_weight;
@@ -2159,9 +2163,18 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         //need quartet of values for remainign distance factor
         //[weight multiplier, value, exponent, max value]
         let chase_distance_amount = closest_rider_distance;
+
+
         if(chase_distance_amount > CHASE_RESPONSE_MAX_DISTANCE){
           chase_distance_amount = CHASE_RESPONSE_MAX_DISTANCE;
         }
+        //**** dk25: change to flip the value and check for < 0 START
+        if(chase_distance_amount < 0){
+          chase_distance_amount = 0;
+        }
+        chase_distance_amount = CHASE_RESPONSE_MAX_DISTANCE - chase_distance_amount;
+        //**** dk25: change END
+
         let inverse_chase_distance_weight = settings.breakaway_chase_inverse_distance_weight;
         let inverse_chase_distance_value = chase_distance_amount;
         let inverse_chase_distance_exponent = settings.breakaway_chase_inverse_distance_exponent;

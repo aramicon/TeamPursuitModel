@@ -93,6 +93,94 @@ function run_single_race(){
   }
 }
 
+function run_win_ratio_test(){
+  console.log("Run win ratio tests for a BREAKAWAY scenario");
+
+  //update settings
+  let current_settings_global = JSON.parse($("#global_settings").val());
+  let current_settings_race = JSON.parse($("#race_settings").val());
+  let current_settings_rider = JSON.parse($("#rider_settings").val());
+  let current_settings_option = $("#experiment_names").val();
+
+  $("#single_race_result").html("running win ratio test, breakaway_strategy_win_ratio_test_quantity: " + current_settings_global.breakaway_strategy_win_ratio_test_quantity);
+
+
+  if (current_settings_option != 0){
+    //we are loading settings
+    if (current_settings_global.length == 0 || current_settings_race.length == 0 || current_settings_rider == 0){
+      alert("Settings have not been loaded correctly.");
+    }
+    else if(typeof(current_settings_global.race_type) == "undefined" || current_settings_global.race_type != "BREAKAWAY"){
+         alert("This test is only for BREAKAWAY type experiments.");
+    }
+    else{
+      console.log("loading settings from experiment")
+      chosen_global_settings = current_settings_global;
+      chosen_race_settings = current_settings_race;
+      chosen_rider_settings = current_settings_rider;
+    }
+  }
+
+  let team_order_input = $('#starting_order').val();
+  if(team_order_input > 0){
+    let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
+    if(input_teamOrder.length > 0){
+      chosen_race_settings.start_order = input_teamOrder;
+      //console.log("updated race.start_order " + race.start_order )
+    }
+  }
+  chosen_race_settings.drop_instruction = 0;
+  chosen_race_settings.live_instructions = [];
+  chosen_race_settings.race_instructions = [];
+  chosen_race_settings.race_instructions_r = [];
+
+  // get the race genotype rider_updates_genotype
+
+  let rider_updates_genotype = [];
+  let new_rider_updates_genotype = $('#instructions').val();
+  if(new_rider_updates_genotype.length > 5){
+    //instructions_t = new_instructions.split(",").map(a=>a.replace(/\"/g,"").split(":"));
+    rider_updates_genotype = JSON.parse(new_rider_updates_genotype);
+  }
+  if (rider_updates_genotype.length > 0){
+    chosen_race_settings.rider_updates_genotype = rider_updates_genotype;
+  }
+  //create a web worker and send it the details for the race
+  let breakaway_strategy_win_ratio_test_quantity = chosen_global_settings.breakaway_strategy_win_ratio_test_quantity;
+  let sum_fitness_all_runs = 0;
+  let win_ratio = 0;
+  let average_fitness = 0;
+  let start_time = 0;
+
+  if(breakaway_strategy_win_ratio_test_quantity > 0){
+
+    if (window.Worker){
+      let winratiotestWorker = new Worker("js/race_function_no_vis.js");
+
+      winratiotestWorker.onmessage = function(e) {
+        let end_time = new Date().getTime();
+        let result = e.data;
+
+        console.log("Breakaway Win Ratio Test Duration " + (end_time - start_time)/1000 + " seconds.");
+        let message_text = result.message;
+        message_text += "\n\nwin_ratio\taverage_fitness\n\n" + result.win_ratio + "\t" + result.average_fitness;
+        $("#robustness_check_result").html(message_text);
+        $("#data_display").val(result.win_ratio + "\t" + result.average_fitness);
+
+        winratiotestWorker.terminate();
+      }
+      start_time =  new Date().getTime();
+      winratiotestWorker.postMessage(["run_breakaway_win_ratio_test",chosen_global_settings,chosen_race_settings,chosen_rider_settings]);
+
+      console.log('Single race message posted to worker at ' + start_time);
+    }
+    else{
+      console.log("Worker cannot be created, maybe not supported by this browser?");
+    }
+  }
+}
+
+
 function run_ga(callback_func){
   let start_time = 0;
 
@@ -341,7 +429,8 @@ function run_robustness_check(){
         let end_time = new Date().getTime();
         let result_data = e.data;
         console.log("Robustness Test Duration " + (end_time - start_time)/1000 + " seconds.");
-        $("#robustness_check_result").html(result_data.message);
+        let message_text = result_data.message;
+        $("#robustness_check_result").html(message_text);
         $("#data_display").val(JSON.stringify(result_data.raw_data));
         //get rid of the thread
         gaWorker.terminate();
@@ -926,7 +1015,7 @@ const getBrowserType = () => {
     result = "Blink";
   }
 
-  return result
+  return result;
 
 }
 
@@ -1346,6 +1435,7 @@ $(document).ready(function() {
 
   //attach events
   $("#button_play_race").on("click", run_single_race);
+  $("#button_run_win_ratio_test").on("click", run_win_ratio_test);
   $("#button_evolve_instructions").on("click", run_ga);
   $("#button_check_race_robustness").on("click", run_robustness_check);
   $("#button_check_race_consistency").on("click", run_consistency_check);

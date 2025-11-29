@@ -82,6 +82,9 @@ onmessage = function(e) {
     result.message = robustnessresult.message;
     result.raw_data = robustnessresult.raw_data;
   }
+  else if(messageType == "run_breakaway_win_ratio_test"){
+    result = run_breakaway_win_ratio_test(e.data[1], e.data[2], e.data[3]);
+  }
   else if(messageType == "run_consistency_check"){
     consistencyresult = run_consistency_check(e.data[1], e.data[2], e.data[3]);
     result = consistencyresult.message;
@@ -240,7 +243,7 @@ function randn_bm() {
   //   console.log("mapPowerToEffort(6," + powerFromEffort + ",400,1000) = " + effortFromPower);
   // }
 
-  function mutate_race_breakaway(r, settings_r,gen,race_r, riders_r){
+  function mutate_race_breakaway(race_to_mutate, settings_r,gen,race_r, riders_r){
     let new_race = {};
 
     const p_shuffle_start = settings_r.ga_p_shuffle_start;
@@ -259,7 +262,7 @@ function randn_bm() {
     let race_distance_segment_value = race_r.distance;
     let segment_distance = race_r.distance/number_of_update_slots;
 
-    let time_taken_old = r.time_taken;
+    let time_taken_old = race_to_mutate.time_taken;
 
     //DonalK25: if the global ga_mutation_switch is set to anything other than 1, quit.
     // this is a new setting so set the default to 1 if the setting is not found
@@ -284,8 +287,10 @@ function randn_bm() {
       return r_clone;
     }
 
-    new_race.start_order = [...r.start_order];
-    new_race.variant_id = r.variant_id;
+    //otherwise, we mutate
+
+    new_race.start_order = [...race_to_mutate.start_order];
+    new_race.variant_id = race_to_mutate.variant_id;
     //also set a geenration, type, and counter
     new_race.id_generation = gen;
     new_race.id_type = 1;
@@ -304,6 +309,7 @@ function randn_bm() {
     new_race.stats.number_of_drop_instructions = 0;
 
     new_race.rider_updates_genotype = [];
+    let original_genotype = JSON.stringify(race_to_mutate.rider_updates_genotype);
 
     //************ new mutation form S^ART **********************
 
@@ -312,19 +318,19 @@ function randn_bm() {
 
 
     //1: go through existing instructions and decide on deletions and changes to them
-      for(let m = 0; m < race_r.rider_updates_genotype.length; m++ ){
+      for(let m = 0; m < race_to_mutate.rider_updates_genotype.length; m++ ){
         //check for deletion
         let deletion_choice = Math.random();
         //if deletion_choice < deletion_choice we simply ignore it and carry on to the next- we copy across the ones we do not delete
         //get the deletion prob value from the property object
         let  probability_delete_instruction = 0;
-        let selected_update = race_r.rider_updates_genotype[m];
+        let selected_update = race_to_mutate.rider_updates_genotype[m];
         //choose to change the value
-        let current_distance = race_r.rider_updates_genotype[m][1]; //distance remaining
-        let current_update_values = race_r.rider_updates_genotype[m][2].split("=");
+        let current_distance = race_to_mutate.rider_updates_genotype[m][1]; //distance remaining
+        let current_update_values = race_to_mutate.rider_updates_genotype[m][2].split("=");
         let current_value = parseFloat(current_update_values[1]);
         let property_name = current_update_values[0];
-        let rider_nombre = race_r.rider_updates_genotype[m][0];
+        let rider_nombre = race_to_mutate.rider_updates_genotype[m][0];
         let mutation_range = 0;
         let minimum_value = 0;
         let maximum_value = 0;
@@ -352,6 +358,7 @@ function randn_bm() {
           let new_value = current_value;
           if(update_value_change_choice < update_probability_value){
             //change the value by some amount up or down, constrained by the min and max.
+
             if(mutation_range > 0){
               new_value = Math.floor((current_value + ((mutation_range*-1) + (Math.random()*(mutation_range*2))))*1000)/1000;
               if(new_value < minimum_value){
@@ -415,10 +422,13 @@ function randn_bm() {
       race_distance_segment_value -= segment_distance;
     }
 
-    //resort the array. shoudl we make this more sophisticated given that multiple riders can have entries at the one timestep??
+    //resort the array. should we make this more sophisticated given that multiple riders can have entries at the one timestep??
     new_race.rider_updates_genotype.sort((a,b)=>b[1]-a[1]);
 
     //************ new mutation form END **********************
+    let new_genotype = JSON.stringify(new_race.rider_updates_genotype);
+
+    //console.log("*** old_genotype\t" + original_genotype + "\n*** new_genotype\t" + new_genotype);
 
     return new_race;
   }
@@ -667,6 +677,60 @@ function randn_bm() {
     return race_results;
 
     //$("#race_result").text('Finish Time = ' + time_taken);
+  }
+
+  function run_breakaway_win_ratio_test(settings_r, race_r, riders_r){
+
+    //********* win ratio tests START ****************************
+    console.log("run_breakaway_win_ratio_test, Evolving rider_updates_genotype " + race_r.rider_updates_genotype);
+
+    let winratiotest_results = {};
+
+    if(race_r.rider_updates_genotype.length == 0){
+      console.log("run_breakaway_win_ratio_test test fail, rider_updates_genotype is empty!");
+      winratiotest_results.message = "run_breakaway_win_ratio_test test fail, rider_updates_genotype is empty!";
+    }
+    else{
+      winratiotest_results.message = "Running Win Ratio test."
+      winratiotest_results.message = "\nEvolving rider_updates_genotype " + race_r.rider_updates_genotype + "\n";
+
+      let best_in_gen_win_ratio_test_result = 0;
+      let best_in_gen_win_ratio_test_average_fitness_result = 0;
+      let breakaway_strategy_win_ratio_test_quantity = settings_r.breakaway_strategy_win_ratio_test_quantity;
+      if(breakaway_strategy_win_ratio_test_quantity > 0){
+        let win_count = 0;
+        let load_race_properties_t = {};
+        let total_fitness = 0;
+
+        for(let a_i = 0; a_i < breakaway_strategy_win_ratio_test_quantity; a_i++){
+          race_r.drop_instruction = 0;
+          race_r.live_instructions = [];
+          race_r.race_instructions = [];
+          race_r.race_instructions_r = [];
+
+          //run the race
+
+          race_results = run_breakaway_race(settings_r,race_r,riders_r);
+
+          total_fitness += race_results.evolving_rider_fitness;
+
+          //need to find the evolvign rider finish position...
+          if(race_results.evolving_rider_finish_position && race_results.evolving_rider_finish_position == 1){
+            win_count += 1;
+          }
+            //console.log("** running win ratio test " + (a_i+1) + " position " + race_results.evolving_rider_finish_position + " fitness " + race_results.evolving_rider_fitness + " updated win count " + win_count + " **");
+        }
+        winratiotest_results.win_ratio = DecimalPrecision.round(win_count/breakaway_strategy_win_ratio_test_quantity,4);
+        winratiotest_results.average_fitness = DecimalPrecision.round(total_fitness/breakaway_strategy_win_ratio_test_quantity,4);
+        console.log("win ratio test complete, ran " + breakaway_strategy_win_ratio_test_quantity + " tests.\n win_ratio " + winratiotest_results.win_ratio + "\naverage_fitness " + winratiotest_results.average_fitness );
+
+        //console.log(" ----------- win ratio test gen " + g + " best race fitness " + JSON.stringify(load_race_properties_t.evolving_rider_fitness) + " genotype " + load_race_properties_t.rider_updates_genotype + " win ratio " + best_in_gen_win_ratio_test_result  + " ----------- ");
+      }
+    }
+
+    return winratiotest_results;
+      //********* win ratio tests END ****************************
+
   }
 
   function run_robustness_check(settings_r, race_r, riders_r){
@@ -1425,6 +1489,9 @@ function randn_bm() {
     }
 
     let segment_size = 12; //just to log % of gens done
+    if(segment_size > number_of_generations){
+      segment_size = number_of_generations;
+    }
     let one_segment = Math.floor(number_of_generations/segment_size);
     let one_segment_count = 0;
 
@@ -1449,7 +1516,9 @@ function randn_bm() {
       //console.log(population);
 
       let stats_total_time = 0;
+      let stats_total_fitness = 0;
       let stats_average_time = 0;
+      let stats_average_fitness = 0;
       let stats_total_number_of_instructions = 0;
       let race_fitness_all = [];
       let stats_average_number_of_instructions = 0;
@@ -1490,7 +1559,7 @@ function randn_bm() {
       let generation_list_of_NON_overeagerness_affected_effort_timesteps = [];
 
       //new structs to store generation instructions info, if asked for
-      let generation_instructions_info = {effort:{},drop:{}};
+      let generation_instructions_info = {};
 
       //dk23 reset the generation_best_time
       generation_best_time = Infinity;
@@ -1514,8 +1583,8 @@ function randn_bm() {
       }
 
       //print % progress every segment
-      if (g % one_segment == 0){
 
+      if (g % one_segment == 0){
         console.log(Math.floor((g/number_of_generations)*100) + "% done, max_performance_failure_percentage found " + max_performance_failure_percentage);
         one_segment_count++;
       }
@@ -1541,39 +1610,24 @@ function randn_bm() {
         if(log_generation_instructions_info){
           //add data to the structure for saving instruction info
           //will need to go through each instruction for each citizen
-          for (let ii = 0; ii < race_r.race_instructions_r.length; ii++){
-            let timestep_ii =  parseInt(race_r.race_instructions_r[ii][0]);
-            //split the actual instruction
-            let inst = race_r.race_instructions_r[ii][1].split("=");
-            if (inst.length=2){
-              if(inst[0]=="effort"){
-                let effort_value = parseFloat(inst[1]);
-                //add to dict
-                //create the object if it does not exist (sparser dict)
-                if(!generation_instructions_info.effort[timestep_ii]){
-                  generation_instructions_info.effort[timestep_ii] = [];
-                }
-                generation_instructions_info.effort[timestep_ii].push(effort_value);
 
+          for (let ii = 0; ii < race_r.rider_updates_genotype.length; ii++){
+            let race_distance =  parseInt(race_r.rider_updates_genotype[ii][1]);
+            //split the actual instruction
+            let inst = race_r.rider_updates_genotype[ii][2].split("=");
+            if (inst.length=2){
+              //get the property names
+              let prop_name = inst[0];
+              if(typeof(generation_instructions_info[prop_name]) == "undefined"){
+                generation_instructions_info[prop_name] = {};
               }
-              else if(inst[0]=="drop"){
-                let drop_value  = parseInt(inst[1]);
-                //seems that the drop value can be bigger than the team size, shite :-( )
-                if (drop_value > (settings_r.ga_team_size-1)){
-                  drop_value = settings_r.ga_team_size-1;
-                }
-                // ah wait, we have to  map drop 1 to array element 0 and so on, so subtract 1
-                drop_value--;
-                if(!generation_instructions_info.drop[timestep_ii]){
-                  //need ar array of team_size-1 for each generation, all set to 0
-                  let team_size_array = [];
-                  for (let ts = 0; ts< settings_r.ga_team_size - 1; ts++){
-                    team_size_array.push(0);
-                  }
-                  generation_instructions_info.drop[timestep_ii] = team_size_array; //may have a shallow/deep copy issue?
-                }
-                generation_instructions_info.drop[timestep_ii][drop_value]++;
+              let prop_value = parseFloat(inst[1]);
+              //add to dict
+              //create the object if it does not exist (sparser dict)
+              if(!generation_instructions_info[prop_name][race_distance]){
+                generation_instructions_info[prop_name][race_distance] = [];
               }
+              generation_instructions_info[prop_name][race_distance].push(prop_value);
             }
           }
         }
@@ -1659,9 +1713,10 @@ function randn_bm() {
         //load_race_properties.time_taken = race_results.time_taken;
         load_race_properties.time_taken = average_time_taken;
         load_race_properties.evolving_rider_fitness = race_results.evolving_rider_fitness;
-        //RRRRRRRRRRRRRRRR
 
         stats_total_time += load_race_properties.time_taken;
+        stats_total_fitness += race_results.evolving_rider_fitness;
+
         stats_total_number_of_instructions += load_race_properties.rider_updates_genotype.length;
         race_fitness_all.push(average_time_taken); //add all times to an array to be able to analyse laterz
 
@@ -1743,11 +1798,17 @@ function randn_bm() {
         }
 
         //DonalK2020 june 25: also track the WORST race to see what kind of instructions it is using
+        //RRRRRRRR
         if(population[i].evolving_rider_fitness <= final_worst_race_properties.evolving_rider_fitness){
           final_worst_race_properties_index = i;
           final_worst_race_properties = population[i];
           worst_race_rider_power = race_results.power_output;
-          worst_race_rider_race_choices = race_results.race_rider_race_choices;
+          worst_race_rider_race_choices = race_results.rider_race_choices;
+          //were any choices made?
+
+          if(typeof(race_results.rider_race_choices) == "undefined" || race_results.rider_race_choices.length==0){
+            debugger;
+          }
 
           // worst_race_instruction_noise_alterations = race_results.instruction_noise_alterations;
           // worst_race_performance_failures = race_results.performance_failures;
@@ -1793,14 +1854,15 @@ function randn_bm() {
         average_timestep_of_choke_event = DecimalPrecision.round((sum_of_choke_events_timestep_in_generation/choke_event_timestep_pairs.length),4);
       }
       if(log_generation_instructions_info){
-        //console.log("[[[[[[[[ Log log_generation_instructions_info after updates ]]]]]]]]");
-        //console.log(JSON.stringify(generation_instructions_info));
+        console.log("[[[[[[[[ Log log_generation_instructions_info after updates ]]]]]]]]");
+        console.log(JSON.stringify(generation_instructions_info));
       }
       if (global_log_message && g == (number_of_generations-1) ){
         console.log("***BEST RACE GENERATION " + g + " LOG START***");
         //console.log(global_log_message_final);
       }
       stats_average_time = stats_total_time/population.length;
+      stats_average_fitness = stats_total_fitness/population.length;
       stats_average_number_of_instructions = stats_total_number_of_instructions/population.length;
       //donalK25: work out the standard deviation for the  number of instructions
       let variance_total = 0;
@@ -1854,6 +1916,7 @@ function randn_bm() {
       generation_results.worst_race_instruction_noise_alterations = worst_race_instruction_noise_alterations;
 
       generation_results.stats_average_time = stats_average_time;
+      generation_results.stats_average_fitness = stats_average_fitness;
       generation_results.stats_average_number_of_instructions = stats_average_number_of_instructions;
       generation_results.stats_std_dev_number_of_instructions = stats_std_dev_number_of_instructions;
 
@@ -1877,6 +1940,87 @@ function randn_bm() {
 
       generation_results.best_race_rider_race_choices = best_race_rider_race_choices;
       generation_results.worst_race_rider_race_choices = worst_race_rider_race_choices;
+
+      //run win ratio tests for the best in gen
+      let breakaway_strategy_win_ratio_test_quantity = 0;
+      let worst_in_gen_win_ratio_test_quantity = 0;
+      if(typeof(settings_r.breakaway_strategy_win_ratio_test_quantity) != "undefined"){
+        breakaway_strategy_win_ratio_test_quantity = settings_r.breakaway_strategy_win_ratio_test_quantity;
+      }
+
+      //********* win ratio tests START ****************************
+      let best_in_gen_win_ratio_test_result = 0;
+      let worst_in_gen_win_ratio_test_result = 0;
+      let best_in_gen_win_ratio_test_average_fitness_result = 0;
+      let worst_in_gen_win_ratio_test_average_fitness_result = 0;
+      if(breakaway_strategy_win_ratio_test_quantity > 0){ //same var is used for WORST tests
+        let win_count = 0;
+        let load_race_properties_t = {};
+        let total_fitness = 0;
+
+        for(let a_i = 0; a_i < breakaway_strategy_win_ratio_test_quantity; a_i++){
+
+          race_r.drop_instruction = 0;
+          race_r.live_instructions = [];
+          race_r.race_instructions = [];
+          load_race_properties_t = population[final_best_race_properties_index];
+  		    race_r.race_instructions_r = [];
+          race_r.rider_updates_genotype = [...load_race_properties_t.rider_updates_genotype];
+          race_r.start_order = [...load_race_properties_t.start_order];
+
+          //reset the rider properties
+          riders_r = JSON.parse(JSON.stringify(riders_r_original));
+          //run the race
+          race_results = run_breakaway_race(settings_r,race_r,riders_r);
+
+          total_fitness += race_results.evolving_rider_fitness;
+          //need to find the evolvign rider finish position...
+          if(race_results.evolving_rider_finish_position && race_results.evolving_rider_finish_position == 1){
+            win_count += 1;
+          }
+        }
+        best_in_gen_win_ratio_test_result = DecimalPrecision.round(win_count/breakaway_strategy_win_ratio_test_quantity,4);
+        best_in_gen_win_ratio_test_average_fitness_result = DecimalPrecision.round(total_fitness/breakaway_strategy_win_ratio_test_quantity,4);
+
+        //console.log(" ----------- win ratio test gen " + g + " best race fitness " + JSON.stringify(load_race_properties_t.evolving_rider_fitness) + " genotype " + load_race_properties_t.rider_updates_genotype + " win ratio " + best_in_gen_win_ratio_test_result  + " ----------- ");
+
+        //also run tests for the WORST race in the generation
+        win_count = 0;
+        load_race_properties_t = {};
+        total_fitness = 0;
+
+        for(let a_i = 0; a_i < breakaway_strategy_win_ratio_test_quantity; a_i++){
+
+          race_r.drop_instruction = 0;
+          race_r.live_instructions = [];
+          race_r.race_instructions = [];
+          load_race_properties_t = population[final_worst_race_properties_index];
+  		    race_r.race_instructions_r = [];
+          race_r.rider_updates_genotype = [...load_race_properties_t.rider_updates_genotype];
+          race_r.start_order = [...load_race_properties_t.start_order];
+
+          //reset the rider properties
+          riders_r = JSON.parse(JSON.stringify(riders_r_original));
+          //run the race
+          race_results = run_breakaway_race(settings_r,race_r,riders_r);
+
+          total_fitness += race_results.evolving_rider_fitness;
+          //need to find the evolvign rider finish position...
+          if(race_results.evolving_rider_finish_position && race_results.evolving_rider_finish_position == 1){
+            win_count += 1;
+          }
+        }
+        worst_in_gen_win_ratio_test_result = DecimalPrecision.round(win_count/breakaway_strategy_win_ratio_test_quantity,4);
+        worst_in_gen_win_ratio_test_average_fitness_result = DecimalPrecision.round(total_fitness/breakaway_strategy_win_ratio_test_quantity,4);
+      }
+
+
+      generation_results.best_in_gen_win_ratio_test_result = best_in_gen_win_ratio_test_result;
+      generation_results.best_in_gen_win_ratio_test_average_fitness_result = best_in_gen_win_ratio_test_average_fitness_result;
+      generation_results.worst_in_gen_win_ratio_test_result = worst_in_gen_win_ratio_test_result;
+      generation_results.worst_in_gen_win_ratio_test_average_fitness_result = worst_in_gen_win_ratio_test_average_fitness_result;
+
+        //********* win ratio tests END ****************************
 
       //get distances covered for last and 2nd last timesteps
       //generation_results.best_race_distance_2nd_last_timestep = best_race_distance_2nd_last_timestep;
@@ -2201,7 +2345,12 @@ function randn_bm() {
     }
 
     let segment_size = 12; //just to log % of gens done
+
+    if(segment_size > number_of_generations){
+      segment_size = number_of_generations;
+    }
     let one_segment = Math.floor(number_of_generations/segment_size);
+
     let one_segment_count = 0;
 
     let race_tracker = {}; //store ids of every race run to try find cases where the times differ
@@ -2949,7 +3098,7 @@ function randn_bm() {
         let best_evolving_rider_fitness_player=current_population[i];
 
         for(let k = 1;k<group_size;k++){
-          if (current_population[(i+k)].evolving_rider_fitness < best_evolving_rider_fitness){
+          if (current_population[(i+k)].evolving_rider_fitness > best_evolving_rider_fitness){
             best_evolving_rider_fitness = current_population[(i+k)].evolving_rider_fitness;
             best_evolving_rider_fitness_index = (i+k);
             best_evolving_rider_fitness_player=current_population[i+k];
@@ -3014,6 +3163,11 @@ function randn_bm() {
             //sort based on fitness
             group_array_to_sort.sort((a, b) => (b.evolving_rider_fitness - a.evolving_rider_fitness));
             //add a rank
+            let num_groups = ((current_population.length-remainder)/group_size);
+            if (remainder > 0){
+              num_groups++;
+            }
+            //console.log(" >> SELECTION >> group " + ((i+1)/group_size + 1) + " of " + num_groups + ", group size " + group_size + ", sorted by fitness << <<");
 
             for(let k2 = 0;k2<group_size;k2++){
                 group_array_to_sort[k2].fitness_rank = k2 + 1;
@@ -3022,6 +3176,7 @@ function randn_bm() {
                 //some info on this Baker-based approach here: https://en.wikipedia.org/wiki/Selection_(evolutionary_algorithm)
                 //(1/n * (sp-((2*sp - 2)*((rank-1)/(n-1)))))
                 group_array_to_sort[k2].tournament_proportional_fitness = (1/group_size * (selective_pressure-((2*selective_pressure - 2)*(((k2 + 1)-1)/(group_size-1)))));
+                //console.log("   >> race " + k2 + ", genotype " + JSON.stringify(group_array_to_sort[k2].rider_updates_genotype) + " fitness " + group_array_to_sort[k2].evolving_rider_fitness + ", fitness rank " + group_array_to_sort[k2].fitness_rank + ", prop. fitness " + group_array_to_sort[k2].tournament_proportional_fitness);
             }
         }
         else{
@@ -3101,6 +3256,8 @@ function randn_bm() {
               parent1.stats.number_of_start_order_shuffles = 0;
               parent1.stats.number_of_drop_instructions = 0;
 
+              parent1.rider_updates_genotype = [];
+
               let parent2 = {};
               parent2.instructions = [];
               parent2.stats = {};
@@ -3111,6 +3268,8 @@ function randn_bm() {
               parent2.stats.number_of_drop_instructions_changed = 0;
               parent2.stats.number_of_start_order_shuffles = 0;
               parent2.stats.number_of_drop_instructions = 0;
+
+              parent2.rider_updates_genotype = [];
 
               let parent1_id = -1;
               let parent2_id = -1;
@@ -3142,6 +3301,7 @@ function randn_bm() {
 
                   if (parent1_id < 0 && p_roulette1 <  sum_fitness){
                     parent1_id = i+k2;
+
                     parent1 = current_population[(i+k2)];
                     parent_1_assigned = 1;
                   }
@@ -3158,6 +3318,8 @@ function randn_bm() {
                   debugger;
                 }
               }
+
+              //console.log("      >> parent selection: parent 1, genotype " + JSON.stringify(parent1.rider_updates_genotype) + ", prop fitness " + parent1.tournament_proportional_fitness + ", rank " + parent1.fitness_rank + " --- parent 2, genotype " + JSON.stringify(parent2.rider_updates_genotype) + ", prop fitness " + parent2.tournament_proportional_fitness + ", rank " + parent2.fitness_rank);
               //dk2020: add crossover effect
               if (Math.random() < settings_r.ga_p_crossover){
                 //select two parents based on proportional fitnesses
@@ -3194,7 +3356,11 @@ function randn_bm() {
                 if(parent1.start_order == undefined ){
                   debugger;
                 }
+                //console.log("      >> mutate parent 1: genotype " + JSON.stringify(parent1.rider_updates_genotype) + ", prop fitness " + parent1.tournament_proportional_fitness + ", rank " + parent1.fitness_rank);
+
                 new_race = mutate_race_breakaway(parent1,settings_r,generation,race_r,riders_r);
+
+                //console.log("      >> new race: genotype " + JSON.stringify(new_race.rider_updates_genotype));
                 stats.number_of_mutants_added_total++;
                 settings_r.mutant_counter++; //dk2020 this may be doing something just like the line above :-(
                 }
@@ -4750,9 +4916,9 @@ function run_breakaway_race(settings_r,race_r,riders_r){
       updates_list.sort((a, b) => (a[1] < b[1]) ? 1 : -1); //sorted by distance descending
       load_rider.in_race_updates_stack = updates_list;
 
-      if(load_rider.breakaway_cooperation_time < 10){
-        debugger;
-      }
+      // if(load_rider.breakaway_cooperation_time < 10){
+      //   debugger;
+      // }
 
   }
 
@@ -5543,19 +5709,15 @@ function run_breakaway_race(settings_r,race_r,riders_r){
           } else {
               console.log("############# Problemo: rider aim '" + race_rider.current_aim + "' not accounted for. #############");
           }
-
           race_rider.distance_this_step = race_rider.velocity; //asssumes we are travelling for 1 second: this is the total distance to be travelled on the track
           //console.log(race_rider.name + " " + race_rider.current_aim + " at " + race_r.race_clock  +  " new velocity " + race_rider.velocity);
 
           //if on a straight just keep going in that direction
           //may need to break a distance covered down into parts (e.g. going from bend to straight)
           race_rider.distance_this_step_remaining = race_rider.distance_this_step;
-
           race_rider.distance_covered += race_rider.velocity;
 
       } // main rider loop
-
-
       for (let i = 0; i < race_r.current_order.length; i++) {
           let race_rider = race_r.riders[race_r.current_order[i]];
 
@@ -5639,13 +5801,11 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                       if (farthest_follower >= 0) {
                           race_r.riders[farthest_follower].current_aim = "LEAD";
                       }
-
                       //update number of turns
                       race_rider.number_of_turns++;
                   }
 
                   //console.log(race_rider.name + " changing to SPRINT, lane " + lowest_avilable_lane + " sprint_probability " + sprint_probability);
-
               }
           } //end of else for sprint
           if (choice_made == 0 && race_rider.current_aim == "FOLLOW" && race_r.race_clock >= settings_r.breakaway_timestep_to_enable_attacks && race_rider.breakaway_attacking_probability > 0) {
@@ -5664,7 +5824,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
               let sum_of_average_turn_length = 0;
               let count_of_non_zero_riders = 0;
               for (let ix = 0; ix < race_r.riders.length; ix++) {
-                  if (ix !== race_r.current_order[i] && race_r.riders[ix].number_of_turns > 0) {
+                  if (race_r.riders[ix].number_of_turns > 0) {
                       let num_turns = race_r.riders[ix].number_of_turns;
                       if (race_r.riders[ix].current_aim == "LEAD") {
                           num_turns += 0.5; //so, if the rider is currently leading, it will on average be halfway through a new turn.
@@ -5672,6 +5832,8 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                       let average_turn_length = (race_r.riders[ix].time_on_front_of_group / num_turns);
                       sum_of_average_turn_length += average_turn_length;
                       count_of_non_zero_riders++;
+
+
                       if (average_turn_length < least_cooperative_rider_average_turn_length) {
                           least_cooperative_rider_average_turn_length = average_turn_length;
                           least_cooperative_rider = ix;
@@ -5687,6 +5849,11 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                   worst_rider_compared_to_average = 0;
               } else {
                   worst_rider_compared_to_average = (((average_turn_length_all_riders - least_cooperative_rider_average_turn_length) / average_turn_length_all_riders));
+              }
+
+              //dk25Nov change, if the rider IS the least cooperative, this factor value goes to 0, i.e. they do not punish others
+              if(least_cooperative_rider == race_r.current_order[i]){
+                worst_rider_compared_to_average = 0;
               }
 
               let attack_lack_of_cohesion_weight = settings_r.attack_lack_of_cohesion_weight;
@@ -5801,6 +5968,13 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                   if (chase_distance_amount > CHASE_RESPONSE_MAX_DISTANCE) {
                       chase_distance_amount = CHASE_RESPONSE_MAX_DISTANCE;
                   }
+                  //**** dk25: change to flip the value and check for < 0 START
+                  if(chase_distance_amount < 0){
+                    chase_distance_amount = 0;
+                  }
+                  chase_distance_amount = CHASE_RESPONSE_MAX_DISTANCE - chase_distance_amount;
+                  //**** dk25: change END
+
                   let inverse_chase_distance_weight = settings_r.breakaway_chase_inverse_distance_weight;
                   let inverse_chase_distance_value = chase_distance_amount;
                   let inverse_chase_distance_exponent = settings_r.breakaway_chase_inverse_distance_exponent;
@@ -6246,6 +6420,9 @@ function run_breakaway_race(settings_r,race_r,riders_r){
       break;
     }
   }
+
+  let evolving_rider_finish_position = 0;
+
   if(evolving_rider >= 0){
     let finish_position = race_r.riders[evolving_rider].finish_position;
     let average_speed = (race_r.distance/race_r.riders[evolving_rider].finish_time);
@@ -6269,6 +6446,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
     let max_distance = race_r.distance;
     let max_time_ahead_from_next_finisher = settings_r.breakaway_max_time_ahead_from_next_finisher;
     let max_average_speed = settings_r.breakaway_fitness_max_average_speed;
+    evolving_rider_finish_position = race_r.riders[evolving_rider].finish_position
 
     evolving_rider_fitness = breakaway_fitness_score(caught,caught_distance_covered,max_distance,finish_position,average_speed,max_average_speed,time_ahead_from_next_finisher,max_time_ahead_from_next_finisher, race_r.riders.length); //winner is e.g., 3 for winner in race of 4. 0 is last.
   }
@@ -6280,7 +6458,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
     rider_race_choices.push(race_r.riders[i].race_choices);
   }
 
-    return {time_taken: finish_time, power_output:rider_power_data,evolving_rider_fitness:evolving_rider_fitness,rider_race_choices:rider_race_choices };
+    return {time_taken: finish_time, power_output:rider_power_data,evolving_rider_fitness:evolving_rider_fitness,rider_race_choices:rider_race_choices,evolving_rider_finish_position:evolving_rider_finish_position };
 }
 //****************************** end of run_breakaway_race() *********************
 function breakaway_fitness_score(caught,caught_distance_covered,max_distance,finish_position,average_speed,max_average_speed,time_ahead_from_next_finisher,max_time_ahead_from_next_finisher, team_size){

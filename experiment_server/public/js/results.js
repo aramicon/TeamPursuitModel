@@ -84,8 +84,8 @@ const saveGraphAsPng = () => {
 
   //generate a useful name
   let d = new Date();
-
-  let image_filename =  $("#select_graph").val() + "_" +  selected_id + "_" + d.getFullYear() + "-" + d.getMonth() + "-" + d.getDate() + "_" + d.getHours() + "-" + d.getMinutes();
+  //dk25: month is zero based, add 1
+  let image_filename =  $("#select_graph").val() + "_" +  selected_id + "_" + d.getFullYear() + "-" + (d.getMonth()+1) + "-" + d.getDate() + "_" + d.getHours() + "-" + d.getMinutes();
 
   // Get the d3js SVG element and save using saveSvgAsPng.js
   saveSvgAsPng(document.getElementsByTagName("svg")[0], image_filename, {scale: 2, backgroundColor: "#FFFFFF"});
@@ -158,6 +158,7 @@ const draw_line_graph = (graph_name_opt) =>{
       case "generation_evolution_breakdown":
       case "best_fitness_robustness_check":
       case "best_fitness_per_generation":
+      case "best_fitness_per_generation_breakaway":
       case "power_graph":
       case "finish_times_graph":
       case "robustness_instruction_variation_times":
@@ -172,7 +173,46 @@ const draw_line_graph = (graph_name_opt) =>{
       let graphYScaleMaxBuffer = 10;
 
       //set the data based on the selection
-      if (graph_name=="best_fitness_per_generation"){
+
+      if (graph_name=="best_fitness_per_generation_breakaway"){
+
+        graph_title = "Avg. and best fitness, and best race win ratio, per generation.";
+        graph_data_1 = {};
+        graph_data_1.title = "Best Fitness";
+        graph_data_1.x_label = "GA Generation";
+        graph_data_1.y_label = "Value";
+
+        graph_data_1.x_scale_from = 0;
+        graph_data_1.x_scale_to = selected_ga_results.generations.length-1;
+        graph_data_1.y_scale_from = 0;
+        graph_data_1.y_scale_to = 1; //this graph has 0 - 1 values.
+        graph_data_1.data = [];
+        for (i=0;i<selected_ga_results.generations.length;i++){
+          graph_data_1.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].best_evolving_rider_fitness});
+        }
+
+        graph_data_2 = {};
+        graph_data_2.title = "Average Race Fitness";
+        graph_data_2.data = [];
+        for (i=0;i<selected_ga_results.generations.length;i++){
+          graph_data_2.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].stats_average_fitness});
+        }
+
+        graph_data_3 = {};
+        graph_data_3.title = "Fittest Race Win Ratio";
+        graph_data_3.data = [];
+        for (i=0;i<selected_ga_results.generations.length;i++){
+          graph_data_3.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].best_in_gen_win_ratio_test_result});
+        }
+
+        graph_data_4 = {};
+        graph_data_4.title = "Win Ratio tests Avg. Fitness";
+        graph_data_4.data = [];
+        for (i=0;i<selected_ga_results.generations.length;i++){
+          graph_data_4.data.push({x:selected_ga_results.generations[i].generation_id, y:selected_ga_results.generations[i].best_in_gen_win_ratio_test_average_fitness_result});
+        }
+      }
+      else if (graph_name=="best_fitness_per_generation"){
 
         graph_title = "Fitness per Generation";
         graph_data_1 = {};
@@ -506,7 +546,6 @@ const draw_line_graph = (graph_name_opt) =>{
           graph_data_4.data.push({x:i, y:selected_ga_results.generations[specified_generation].best_race_rider_power[3][i]});
         }
       }
-      //yyyyyy
         else if (graph_name=="robustness_instruction_variation_times"){
 
           graph_title = "Mutant Vs Instruction-variance Robustness per Generation";
@@ -560,7 +599,6 @@ const draw_line_graph = (graph_name_opt) =>{
             }
           }
 
-
            graph_data_4 = {};
            graph_data_4.title = "Best R.M.";
            graph_data_4.data = [];
@@ -604,13 +642,6 @@ const draw_line_graph = (graph_name_opt) =>{
         // }
         // $("#data_display").val(JSON.stringify(raw_data));
 
-
-
-
-
-
-
-      //yyyyyyyyyy
     }
       else if (graph_name=="finish_times_graph"){
 
@@ -650,11 +681,11 @@ const draw_line_graph = (graph_name_opt) =>{
       // ************** D3 BEGIN **************
       // set the dimensions and margins of the graph
       let totalWidth = `1000`;
-      let totalHeight = 450;
+      let totalHeight = 470;
       let legendLeftIndent = 20;
       let bulletIndent = 20;
 
-      var margin = {top: 30, right: legendLeftIndent, bottom: 40, left: 60},
+      var margin = {top: 42, right: legendLeftIndent, bottom: 40, left: 60},
       width = totalWidth - margin.left - margin.right,
       height = totalHeight - margin.top - margin.bottom;
       const INNER_WIDTH  = totalWidth - margin.left - margin.right;
@@ -812,12 +843,13 @@ svg.append("text")
 //try to dynamically space out the legend labels using their widths
 let legend_label_offset = 100;
 let legend_icon_gap = 12;
-let legend_line_length = 60;
-let legend_average_char_width = 14;
+let legend_line_length = 80;
+let legend_average_char_width = 10;
 let legend_gap_length = 10;
-let legend_line_segment_y = -22;
+let legend_line_segment_y = -20;
+let legend_y_offset = -30;
 
-svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[0]);
+svg.append("circle").attr("cx",legend_label_offset).attr("cy",legend_y_offset).attr("r", 6).style("fill", rider_colours[0]);
 svg.append("line")//making a line for legend
       .attr("x1", legend_label_offset)
       .attr("x2", legend_label_offset+legend_line_length)
@@ -826,14 +858,12 @@ svg.append("line")//making a line for legend
       .attr("stroke-width", rider_line_stroke_width[0])
       .style("stroke-dasharray",rider_line_styles[0])//dashed array for line
       .style("stroke", rider_colours[0]);
-
-
-svg.append("text").attr("x", legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
+svg.append("text").attr("x", legend_label_offset+legend_icon_gap).attr("y", legend_y_offset).text(graph_data_1.title).style("font-size", "15px").attr("alignment-baseline","middle");
 
 if (!jQuery.isEmptyObject(graph_data_2)){
   legend_label_offset += (graph_data_1.title.length * legend_average_char_width) + legend_gap_length;
 
-  svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[1]);
+  svg.append("circle").attr("cx",legend_label_offset).attr("cy",legend_y_offset).attr("r", 6).style("fill", rider_colours[1]);
 
   svg.append("line")//making a line for legend
         .attr("x1", legend_label_offset)
@@ -844,12 +874,12 @@ if (!jQuery.isEmptyObject(graph_data_2)){
         .style("stroke-dasharray",rider_line_styles[1])
         .style("stroke", rider_colours[1]);
 
-  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", legend_y_offset).text(graph_data_2.title).style("font-size", "15px").attr("alignment-baseline","middle");
 }
 if (!jQuery.isEmptyObject(graph_data_3)){
   legend_label_offset += (graph_data_2.title.length * legend_average_char_width) + legend_gap_length;
 
-  svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[2]);
+  svg.append("circle").attr("cx",legend_label_offset).attr("cy",legend_y_offset).attr("r", 6).style("fill", rider_colours[2]);
 
   svg.append("line")//making a line for legend
         .attr("x1", legend_label_offset)
@@ -860,12 +890,12 @@ if (!jQuery.isEmptyObject(graph_data_3)){
         .style("stroke-dasharray",rider_line_styles[2])
         .style("stroke", rider_colours[2]);
 
-  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", legend_y_offset).text(graph_data_3.title).style("font-size", "15px").attr("alignment-baseline","middle");
 }
 if (!jQuery.isEmptyObject(graph_data_4)){
   legend_label_offset += (graph_data_3.title.length * legend_average_char_width) + legend_gap_length;
 
-  svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[3]);
+  svg.append("circle").attr("cx",legend_label_offset).attr("cy",legend_y_offset).attr("r", 6).style("fill", rider_colours[3]);
 
   svg.append("line")//making a line for legend
         .attr("x1", legend_label_offset)
@@ -876,12 +906,12 @@ if (!jQuery.isEmptyObject(graph_data_4)){
         .style("stroke-dasharray",rider_line_styles[3])
         .style("stroke", rider_colours[3]);
 
-  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", legend_y_offset).text(graph_data_4.title).style("font-size", "15px").attr("alignment-baseline","middle");
 }
 if (!jQuery.isEmptyObject(graph_data_5)){
   legend_label_offset += (graph_data_4.title.length * legend_average_char_width) + legend_gap_length;
 
-  svg.append("circle").attr("cx",legend_label_offset).attr("cy",-10).attr("r", 6).style("fill", rider_colours[4]);
+  svg.append("circle").attr("cx",legend_label_offset).attr("cy",legend_y_offset).attr("r", 6).style("fill", rider_colours[4]);
 
   svg.append("line")//making a line for legend
         .attr("x1", legend_label_offset)
@@ -892,7 +922,7 @@ if (!jQuery.isEmptyObject(graph_data_5)){
         .style("stroke-dasharray",rider_line_styles[4])
         .style("stroke", rider_colours[4]);
 
-  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", -10).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
+  svg.append("text").attr("x",legend_label_offset+legend_icon_gap).attr("y", legend_y_offset).text(graph_data_5.title).style("font-size", "15px").attr("alignment-baseline","middle");
 }
 //add a title
 // svg.append("text")
@@ -910,25 +940,43 @@ break;
 case "generation_instructions_info":
   console.log("[][][][] generation_instructions_info [][][][]");
   //need to loop through the generations and if we find entries with generation_instructions_info, we stuff that into the raw database
+
+  //this might be track or breakaway format... need to output slightly differently?
+
   let raw_data_string = "";
+  let ga_type = "TEAM_PURSUIT";
+  let results_object = {};
+  if(typeof(selected_global_settings.race_type) != "undefined"){
+    ga_type = selected_global_settings.race_type;
+  }
 
   for (i=0;i<selected_ga_results.generations.length;i++){
-
-    if (selected_ga_results.generations[i].generation_instructions_info){
-      if (selected_ga_results.generations[i].generation_instructions_info.effort){
-        raw_data_string += "# Generation " + i + " EFFORT\n";
-        raw_data_string += JSON.stringify(selected_ga_results.generations[i].generation_instructions_info.effort);
-        raw_data_string += "\n";
-      }
-      if (selected_ga_results.generations[i].generation_instructions_info.drop){
-        raw_data_string += "# Generation " + i + " DROP\n";
-        raw_data_string += JSON.stringify(selected_ga_results.generations[i].generation_instructions_info.drop);
-        raw_data_string += "\n"
+    if(ga_type == "TEAM_PURSUIT"){
+      if (selected_ga_results.generations[i].generation_instructions_info){
+        if (selected_ga_results.generations[i].generation_instructions_info.effort){
+          raw_data_string += "# Generation " + i + " EFFORT\n";
+          raw_data_string += JSON.stringify(selected_ga_results.generations[i].generation_instructions_info.effort);
+          raw_data_string += "\n";
         }
-    }
-    if(raw_data_string){
-     $("#data_display").val(raw_data_string);
- }
+        if (selected_ga_results.generations[i].generation_instructions_info.drop){
+          raw_data_string += "# Generation " + i + " DROP\n";
+          raw_data_string += JSON.stringify(selected_ga_results.generations[i].generation_instructions_info.drop);
+          raw_data_string += "\n"
+          }
+      }
+
+  }
+  else if(ga_type == "BREAKAWAY"){
+    results_object[i] = selected_ga_results.generations[i].generation_instructions_info;
+  }
+}
+if(ga_type == "TEAM_PURSUIT"){
+if(raw_data_string){
+ $("#data_display").val(raw_data_string);
+}
+}
+else if(ga_type == "BREAKAWAY"){
+  $("#data_display").val(JSON.stringify(results_object));
 }
   break;
 
@@ -1086,7 +1134,6 @@ const draw_multi_line_graph = (graph_name_opt) =>{
             });
             // y axis scale from min of data
             graph_data_1.y_scale_from = min_all_data-5;
-
 
             if(data[0]){
               graph_data_1.title = short_titles[0];
@@ -1542,7 +1589,7 @@ const  build_results_table = () =>{
   // use a different display for breakawway results
   if(ga_type == "BREAKAWAY"){
     results_html = "<div>||" + ga_type + "|| Start time: "+ga_results.start_time + " End Time: " + ga_results.end_time +  "</div>";
-    results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>Std. Dev.# Instructions</th><th>BEST RACE</th><th>BEST FITNESS/TIME</th><th>BEST START ORDER</th><th>BEST R. Updates</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>C.U.P %</th><th>C.U.P AVG. TIMESTEP</th><th>OVEREAGERNESS</th><th>VISUALISE</th> <th>POWER GRAPH</th><th> FINISH TIMES GRAPH </th><th>WORST RACE</th><th>WORST TIME</th><th>WORST START ORDER</th><th>WORST R. Updates</th><th>NOISE ALTERATONS</th><th>PERFORMANCE FAILURES</th><th>CHOKE UNDER PRESSURE NOISE</th><th>OVEREAGERNESS</th><th>VISUALISE</th><th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
+    results_html += "<table class='results_table'><tr><th>GEN</th><th>AVG. TIME</th><th>AVG. # Instructions</th><th>Std. Dev.# Instructions</th><th>BEST RACE</th><th>BEST FITNESS/TIME</th><th>BEST START ORDER</th><th>BEST R. Updates</th><th>Best Win Ratio/Avg. Fitness</th><th>VISUALISE</th> <th>POWER GRAPH</th><th> FINISH TIMES GRAPH </th><th>WORST RACE</th><th>WORST FITNESS/TIME</th><th>WORST START ORDER</th><th>WORST R. Updates</th><th>Worst Win Ratio/Avg. Fitness</th><th>VISUALISE</th><th># Crossovers</th> <th>AVG. Inst. ++</th><th>Avg. Inst. --</th><th>Avg. Inst. moved</th><th>Avg Effort changes</th><th>Avg. Drop changes.</th><th>Avg. Order shuffles.</th><th>Drop Inst/Total Inst</th><th># Variants</th> </tr>";
 
     console.log(ga_results);
     console.log(ga_results.generations);
@@ -1550,14 +1597,8 @@ const  build_results_table = () =>{
     //for(g=0;g<ga_results.generations.length;g++){
     for(g=(ga_results.generations.length-1);g>=0;g--){
 
-      results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\"><strong>" + g + "</strong></td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Standard Deviation of Number of Instructions per race')\">" + ga_results.generations[g].stats_std_dev_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Fitness/Ev. Rider Time')\">" + ga_results.generations[g].best_evolving_rider_fitness + "/" + ga_results.generations[g].best_race_time + " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Rider Updates Genotype')\">" + JSON.stringify(ga_results.generations[g].final_best_race_rider_updates_genotype) + "</td><td onmouseover=\"showColName('Best Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_alterations) + "</td>" +
-      "<td onmouseover=\"showColName('Best Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].best_race_performance_failures) + "</td>" +
-      "<td onmouseover=\"showColName('Best Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_choke_under_pressure) + "</td>" +
-      "<td onmouseover=\"showColName('Generation Choke Under Pressure % of Riders that Experience a choke event')\">" + JSON.stringify(ga_results.generations[g].percentage_of_riders_that_choke) + "</td>" +
-      "<td onmouseover=\"showColName('Generation average timestep of Choke Under Pressure event.')\">" + JSON.stringify(ga_results.generations[g].average_timestep_of_choke_event) + "</td>" +
-
-
-      "<td onmouseover=\"showColName('Best Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].best_race_instruction_noise_overeagerness) + "</td>" +
+      results_html += "<tr><td style='background-color:#aaaaaa;' onmouseover=\"showColName('Generation')\"><strong>" + g + "</strong></td><td onmouseover=\"showColName('Average Race Time')\"> " + ga_results.generations[g].stats_average_time + "</td><td onmouseover=\"showColName('Average Number of Instructions per race')\">" + ga_results.generations[g].stats_average_number_of_instructions + "</td><td onmouseover=\"showColName('Standard Deviation of Number of Instructions per race')\">" + ga_results.generations[g].stats_std_dev_number_of_instructions + "</td><td onmouseover=\"showColName('BEST Populaton index/ID')\">" + ga_results.generations[g].final_best_race_properties_index + "/" + ga_results.generations[g].best_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Best Race Fitness/Ev. Rider Time')\">" + ga_results.generations[g].best_evolving_rider_fitness + "/" + ga_results.generations[g].best_race_time + " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_best_race_start_order + "]</td><td onmouseover=\"showColName('Best Race Rider Updates Genotype')\">" + JSON.stringify(ga_results.generations[g].final_best_race_rider_updates_genotype) + "</td>" +
+      "<td onmouseover=\"showColName('Best Race Win ratio test results')\">" + ga_results.generations[g].best_in_gen_win_ratio_test_result + "(" + ga_results.generations[g].best_in_gen_win_ratio_test_average_fitness_result + ")</td>" +
       "<td onmouseover=\"showColName('Run BEST race in breakaway model')\"><a  target='_blank' href = 'tpgamebreakaway.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_best_race_start_order) + "&race_choices=" + encodeURI(JSON.stringify(ga_results.generations[g].best_race_rider_race_choices)) + "&final_best_race_rider_updates_genotype=" +
       encodeURI(JSON.stringify(ga_results.generations[g].final_best_race_rider_updates_genotype)) +
       "'> Run </a></td>";
@@ -1565,13 +1606,10 @@ const  build_results_table = () =>{
       results_html += "<td> <button onclick = 'draw_power_graph("+g+")'>DRAW</button><button type='button' class='btn btn-info' onclick = 'show_power_data("+g+")'><i class='fas fa-info-circle'></i></button></td>";
       results_html += "<td> <button onclick = 'draw_finish_times_graph("+g+")'>DRAW</button>" + "</td>";
 
-      results_html += "</td><td onmouseover=\"showColName('WORST Populaton index/ID')\">" + ga_results.generations[g].final_worst_race_properties_index + "/" + ga_results.generations[g].worst_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Worst Race Time')\">" + ga_results.generations[g].worst_race_time+ " </td><td onmouseover=\"showColName('Best race Start Order')\"> [" + ga_results.generations[g].final_worst_race_start_order + "]</td><td onmouseover=\"showColName('WORST Race Rider Updates genotype')\">" + JSON.stringify(ga_results.generations[g].final_worst_race_rider_updates_genotype) + "</td><td onmouseover=\"showColName('WORST Race Instruction Noise Alterations')\"> " + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations) +
-      "</td><td onmouseover=\"showColName('Worst Race Performance failures')\">" + JSON.stringify(ga_results.generations[g].worst_race_performance_failures)  +
-      "<td onmouseover=\"showColName('Worst Race Choke Under Pressure failures')\">" + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_choke_under_pressure) + "</td>" +
-      "<td onmouseover=\"showColName('Worst Race overeagerness noise')\">" + JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_overeagerness) + "</td>" +
-      "</td><td onmouseover=\"showColName('Run WORST race in game model')\"><a  target='_blank' href = 'tpgame.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_worst_race_start_order) + "&instructions=" + encodeURI(JSON.stringify(ga_results.generations[g].final_worst_race_instructions)) + "&noise_alterations=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_alterations))   + "&performance_failures=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_performance_failures)) +
-      "&instruction_noise_choke_under_pressure=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_choke_under_pressure)) +
-      "&instruction_noise_overeagerness=" +  encodeURI(JSON.stringify(ga_results.generations[g].worst_race_instruction_noise_overeagerness)) +
+      results_html += "</td><td onmouseover=\"showColName('WORST Populaton index/ID')\">" + ga_results.generations[g].final_worst_race_properties_index + "/" + ga_results.generations[g].worst_race_id + "</td><td style='background-color:#aaffaa' onmouseover=\"showColName('Worst Race Fitness/Time')\">" + ga_results.generations[g].worst_evolving_rider_fitness + "/" + ga_results.generations[g].worst_race_time + " </td><td onmouseover=\"showColName('Worst race Start Order')\"> [" + ga_results.generations[g].final_worst_race_start_order + "]</td><td onmouseover=\"showColName('WORST Race Rider Updates genotype')\">" + JSON.stringify(ga_results.generations[g].final_worst_race_rider_updates_genotype) +
+      "<td onmouseover=\"showColName('Worst Race Win ratio test results')\">" + ga_results.generations[g].worst_in_gen_win_ratio_test_result + "/" + ga_results.generations[g].worst_in_gen_win_ratio_test_average_fitness_result + "</td>" +
+      "<td onmouseover=\"showColName('Run WURST race in breakaway model')\"><a  target='_blank' href = 'tpgamebreakaway.html?source=results&results_id=" + selected_id + "&startorder=" + encodeURI(ga_results.generations[g].final_worst_race_start_order) + "&race_choices=" + encodeURI(JSON.stringify(ga_results.generations[g].worst_race_rider_race_choices)) + "&final_best_race_rider_updates_genotype=" +
+      encodeURI(JSON.stringify(ga_results.generations[g].final_worst_race_rider_updates_genotype)) +
       "'> Run </a></td>";
 
       //stats columns
