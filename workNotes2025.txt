@@ -3064,3 +3064,147 @@ race_function_no_vis.js:3179    >> race 1, genotype [[0,5000,"breakaway_sprint_e
 - comment out the console logs and run again. need to re-run all tests :-( I guess it was still convergign before despite the "anti-elitism"
 
 - now run it for a bigger test, see can it save?
+
+- tryign to explain rank selection :-o 
+
+=1/$H$13($H$12-(2*$H$12-2)*(G15-1/$H$13-1))
+
+- running some tests on a sprint+ cooperation setup. low cooperation does NOT appear. warum?
+- instead we have this as the best from 3 runs:
+[[0,5000,"breakaway_sprint_eagerness=10"],[0,5000,"breakaway_cooperation_time=14.06"]]	
+
+- should try to engineer properties to get 
+
+
+- why is the turn length higher with high recovery?
+
+- -loook at the position that the evolving rider begins their sprint from in the final 10 generations (best-in-gen result) 
+
+gen - sprint time - position - current fat.
+100 - 323 - 2 - 0
+99 - 317 - 2 - 0
+98 - 324 - 2 - 0
+97 - 321 - 2 - 0
+96 - 324 - 2 - 0
+95 - 319 - 2 - 0
+94 - 325 - 2 - 0
+93 - 330 - 1 - 28
+92 - 324 - 2 - 0
+91 - 322 - 2 - 0
+90 - 325 - 1 - 8
+
+- if i make the race LONGER does the same turn length emerge?
+
+- wait, i can't randomise the first default property value? should add this? 
+allow this value: "initial_value":"random",
+
+could make a table with a few results for this sprint idea? 
+
+- Tuesday 
+
+- test out the turn length evolution with a different race length and a different default turn length for the other riders.
+
+- test out the low recovery situatio with a slightly faster peloton. create an experiment that runs 7 values of  "chasing_bunch_speed": 8, 13, 14.5, 15, 16, 18, 20
+
+
+{"iterations":7,"active":1,"variations":[{"iterations":[7,6,5,4,3,2,1],"type":"race","property":"chasing_bunch_speed","values":[8,13,14.5,15,16,18,20]}],"experiments":[]}
+
+- yikes, there is NO race value for the sequence testing, I will have to add it...
+
+- test win ratio with small changes to peloton speed around 14.5
+
+peloton speed	win ratio	avg. fitness
+14.35			0.7195 0.8606
+14.4			0.372 0.664
+14.45			0.1025 0.517
+14.46			0.075 0.5015
+14.47			0.056 0.4908
+14.48			0.027 0.4745
+14.49			0.0165 0.4669			
+14.5			0.007 0.4607
+14.51			0.001 0.4565
+14.52			0 0.4548
+14.53			0 0.4537
+14.54			0 0.4537			
+
+evolve breakaway_cooperation_effort_level
+
+- added more graphs and text. ran a bunch of tests to build a table, but hit a buggo :-(
+
+- when a rider is dropped, another rider droppign back after a turn tries to go all the way behind it :-( so, we add a drop instruction but it needs to check if the group is 'all together'? 
+
+wowee, so I;'ve set the drop distance to being 10m, but in this case it's 9.5 or something. sooo, i change contiguous_group_drop_distance and re-run things? or just leave it and carry on?
+
+- if i rerun it do i rerun everything else? naw, but going forward I will use this. I could also use this in any case going forward, maybe make contiguous_group_drop_distance = 6 instead?
+
+- test the win ratio with the current and then the updated contiguous_group_drop_distance?
+
+contiguous_group_drop_distance= 10, win ratio = 1 0.9799
+contiguous_group_drop_distance= 7, win ratio = 0.034 0.6944
+contiguous_group_drop_distance= 6, win ratio = 0.037 0.6898
+
+oh fart, that's a big difference. best to re-run things :-( try running just this one, peloton speed = 12, contiguous_group_drop_distance= 6
+
+new result is even more confusing :-( :-( 
+
+big problems here... chaos in the group when riders are failing and others are dropping back.
+
+what happens if you are dropping back and that rider 'blows'... you should check each time to see if the rider you are dropping back to has been DROPPED, and if they have, to pick a new rider to follow.
+
+if droping back, 
+	if target rider gap to their target rider > limit 
+		choose new target rider 
+		
+		
+if the following rider has ALSO been dropped, it doesn't matter who they follow? 
+
+Also have to factor in rider groups
+
+run a test with 20 gens and contiguous_group_drop_distance = 4
+
+---------- a new day 
+- we want to issue a DROP to any rider that fails, even if they are not on the front. 
+- a fail is identified by them going into recovery_mode = 1. now, it can't be triggered every time they go into this mode, so we need a new switch?
+- add a property parallel to recovery_mode. call it recovery_mode_trigger_drop. 
+- add code next to here to trigger the actual drop: // **** cooperation effort check START **** LEADING rider only 
+
+- then, look at the drop code, if yoou are NOT in recovery mode, do not drop behind any riders at the back who ARE in recovery mode.
+
+1st test, following rider fails but there is NO drop- I guess following riders are NOT given those drops. 
+
+- added drop code to follow riders.
+- now, the race totally blows up, all riders grind to a halt at 3.4km
+
+- huh, so all other riders fail and the leader tries to drop, it needs to be 'cancelled'?
+**** rider trying to drop back 3 but undropped_riders_behind_me_in_group is 0
+
+- ok, so it looks awful but maybe is a bit better- all riders fail, but it kinda makes sense.
+
+- port this code across to look at it in the GA
+
+- can we add a new setting such that the new changes are optinal, i.e., on an old race, the old code will run?? 
+
+- use_updated_failure_drop_code_rules added, now have to implement it.
+-= e.g.,   if(typeof(settings_r.use_updated_failure_drop_code_rules) != "undefined" && settings_r.use_updated_failure_drop_code_rules == 1){
+
+- ok, so added these checks to both code files, now running a new test. can I now rerun an old result and get the original times? 
+
+- another bug that needs fixing: at the beginning of the race, the starting rider does NOT use their turn effort :-( 
+
+- need to use breakaway_cooperation_effort_level
+- line 1005, race_rider.current_power_effort = mapEffortToPower(settings.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power, settings.maximum_effort_value);
+
+- where is output_level set from breakaway_cooperation_effort_level?
+
+- in the load phase we have 
+load_rider.output_level=load_rider.breakaway_cooperation_effort_level;
+
+but I don't think this is goign to be called?
+
+in_race_updates_stack is used to update properties but does this not happen at the beginning?
+
+- it IS updating breakaway_cooperation_effort_level but this is not updating  output_level... this must be done somewhere else?
+
+- yup, its in switchlead and nowhere else... it needs to happen at the raec beginning!
+
+- seems to work? port to the GA version.

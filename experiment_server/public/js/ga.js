@@ -1233,7 +1233,6 @@ const check_for_sequences = () => {
                   //console.log('get experiment settings, data ' + JSON.stringify(data));
                   //console.log('data ' + JSON.stringify(data[0].global_settings) );
 
-
                   //need to apply any variations if they exist
                   let sequence_variations_info = "";
                   console.log('Variation: Check for variations');
@@ -1243,6 +1242,8 @@ const check_for_sequences = () => {
 
                     let globalSettingsObject = JSON.parse(data[0].global_settings);
                     let riderSettingsObject = JSON.parse(data[0].rider_settings);
+                    //donalK25 adding the race object
+                    let raceSettingsObject = JSON.parse(data[0].race_settings);
 
                     for(let i = 0; i < sequence_iteration_variations.length; i++){
                       console.log('Variation: Process variation ' + (i+1) + " of " + sequence_iteration_variations.length );
@@ -1255,11 +1256,23 @@ const check_for_sequences = () => {
                         console.log("Variation: update global property " + v_details.property + " to " + v_details.value);
 
                         try {
-                        globalSettingsObject[v_details.property] = v_details.value;
+                          globalSettingsObject[v_details.property] = v_details.value;
                           sequence_variations_info += "Global variation: " + v_details.property + " = " + v_details.value + "||";
                         }
                         catch(err) {
                           alert("Variation:error applying global variation " + JSON.stringify(v_details) + "  ---  " + err.message);
+                        }
+                      }
+                      else if(v_details.type == "race"){
+                        //adjust a global setting to the given value
+                        console.log("Variation: update race property " + v_details.property + " to " + v_details.value);
+
+                        try {
+                          raceSettingsObject[v_details.property] = v_details.value;
+                          sequence_variations_info += "Race properties variation: " + v_details.property + " = " + v_details.value + "||";
+                        }
+                        catch(err) {
+                          alert("Variation:error applying race properties variation " + JSON.stringify(v_details) + "  ---  " + err.message);
                         }
                       }
                       else if (v_details.type == "rider"){
@@ -1267,7 +1280,7 @@ const check_for_sequences = () => {
                         if(v_details.rider_no >= 0){
                           console.log("Variation: update rider " + v_details.rider_no + " property " + v_details.property + " to " + v_details.value);
                           try {
-                          riderSettingsObject[v_details.rider_no][v_details.property] = v_details.value;
+                            riderSettingsObject[v_details.rider_no][v_details.property] = v_details.value;
                             sequence_variations_info += "Rider " + v_details.rider_no + " variation: " + v_details.property + " = " + v_details.value + "||";
                             console.log("#### riderSettingsObject["+v_details.rider_no+"]['"+v_details.property+"'] = " + v_details.value);
                           }
@@ -1287,6 +1300,8 @@ const check_for_sequences = () => {
                     sequence_iteration_variations = [];
                     data[0].global_settings = JSON.stringify(globalSettingsObject);
                     data[0].rider_settings = JSON.stringify(riderSettingsObject);
+
+                    data[0].race_settings = JSON.stringify(raceSettingsObject);
 
                   }
                   else{
@@ -1311,7 +1326,6 @@ const check_for_sequences = () => {
                         global_settings_object = JSON.stringify(global_settings_object_parse);
                       }
                   }
-
 
                   $("#global_settings").val(global_settings_object);
                   $("#race_settings").val(data[0].race_settings);

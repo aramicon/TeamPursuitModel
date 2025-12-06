@@ -554,130 +554,156 @@ function switchLead(positions_to_drop_back, rider_no){
         //e.g. ig group size is 3 you can at most drop back 2 (lead rider is 1)
         console.log("**** rider trying to drop back " + positions_to_drop_back + " but undropped_riders_behind_me_in_group is " + undropped_riders_behind_me_in_group);
         positions_to_drop_back = undropped_riders_behind_me_in_group;
+        }
+
+      //**** START change to help with chaos when riders fail DK_Dec4_25
+      //reduce positions_to_drop_back IF riders at the END have failed and are in recovery mode
+      //a rider dropping back that is themselves in recovery mode, still goes to the back
+      if(typeof(settings.use_updated_failure_drop_code_rules) != "undefined" && settings.use_updated_failure_drop_code_rules == 1){
+      if(positions_to_drop_back > 0 && race.riders[current_leader].recovery_mode !== 1){
+        //start at end and count any failed riders in recovery mode
+        let recovery_mode_riders_at_back_count = 0;
+        let k = rider_position + positions_to_drop_back;
+        while(k > rider_position && race.riders[race.current_order[k]].recovery_mode == 1){
+          recovery_mode_riders_at_back_count++;
+          k -= 1;
+        }
+        if(recovery_mode_riders_at_back_count > 0){
+          console.log("*** DROP - " + recovery_mode_riders_at_back_count + " failing riders at back of group, adjusting positions to DROP from " + positions_to_drop_back + " to " + (positions_to_drop_back - recovery_mode_riders_at_back_count));
+          positions_to_drop_back -= recovery_mode_riders_at_back_count;
+        }
       }
     }
-
-    $("#race_info").html("<strong>Leader Drops Back</strong> by "+  positions_to_drop_back + " places");
-
-    if(race.riders[current_leader].current_aim == "LEAD"){
-      race.riders[current_leader].number_of_turns++;
+      //**** END of change DK_Dec4_25
     }
 
-    race.riders[current_leader].current_aim = "DROP"; //separate status whilst dropping back
 
-
-    let current_leader_power = race.riders[current_leader].power_out; //try to get the new leader to match this power
-    let current_leader_velocity = race.riders[current_leader].velocity;
-    // //need to get the theoretical velocity of the current leader for this timestep and use that as the target
-    // //donalK25 #accel ------------
-    // let current_leader_theoretical_velocity = velocity_from_power_with_acceleration(current_leader_power, settings.rollingRes, (race.riders[current_leader].weight + settings.bike_weight), 9.8, race.riders[current_leader].air_density, settings.frontalArea, current_leader_velocity, settings.transv);
-    // //donalK25 #accel ------------ ||
-
-    //adjust positions_to_drop_back if it is too big
-    if((rider_position + positions_to_drop_back) >= race.current_order.length){
-      positions_to_drop_back = (race.current_order.length - (rider_position+1));
+    if(typeof(settings.use_updated_failure_drop_code_rules) != "undefined" && settings.use_updated_failure_drop_code_rules == 1 && positions_to_drop_back <= 0){ //this IF/ELSE is new DK_Dec4_25
+      console.log("**** cannot drop back " + positions_to_drop_back + " positions. Droperation cancelled.");
     }
-    if(positions_to_drop_back < 0){
-      positions_to_drop_back = 0;
-    }
+    else{
 
-    if(positions_to_drop_back > 0){
-      let new_order = race.current_order.slice(0,rider_position); //insert any unchanged initial riders.
-      new_order.push(...race.current_order.slice((rider_position+1),(rider_position + 1 + positions_to_drop_back))); //insert the riders that will move ahead of the leader
-      new_order.push(current_leader); //insert the leader again
-      new_order.push(...race.current_order.slice((rider_position + 1 + positions_to_drop_back))); //anything else at the end
-      let original_order = race.current_order;
-      race.current_order = new_order;
-      //change other rider roles to lead and follow
-      //cannot make a rider in a different group the new leader, need to only look at riders in the current group
+      $("#race_info").html("<strong>Leader Drops Back</strong> by "+  positions_to_drop_back + " places");
 
-      let new_leader = {};
-      // if(rider_position > 0){
-      //   debugger;
+      if(race.riders[current_leader].current_aim == "LEAD"){
+        race.riders[current_leader].number_of_turns++;
+      }
+
+      race.riders[current_leader].current_aim = "DROP"; //separate status whilst dropping back
+
+
+      let current_leader_power = race.riders[current_leader].power_out; //try to get the new leader to match this power
+      let current_leader_velocity = race.riders[current_leader].velocity;
+      // //need to get the theoretical velocity of the current leader for this timestep and use that as the target
+      // //donalK25 #accel ------------
+      // let current_leader_theoretical_velocity = velocity_from_power_with_acceleration(current_leader_power, settings.rollingRes, (race.riders[current_leader].weight + settings.bike_weight), 9.8, race.riders[current_leader].air_density, settings.frontalArea, current_leader_velocity, settings.transv);
+      // //donalK25 #accel ------------ ||
+
+      //adjust positions_to_drop_back if it is too big
+      if((rider_position + positions_to_drop_back) >= race.current_order.length){
+        positions_to_drop_back = (race.current_order.length - (rider_position+1));
+      }
+      if(positions_to_drop_back < 0){
+        positions_to_drop_back = 0;
+      }
+
+      if(positions_to_drop_back > 0){
+        let new_order = race.current_order.slice(0,rider_position); //insert any unchanged initial riders.
+        new_order.push(...race.current_order.slice((rider_position+1),(rider_position + 1 + positions_to_drop_back))); //insert the riders that will move ahead of the leader
+        new_order.push(current_leader); //insert the leader again
+        new_order.push(...race.current_order.slice((rider_position + 1 + positions_to_drop_back))); //anything else at the end
+        let original_order = race.current_order;
+        race.current_order = new_order;
+        //change other rider roles to lead and follow
+        //cannot make a rider in a different group the new leader, need to only look at riders in the current group
+
+        let new_leader = {};
+        // if(rider_position > 0){
+        //   debugger;
+        // }
+        for(let i = 0; i < new_order.length; i++){
+          if(race.breakaway_riders_groups[new_order[i]] == my_group){
+            new_leader = race.riders[new_order[i]];
+            break;
+          }
+        }
+
+        if(!isEmpty(new_leader)){
+          new_leader.current_aim = "LEAD";
+          new_leader.current_power_effort = settings.threshold_power_effort_level;
+
+          //update this rider's power Effort
+          new_leader.current_power_effort = current_leader_power;
+          let current_threshold = new_leader.threshold_power;
+
+          //originally we tried to set the new leader's effort to match the POWER of the former leader... BUT we really should be working it out based on the VELOCITY, i.e. that unless another instruciton is given, the rider will try to go at the same speed.
+
+          //console.log("************ WORK OUT POWER REQUIRED TO MAINTAIN SPEED AFTER SWITCH **********");
+          //console.log("Target Velocity = " + current_leader_velocity + " (" + current_leader_velocity*3.6 + ") new_leader.aero_A2 " + new_leader.aero_A2 + " settings.headwindv " + settings.headwindv + " new_leader.aero_tres " + new_leader.aero_tres + " settings.transv " + settings.transv);
+
+          // should aim for power to produce the target speed WITHOUT SHELTER so need to make sure the correct aero_A2 value is used
+          let aero_A2_no_shelter = Math.round((0.5 * settings.frontalArea * new_leader.air_density)*10000)/10000;
+          let target_power = 0;
+          //console.log("power_from_velocity returns " + target_power + " watts");
+          //donalK25: apply constant-speed drag calc or acceleration-based calc
+
+          //if new leader has a cooperation effort level, set its effort to this
+          if(typeof(new_leader.breakaway_cooperation_effort_level) != "undefined"){
+            new_leader.output_level = new_leader.breakaway_cooperation_effort_level;
+          }
+          else{
+
+            //donLK25: get the target_power using the old leader output level
+            let power_from_output_level_old_leader = mapEffortToPower(settings.threshold_power_effort_level, race.riders[current_leader].output_level, race.riders[current_leader].threshold_power, race.riders[current_leader].max_power, settings.maximum_effort_value);
+
+            new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, power_from_output_level_old_leader, new_leader.threshold_power, new_leader.max_power, settings.maximum_effort_value);
+          }
+          //now take that power and map it to an output for the ne_leader
+
+          // if(power_application_include_acceleration){
+          //   target_power = power_from_velocity_with_acceleration(current_leader_theoretical_velocity, settings.rollingRes, (new_leader.weight + settings.bike_weight), 9.8, new_leader.air_density, settings.frontalArea, new_leader.velocity, settings.transv);
+          //
+          //     //console.log("Change Lead rider " + race.current_order[i] + " power_from_velocity_with_acceleration() " + " target velocity " + current_leader_velocity + " Crr " + settings.rollingRes + " total weight " + (new_leader.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + new_leader.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + new_leader.velocity + " drivetrain efficiency " + settings.transv + " TARGET POWER " + target_power);
+          //
+          // }
+          // else{
+          //   target_power = power_from_velocity(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, current_leader_velocity);
+          // }
+
+
+          //now figure out what effort level will equate to this power, and aim for that
+
+
+          //console.log("Maps to output_level " + new_leader.output_level);
+
+          //test: map this output level back to power and see what velocity it produces
+          //let power_from_effort = mapEffortToPower(settings.threshold_power_effort_level, new_leader.output_level, new_leader.threshold_power, new_leader.max_power );
+          //console.log("power_from_effort " + power_from_effort);
+
+          //let velocity_from_power = newton(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, power_from_effort);
+          //console.log("velocity_from_power " + velocity_from_power + " ("+ velocity_from_power*3.6 +  ")");
+          //console.log("************");
+
+
+          if (new_leader.output_level < 0){
+            console.log("new_leader.output_level < 0");
+            debugger;
+          }
+      }
+      //console.log("new_leader.output_level = "+ new_leader.output_level);
+      //update other riders to follow, but only in the same group
+
+      // for(let i=0;i<new_order.length;i++){
+      //   if (new_order[i] != current_leader && race.breakaway_riders_groups[new_order[i]] == my_group){ //don't update the dropping back rider
+      //     race.riders[new_order[i]].current_aim = "FOLLOW";
+      //     //reset their power levels, though chasing riders will always try to follow
+      //     race.riders[new_order[i]].current_power_effort = race.riders[new_order[i]].threshold_power;
+      //   }
       // }
-      for(let i = 0; i < new_order.length; i++){
-        if(race.breakaway_riders_groups[new_order[i]] == my_group){
-          new_leader = race.riders[new_order[i]];
-          break;
-        }
+      console.log("||||||||||| DROP: original_order " + original_order + " move " + current_leader + " back " + positions_to_drop_back + " positions, new order " + new_order + " |||||||||||");
       }
-
-      if(!isEmpty(new_leader)){
-        new_leader.current_aim = "LEAD";
-        new_leader.current_power_effort = settings.threshold_power_effort_level;
-
-        //update this rider's power Effort
-        new_leader.current_power_effort = current_leader_power;
-        let current_threshold = new_leader.threshold_power;
-
-        //originally we tried to set the new leader's effort to match the POWER of the former leader... BUT we really should be working it out based on the VELOCITY, i.e. that unless another instruciton is given, the rider will try to go at the same speed.
-
-        //console.log("************ WORK OUT POWER REQUIRED TO MAINTAIN SPEED AFTER SWITCH **********");
-        //console.log("Target Velocity = " + current_leader_velocity + " (" + current_leader_velocity*3.6 + ") new_leader.aero_A2 " + new_leader.aero_A2 + " settings.headwindv " + settings.headwindv + " new_leader.aero_tres " + new_leader.aero_tres + " settings.transv " + settings.transv);
-
-        // should aim for power to produce the target speed WITHOUT SHELTER so need to make sure the correct aero_A2 value is used
-        let aero_A2_no_shelter = Math.round((0.5 * settings.frontalArea * new_leader.air_density)*10000)/10000;
-        let target_power = 0;
-        //console.log("power_from_velocity returns " + target_power + " watts");
-        //donalK25: apply constant-speed drag calc or acceleration-based calc
-
-        //if new leader has a cooperation effort level, set its effort to this
-        if(typeof(new_leader.breakaway_cooperation_effort_level) != "undefined"){
-          new_leader.output_level = new_leader.breakaway_cooperation_effort_level;
-        }
-        else{
-
-          //donLK25: get the target_power using the old leader output level
-          let power_from_output_level_old_leader = mapEffortToPower(settings.threshold_power_effort_level, race.riders[current_leader].output_level, race.riders[current_leader].threshold_power, race.riders[current_leader].max_power, settings.maximum_effort_value);
-
-          new_leader.output_level = mapPowerToEffort(settings.threshold_power_effort_level, power_from_output_level_old_leader, new_leader.threshold_power, new_leader.max_power, settings.maximum_effort_value);
-        }
-        //now take that power and map it to an output for the ne_leader
-
-        // if(power_application_include_acceleration){
-        //   target_power = power_from_velocity_with_acceleration(current_leader_theoretical_velocity, settings.rollingRes, (new_leader.weight + settings.bike_weight), 9.8, new_leader.air_density, settings.frontalArea, new_leader.velocity, settings.transv);
-        //
-        //     //console.log("Change Lead rider " + race.current_order[i] + " power_from_velocity_with_acceleration() " + " target velocity " + current_leader_velocity + " Crr " + settings.rollingRes + " total weight " + (new_leader.weight + settings.bike_weight) + " gravity " + 9.8 + " air density " + new_leader.air_density + " frontal area " + frontal_area_adjusted_for_shelter + " current velocity " + new_leader.velocity + " drivetrain efficiency " + settings.transv + " TARGET POWER " + target_power);
-        //
-        // }
-        // else{
-        //   target_power = power_from_velocity(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, current_leader_velocity);
-        // }
-
-
-        //now figure out what effort level will equate to this power, and aim for that
-
-
-        //console.log("Maps to output_level " + new_leader.output_level);
-
-        //test: map this output level back to power and see what velocity it produces
-        //let power_from_effort = mapEffortToPower(settings.threshold_power_effort_level, new_leader.output_level, new_leader.threshold_power, new_leader.max_power );
-        //console.log("power_from_effort " + power_from_effort);
-
-        //let velocity_from_power = newton(aero_A2_no_shelter, settings.headwindv, new_leader.aero_tres, settings.transv, power_from_effort);
-        //console.log("velocity_from_power " + velocity_from_power + " ("+ velocity_from_power*3.6 +  ")");
-        //console.log("************");
-
-
-        if (new_leader.output_level < 0){
-          console.log("new_leader.output_level < 0");
-          debugger;
-        }
-    }
-    //console.log("new_leader.output_level = "+ new_leader.output_level);
-    //update other riders to follow, but only in the same group
-
-    // for(let i=0;i<new_order.length;i++){
-    //   if (new_order[i] != current_leader && race.breakaway_riders_groups[new_order[i]] == my_group){ //don't update the dropping back rider
-    //     race.riders[new_order[i]].current_aim = "FOLLOW";
-    //     //reset their power levels, though chasing riders will always try to follow
-    //     race.riders[new_order[i]].current_power_effort = race.riders[new_order[i]].threshold_power;
-    //   }
-    // }
-    console.log("||||||||||| DROP: original_order " + original_order + " move " + current_leader + " back " + positions_to_drop_back + " positions, new order " + new_order + " |||||||||||");
-    }
+  } //DK_Dec4_25 block to check if we drop back 0 spaces
 }
-
 }
 
 function moveRace(){
@@ -774,7 +800,7 @@ function moveRace(){
     }
   }
 
-  //also look at the drop instruciton: unlike the track race there can be multiple drops, one per rider per timestep, and they are immediately carried out
+  //also look at the drop instruction: unlike the track race there can be multiple drops, one per rider per timestep, and they are immediately carried out
   //unlike on the track, each rider can have their own drop instruction
   for(let i = 0;i<race.riders.length;i++){
     if(race.riders[i].drop_instruction > 0){
@@ -878,11 +904,18 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
     }
   // ******** drawing end *******************
 
-
   for(let i=0;i<race.current_order.length;i++){
     let race_rider = race.riders[race.current_order[i]];
     //work out how far the race_rider can go in this time step
     //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
+
+    // **** START make sure that in the first timestep, the rider gets their breakaway_cooperation_effort_level DK_Dec4_25
+    if(race.race_clock == 0){
+      if(typeof(race_rider.breakaway_cooperation_effort_level) != "undefined"){
+        race_rider.output_level=race_rider.breakaway_cooperation_effort_level;
+      }
+    }
+    // **** END make sure that in the first timestep, the rider gets their breakaway_cooperation_effort_level DK_Dec4_25
 
     race_rider.rider_to_follow = {}; //reset this every timestep (following)
 
@@ -952,6 +985,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         //turn on recovery mode it's not already on
         if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level && race_rider.recovery_mode == 0){
           race_rider.recovery_mode = 1;
+          race_rider.recovery_mode_trigger_drop = 1; //trigger a drop to the back of the group DK_Dec4_25
           race_rider.recovery_mode_recovery_so_far = 0; //this counts the recovering done, needed to exit this mode
 
           //donalK25- May 19 - reset the rider's failure point (at the point of failure)
@@ -1106,6 +1140,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         race_rider.accumulated_fatigue += fatigue_rise;
       }
 
+      let drop_added = false; //DK_Dec4_25
 
       // **** cooperation effort check START **** LEADING rider only
       if(race_rider.current_aim == "LEAD"){
@@ -1113,12 +1148,30 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         if(race_rider.time_leading_group > race_rider.breakaway_cooperation_time){
 
           let new_drop_instruction = [race.race_clock+1,"drop=" + (race.current_order.length-1),race.current_order[i]];
-          console.log("||||||||||||| added drop instruction " + new_drop_instruction + " |||||||||||||");
+          console.log("||||||||||||| cooperation triggered, added drop instruction " + new_drop_instruction + " |||||||||||||");
           race.race_instructions_r.push(new_drop_instruction); //what if there's an instruction in there already?
           race_rider.time_leading_group = 0;
+          drop_added = true; //DK_Dec4_25
         }
       }
       // **** cooperation effort check END ****
+
+      //**** START: DK_Dec4_25 trigger a drop if the rider has just fatigued over the failure threshold and entered recovery_mode
+      //Note: we don't want to add 2 DROPS so check that one wasn't just added above in the cooperation check
+      if(typeof(settings.use_updated_failure_drop_code_rules) != "undefined" && settings.use_updated_failure_drop_code_rules == 1){
+        if(race_rider.recovery_mode_trigger_drop == 1 && drop_added == false){
+          let new_drop_instruction = [race.race_clock+1,"drop=" + (race.current_order.length-1),race.current_order[i]];
+          console.log("||||||||||||| LEAD rider failure triggered, added drop instruction " + new_drop_instruction + " |||||||||||||");
+          race.race_instructions_r.push(new_drop_instruction);
+
+          if(race_rider.current_aim == "LEAD"){
+              race_rider.time_leading_group = 0;
+          }
+          race_rider.recovery_mode_trigger_drop =  0;   //key: reset so that it doesn't keep getting triggered while they are in recovery_mode
+        }
+      }
+      //**** EBD: DK_Dec4_25 trigger a drop
+
 
     } //end of lead rider block
     else if (race_rider.current_aim == "FOLLOW" || race_rider.current_aim == "DROP" || race_rider.current_aim == "CHASE"){
@@ -1158,12 +1211,27 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         rider_to_follow = race.riders[race_rider.breakaway_chase_target_rider];
       }
       else{
+        //dk25: not sure- does this mean to follow the first rider ahead of you in the current order that is in your group?
+        //what do we do if that rider is being dropped, i.e., has failed and is going very slowly?
+        //can't reorder the order because we are iterating through it?
         let check_rider = i-1;
         let my_group = race.breakaway_riders_groups[race.current_order[i]];
         while(check_rider >= 0){
           if(race.breakaway_riders_groups[race.current_order[check_rider]] == my_group){
-              rider_to_follow = race.riders[race.current_order[check_rider]];
-              break;
+              //dk25: also check to see that this rider is not too far behind their rider in front.
+              //not an issue if they are at the front
+            //  let rider_gap_too_big = false;
+            //  if(check_rider > 0){
+                //do not follow a non-leader rider if their gap to the rider in front of them is BIG.
+              //  if(race.riders[race.current_order[check_rider]].distance_from_rider_in_front > settings.contiguous_group_drop_distance){
+              //    rider_gap_too_big = true;
+              //  }
+            //  }
+            //  if(rider_gap_too_big == false){
+                rider_to_follow = race.riders[race.current_order[check_rider]];
+                break;
+            //  }
+
           }
           check_rider -= 1;
         }
@@ -1428,6 +1496,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         //turn on recovery mode it's not already on
         if(race_rider.endurance_fatigue_level >= race_rider.rider_fatigue_failure_level && race_rider.recovery_mode == 0){
           race_rider.recovery_mode = 1;
+          race_rider.recovery_mode_trigger_drop = 1; //trigger a drop to the back of the group DK_Dec4_25
           race_rider.recovery_mode_recovery_so_far = 0; //this counts the recovering done, needed to exit this mode
 
           //donalK25- May 19 - reset the rider's failure point (at the point of failure)
@@ -1585,6 +1654,18 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         race_rider.endurance_fatigue_level += fatigue_rise
         race_rider.accumulated_fatigue += fatigue_rise;
       }
+
+      //**** START: DK_Dec4_25 trigger a drop if the rider has just fatigued over the failure threshold and entered recovery_mode
+      //Note: we don't want to add 2 DROPS so check that one wasn't just added above in the cooperation check
+      if(typeof(settings.use_updated_failure_drop_code_rules) != "undefined" && settings.use_updated_failure_drop_code_rules == 1){
+      if(race_rider.recovery_mode_trigger_drop == 1){
+        let new_drop_instruction = [race.race_clock+1,"drop=" + (race.current_order.length-1),race.current_order[i]];
+        console.log("||||||||||||| FOLLOWING rider failure triggered, adding drop instruction " + new_drop_instruction + " |||||||||||||");
+        race.race_instructions_r.push(new_drop_instruction);
+        race_rider.recovery_mode_trigger_drop =  0;   //key: reset so that it doesn't keep getting triggered while they are in recovery_mode
+      }
+    }
+      //**** END: DK_Dec4_25 trigger a drop
 
     } //*** end of follow rider block
     else if(race_rider.current_aim == "CAUGHT"){
@@ -2803,6 +2884,7 @@ function load_race(){
     }
 
     load_rider.recovery_mode = 0;
+    load_rider.recovery_mode_trigger_drop = 0; //DK_Dec4_25
 
     //set up the aero properties so they don't have to be recalculated
     load_rider.air_density = (1.293 - 0.00426 * settings.temperaturev) * Math.exp(-settings.elevationv / 7000.0);
@@ -2859,6 +2941,7 @@ function load_race(){
 
     //initialize the recovery props
     load_rider.recovery_mode = 0;
+    load_rider.recovery_mode_trigger_drop = 0; //DK_Dec4_25
     load_rider.recovery_mode_recovery_so_far = 0;
 
     //new array to update props based on distance remaining... create a copy, ordered by distance_remaining, from which we pop entries
