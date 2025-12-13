@@ -3188,3 +3188,84 @@ run a test with 20 gens and contiguous_group_drop_distance = 4
 -= e.g.,   if(typeof(settings_r.use_updated_failure_drop_code_rules) != "undefined" && settings_r.use_updated_failure_drop_code_rules == 1){
 
 - ok, so added these checks to both code files, now running a new test. can I now rerun an old result and get the original times? 
+
+- another bug that needs fixing: at the beginning of the race, the starting rider does NOT use their turn effort :-( 
+
+- need to use breakaway_cooperation_effort_level
+- line 1005, race_rider.current_power_effort = mapEffortToPower(settings.threshold_power_effort_level, race_rider.output_level, race_rider.threshold_power, race_rider.max_power, settings.maximum_effort_value);
+
+- where is output_level set from breakaway_cooperation_effort_level?
+
+- in the load phase we have 
+load_rider.output_level=load_rider.breakaway_cooperation_effort_level;
+
+but I don't think this is goign to be called?
+
+in_race_updates_stack is used to update properties but does this not happen at the beginning?
+
+- it IS updating breakaway_cooperation_effort_level but this is not updating  output_level... this must be done somewhere else?
+
+- yup, its in switchlead and nowhere else... it needs to happen at the race beginning!
+
+- seems to work? port to the GA version.
+
+- ah shit, a rider is not dropping, still... is leading, fails, stays ledaing
+
+- saturday, running ATTACK tests.
+
+- basic set ran, try swithc on crossover. does it make a difference?
+
+- run a test with only the 5000 timestep gene? compare to one with multiple distance genes?
+
+- hmmm, raised   "ga_p_delete_instruction": 0.4, high and that seems to be ok, creates lots of instructions otherwise?
+
+- there's a lot of SOLO_TO_DROP actions, what do they mean here? e.g. [[[302,"ATTACK","FOLLOW","EVOLVE 1"],[330,"SOLO_TO_DROP","SOLO","EVOLVE 1"],[331,"SOLO_TO_DROP","SOLO","EVOLVE 1"],[332,"SOLO_TO_DROP","SOLO","EVOLVE 1"],[333,"SOLO_TO_DROP","SOLO","EVOLVE 1"],[334,"SOLO_TO_DROP","SOLO","EVOLVE 1"]],[[319,"SPRINT","LEAD"," Rider 2"]],[[338,"CHASE_TO_SOLO","DROP","Rider 3"],[339,"SOLO_TO_DROP","SOLO","Rider 3"],[340,"SOLO_TO_FOLLOW","SOLO","Rider 3"],[342,"SPRINT","FOLLOW","Rider 3"]],[[338,"SPRINT","LEAD","Rider 4"]]]
+
+- doens't show the average fitness in the results. need to add for the table .
+
+- graph result case (2) attackr is 6934968cceaa284e7826de30, for case (1) is 69349306ceaa284e7826de2f 
+
+stats_average_fitness. added a new column to the results table, rounded it to 3 places. also orund the avg. race time?
+
+- make a list of new experiments to run:
+
+- attack against very basic opponents with no sprint 
+- attack with high peloton pressure 
+- evolving rider is a lot stronger (early attacks work?)
+
+- evolve a whole pile of genes, turn length sprint, attack, etc, agaisnt basic sprinters.
+
+
+
+- note, a rider can win with no sprint at all if all others riders sprint, then they switch to SOLO, then to FOLLOW, then the other riders fail, then it goes to LEAD because the failing rider drops back, then it will also fail, but still crosses the line first.
+
+- attackign early is PUNISHED.
+
+- add another column to the table, use result 6939c2222c4bc85f54ce039a . this will show a 6-property variable-gene solution that has a HIGH win ratio.
+
+- need a 3 gene case where we evolve attack prob/level, and coop length 
+- 4 gene case that also adds coop level. 
+
+add 2 more columsn tot he table, improve the following paragraph, then move to the nemesis case. could make the nemesis more sophisticated? give them an exact winning strategy?
+
+then move on to the chase, create an experiment with a basic sprinter where one other rider has a high chase prob.
+
+add results from 693acea7e0c0b90d640cb272  to table,a nd also the 2-prop run of 693ad20ce0c0b90d640cb274
+
+I was supposed to add/improve the noise chap. table, no? can I find those notes??
+
+is the rider doing an initial turn even with 
+#
+
+
+- first chase tests- rider chases attacker but then immediately goes back to following others.
+
+- rider chases, then follows because it is close, but why does it then follow a different rider? it should be kept in a group with the chasee?
+
+  if (race_r.riders[race_r.current_order[iik]].distance_covered > race_rider.distance_covered && race_r.breakaway_riders_groups[race_r.current_order[iik]] != my_group && race_r.riders[race_r.current_order[iik]].velocity >=  race_rider.velocity){ //donalK25Dec_fasterOnly
+  
+  - it runs BUT it has an awful win ratio... the basic sprint and chase. is it worse than a sprint on its own?
+  
+  - run chase/sprint with NO chase as a comaprison point. the sprint+chase win ratio is poor. 
+  
+  

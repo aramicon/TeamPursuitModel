@@ -6025,10 +6025,14 @@ function run_breakaway_race(settings_r,race_r,riders_r){
 
               // loop through the (other) riders and count who is ahead and 'not in your lane'
               // also mark the one that is the closest - if you chase, you chase this rider?
+
+              //donalK25Dec_fasterOnly: we don't want to chase slower riders that may be ahead (causing issues when chasing from the back of the group)
+
+
               let my_group = race_r.breakaway_riders_groups[race_r.current_order[i]];
               for (let iik = 0; iik < race_r.current_order.length; iik++) {
                   if (iik != i) {
-                      if (race_r.riders[race_r.current_order[iik]].distance_covered > race_rider.distance_covered && race_r.breakaway_riders_groups[race_r.current_order[iik]] != my_group) {
+                      if (race_r.riders[race_r.current_order[iik]].distance_covered > race_rider.distance_covered && race_r.breakaway_riders_groups[race_r.current_order[iik]] != my_group && race_r.riders[race_r.current_order[iik]].velocity >=  race_rider.velocity){ //donalK25Dec_fasterOnly
                           number_of_riders_ahead++;
                           if ((race_r.riders[race_r.current_order[iik]].distance_covered - race_rider.distance_covered) < closest_rider_distance) {
                               closest_rider_ahead = race_r.current_order[iik];
@@ -6066,7 +6070,7 @@ function run_breakaway_race(settings_r,race_r,riders_r){
                   let inverse_chase_distance_max_value = CHASE_RESPONSE_MAX_DISTANCE;
                   value_list.push(inverse_chase_distance_weight, inverse_chase_distance_value, inverse_chase_distance_exponent, inverse_chase_distance_max_value);
 
-                  let chase_number_of_riders_ahead_weight = settings_r.breakaway_chase_inverse_distance_weight;
+                  let chase_number_of_riders_ahead_weight = settings_r.chase_number_of_riders_ahead_weight;
                   let chase_number_of_riders_ahead = number_of_riders_ahead;
                   let chase_number_of_riders_ahead_exponent = settings_r.chase_number_of_riders_ahead_exponent;
                   let chase_number_of_riders_ahead_max_value = race_r.current_order.length;

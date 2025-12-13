@@ -1148,7 +1148,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         if(race_rider.time_leading_group > race_rider.breakaway_cooperation_time){
 
           let new_drop_instruction = [race.race_clock+1,"drop=" + (race.current_order.length-1),race.current_order[i]];
-          console.log("||||||||||||| cooperation triggered, added drop instruction " + new_drop_instruction + " |||||||||||||");
+          //console.log("||||||||||||| cooperation triggered, added drop instruction " + new_drop_instruction + " |||||||||||||");
           race.race_instructions_r.push(new_drop_instruction); //what if there's an instruction in there already?
           race_rider.time_leading_group = 0;
           drop_added = true; //DK_Dec4_25
@@ -1190,9 +1190,9 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
       }
 
      if(race_rider.current_aim == "DROP" && count_of_group_members <= 1){
+       console.log("DROP state and yet nobody else is in the group, this should NOT happen.");
        debugger;
      }
-
 
      if(race_rider.current_aim == "CHASE"){
        race_rider.chase_period_time_elapsed++;
@@ -1851,7 +1851,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
             let my_group = race.breakaway_riders_groups[race.current_order[i]];
             for(let iik = 0; iik < race.current_order.length; iik++){
               if (iik != i){
-                if(race.riders[race.current_order[iik]].distance_covered > race_rider.distance_covered && race.breakaway_riders_groups[race.current_order[iik]] != my_group){
+                if(race.riders[race.current_order[iik]].distance_covered > race_rider.distance_covered && race.breakaway_riders_groups[race.current_order[iik]] != my_group && race.riders[race.current_order[iik]].velocity >=  race_rider.velocity){ //donalK25Dec_fasterOnly
                   number_of_riders_ahead++;
                   if ((race.riders[race.current_order[iik]].distance_covered - race_rider.distance_covered) <  closest_rider_distance){
                     closest_rider_ahead = race.current_order[iik];
@@ -1932,6 +1932,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
             race_rider.current_aim = "FOLLOW";
             race.breakaway_riders_groups[race.current_order[i]] = closest_ahead_rider_group;
             choice_made = 1;
+            console.log(race_rider.name + " switching to FOLLOW from SOLO");
           }
           else if(closest_rider_behind >= 0 && gap_to_rider_behind < BREAKAWAY_SWITCH_TO_LEAD_GAP_SIZE && race.riders[closest_rider_behind].velocity > race_rider.velocity){
             //join this group but DROP back - only if going SLOWER than it.
@@ -2039,7 +2040,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         let inverse_remaining_distance_max_value = breakaway_max_sprint_distance;
         value_list.push(inverse_remaining_distance_weight,inverse_remaining_distance_value,inverse_remaining_distance_exponent,inverse_remaining_distance_max_value);
         sprint_probability = calculate_linear_space_value(value_list, probability_variables);
-        console.log(race_rider.name + " >>>S>P>R>I>N>T>>>> sprint_probability " + sprint_probability + " inverse_remaining_distance_value " + inverse_remaining_distance_value);
+        //console.log(race_rider.name + " >>>S>P>R>I>N>T>>>> sprint_probability " + sprint_probability + " inverse_remaining_distance_value " + inverse_remaining_distance_value);
       }
       let sprint_choice = 0;
       let sprint_choice_random_value = Math.random();
@@ -2222,7 +2223,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
       let my_group = race.breakaway_riders_groups[race.current_order[i]];
       for(let iik = 0; iik < race.current_order.length; iik++){
         if (iik != i){
-          if(race.riders[race.current_order[iik]].distance_covered > race_rider.distance_covered && race.breakaway_riders_groups[race.current_order[iik]] != my_group){
+          if(race.riders[race.current_order[iik]].distance_covered > race_rider.distance_covered && race.breakaway_riders_groups[race.current_order[iik]] != my_group && race.riders[race.current_order[iik]].velocity >=  race_rider.velocity){
             number_of_riders_ahead++;
             if ((race.riders[race.current_order[iik]].distance_covered - race_rider.distance_covered) <  closest_rider_distance){
               closest_rider_ahead = race.current_order[iik];
@@ -2262,7 +2263,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
         let inverse_chase_distance_max_value = CHASE_RESPONSE_MAX_DISTANCE;
         value_list.push(inverse_chase_distance_weight,inverse_chase_distance_value,inverse_chase_distance_exponent,inverse_chase_distance_max_value);
 
-        let chase_number_of_riders_ahead_weight = settings.breakaway_chase_inverse_distance_weight;
+        let chase_number_of_riders_ahead_weight = settings.chase_number_of_riders_ahead_weight;
         let chase_number_of_riders_ahead = number_of_riders_ahead;
         let chase_number_of_riders_ahead_exponent = settings.chase_number_of_riders_ahead_exponent;
         let chase_number_of_riders_ahead_max_value = race.current_order.length;
@@ -2361,6 +2362,7 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
       if(closest_rider_ahead >= 0 && gap_to_rider_ahead < BREAKAWAY_SWITCH_TO_FOLLOW_GAP_SIZE){
         // not sure about this - if you meet a much slower rider, you won't pass them. better if they try to follow you?
         ///but what if one solo rider passes another?
+        debugger;
         race_rider.current_aim = "FOLLOW";
         race.breakaway_riders_groups[race.current_order[i]] = closest_ahead_rider_group;
         choice_made = 1;
@@ -2414,9 +2416,12 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
       //transition to FOLLOW if close enough
       let gap_to_rider_in_front = (closest_ahead_distance_covered - race_rider.distance_covered);
       if(closest_ahead_rider_group > -1 && gap_to_rider_in_front < BREAKAWAY_SWITCH_TO_FOLLOW_GAP_SIZE){
+        debugger;
         race_rider.current_aim = "FOLLOW";
+        let original_group = race.breakaway_riders_groups[race.current_order[i]];
         race.breakaway_riders_groups[race.current_order[i]] = closest_ahead_rider_group;
         choice_made = 1;
+        console.log("<><><><><><><> - " + race_rider.name + " switching from CHASE to FOLLOW, from group " + original_group + " to " + closest_ahead_rider_group);
       }
     }
     if(choice_made == 0 && (race_rider.current_aim == "DROP")) {
