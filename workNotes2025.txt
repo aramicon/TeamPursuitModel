@@ -3284,3 +3284,333 @@ is the rider doing an initial turn even with
             "mutation_range":1}                     
 			
 - testing chase- seems to take way too long to instigate, and a small delay means the shelter is lost. needs to be instant.
+
+- seems like a rider won't CHASE from DROP? 
+
+- oooooh, i found a bug! 
+et chase_number_of_riders_ahead_weight = settings.breakaway_chase_inverse_distance_weight;
+-jeeeeeez, that's nasty.
+
+- moved sprint point to 450m 
+- ride chases then abruptly goes back to FOLLOWing a different rider in the original group. warum?
+
+testign again. in one go the ER does chase and then wins.
+
+in the next they jump from chasing one sprinter to another then another and fall way behind. yikes.
+
+[[0,5000,"breakaway_sprint_eagerness=2"]]
+
+-- ooh, finally they are winning consistently with one other sprinter- they follow the other sprint, save energy, then come round to win
+
+- now enable another sprinter, can they still win? 
+
+- some weird breakaway group changes... a sprinter once sprinter should never change their group?? River 4 sprints in group 1 but then ends up in group 3?
+So, rider 4 sprints, rider 1 chases, rider 4 BLOWS, is issued a DROP, then imeediately tries to sprint again, which puts them in a new group...
+- this is FINE, they are basically getting out of the way of the chasing rider.
+
+- have ALL other riders sprint
+- ok, so it still wins most of the time- though it does jump from chasing one rider to another a lot. this is not necessarily bad if the new rider it chases is closer and is also sprinting
+
+- run a GA now with this setup and look at the best-in-gen races- do they seem more natural than before?
+
+huh, wellll it's winnign a lot, i think mainly because it is cooperating less!
+
+run it again with all equal coop level, and default sprint of 0 for EvR.
+
+wowah, with regular coop it almost NEVER wins. 
+
+have to stop the chaser swithcing to a less useful position- it needs to NOT chase a different rider that is much further ahead. But how?
+
+- it only considers the closest rider to chase that is NOT in its current group.
+
+- ideas for new rules
+- don't chase at all if in recovery  mode 
+- add a weighted factor for your power effort: higher power is lower liklihood of chase? anything at threshold or below is 1, max power is 0?
+
+- if the rider you might chase is further away than the rider you are following now, include a new weighted factor for power- the higher the power, the less likely the chase.
+
+- //dkDec13_change added && race_rider.recovery_mode == 0
+
+- add chase_inverse_power_output_weight and chase_inverse_power_output_exponent to settings 
+
+- when a rider swithces to chase a clsoer rider, it slows down :-( and this ruins its effort- it must apply some kind of smoothing effect, which makes no sense here. Power can go to 0!
+
+- maybe add a simple minimum_chase_duration? so that it can't immediately go to FOLLOW?
+
+  "attack_minimum_duration":5,
+  
+  - should I randomise he starting order? it allows for things to converge based on very specific turns, but if I do, do I randomise it for every race before it runs, where exactly? and it has to be replayable as before
+  
+  - is sheltering workign for a chaser? it follows pretty close but still outputs 1000 watts
+  
+  - start again with one then two then three other sprinters.
+  
+  - try shuffling the start order for every race... need to make sure it is included in results
+  
+  added new setting shuffle_race_start_order_every_race
+  
+  port dkDec13_change to GA race
+  
+  dkDec25_shuffle_start_order 
+  
+  - something wrong with the start order- the one shown in the GA results does not seem to be the one run in the race? It's saving the wrong order?
+  
+  - start order is stored in final_best_race_start_order
+  - and then we have generation_results.final_best_race_start_order = final_best_race_properties.start_order;
+  
+  - weird. it seems like we return ^^^ START ORDER sent as result 1,0,3,2 but then the results show 2,1,3,0
+  
+  
+  - after the big break, Dec 29th. Monday.
+  
+  - work on the start order. where is it going wrong??
+
+- need to cheeck it at the point of saving?? print it again there?
+
+- start order was not being shuffled for the WORST race win ratio tests.
+
+- seems like the win ratio tests shuffle the best race start order in place, and the results store a REF to this. the fix is a deep copy, i.e.,
+generation_results.final_best_race_start_order = [...final_best_race_properties.start_order];
+
+- oh deer, so now it seeems to save and send the right start order, but the race time/fitness still seems off... is the race game doing something odd, too?
+
+stored: 2,0,3,1
+executed: 1,0,2,3
+
+- oh it marches if i press stop and re-run it. sooooo it loads it wrong or just doesn'ty load it at all???
+
+- wasn't loading it and there is a default start order in the race object. Now it seems to work. 
+
+- what now? 
+
+- go through Colm's updates.done. 
+
+- images -. 36 descriptiosn too close togethr.
+
+- add a vertical line to table 1.4. done
+
+- rerun a nemesis test... in this case there is  no chaser.
+
+- run some more chase tests. start with a very basic one sprinter setup. try to explain the behaviour that emerges.
+
+- give the nemesis the exact strategy that the ER has, and run the test again? 
+
+[[0,3697.538,"breakaway_cooperation_time=0.755"],[0,950,"breakaway_sprint_eagerness=5.667"]]
+
+- I added these to in_race_updates and ran the GA, but I can see they weren't applied. maybe because the rider id number is there?
+- try this instead (run for a few gens)
+[[3697.538,"breakaway_cooperation_time=0.755"],[950,"breakaway_sprint_eagerness=5.667"]]
+
+- load_rider.in_race_updates is wonky- it has updates put into the WRONG rider, then it is NOT used. load_rider.in_race_updates_stack is what is actually used.
+- if a rider gets nothing from the rider_updates_genotype into its in_race_updates_stack, AND it has something in its in_race_updates, these should be COPIED to in_race_updates_stack.
+
+- shoot, still seems to not work.
+- forgot to comment out original code inserting things into in_race_updates
+- huh, in_race_updates_stack is empty when the race runs. warum?
+
+- now it seems to be doing something but is it actually working? the nemsis seems to lead the race when told not to?
+
+- ah poop, weird behaviour- the nemesis does drop at the beginning but after a while doens't... seems to refuse to drop then stays leading for ages. warum?
+
+- ah, so all the others have failed because ER has set off at a sillily high pace- the nemesis is then left at the front!
+- then, when it is MILES ahead, it is told to drop back. yikes.
+- if a rider is far ahead, it should be put into its own group? 
+
+- try another short 10 gen run, i think it technically works? we want it to roll so that we can add a second image to talk about.
+
+- seems to work/ running a larger test of 100 gens.
+
+- did i delete the original nemesis result? can't find it. thought i added an IMAGE tag? maybe corrupted it somehow.
+
+- need to re-run both sides now. 
+- how about we give the 'case 5' strategy to the first nemesis, then the repsonse to this as the 2nd? could it create some kind of circle?
+
+[[3,5000,"breakaway_cooperation_effort_level=7.09"],[3,4550,"breakaway_cooperation_time=9.828"],[3,2100,"breakaway_cooperation_time=0.604"],[3,800,"breakaway_sprint_eagerness=8.403"]]	
+
+- somewhat works, BUT i didnt; finish the coding last night where a rider with a gap should not get  drop added.
+- add this and rerun these tests.
+- added setting    "leader_distance_ahead_that_prevents_turn_drops":5,
+
+ok, it ran, and i added the image nemesisCase5Jan3V1 from experiment results 6959570d5c82a26f304177a4.
+
+- now, take that winning strategy and put it in a new search. 
+
+[[0,4229.387,"breakaway_cooperation_time=2.086"],[0,2989.927,"breakaway_cooperation_effort_level=5.422"],[0,2500,"breakaway_attack_effort_level_increase=0.264"],[0,2000,"breakaway_attack_duration=18.937"],[0,1700,"breakaway_cooperation_time=6.838"],[0,50,"breakaway_attack_duration=2.18"]]
+
+[[3,4229.387,"breakaway_cooperation_time=2.086"],[0,2989.927,"breakaway_cooperation_effort_level=5.422"],[3,1700,"breakaway_cooperation_time=6.838"]]
+
+- ok, so now i have the next experiment results, add this as an image 
+experiment 695962175c82a26f304177a6  best-in-gen image 
+
+simulator is buggy as funk- rider is with one other sprinter then decides to DROP behind a rider that is MILES behind. warum??
+- the rider it is with sprints and leaves the group.
+- the dropping rider should switch back to LEAD immediately, not try and drop behind someone wayyyyy behind.
+- need to find out where in the code it updates it's target, must be when it finds a target to follow as that is all group-specific.
+
+- so, when a rider sprints a new leader may be selected, but NOT one that is dropping... made a change to this 
+  if(race.current_order[i] != iik && race.breakaway_riders_groups[iik] == original_group && (race.riders[iik].current_aim == "FOLLOW" || race.riders[iik].current_aim == "DROP") && race.riders[iik].distance_covered > highest_follower_distance_covered){
+  
+- ok, so that's a little better. should now try to fix the odd behaviour from the previous nemesis test.
+
+- changed it to add a new setting, allow_dropping_rider_to_take_lead_after_sprint, so that it won't affect old results/replayability.
+
+in the other race, http://127.0.0.1:3003/tpgamebreakaway.html?source=results&results_id=6959570d5c82a26f304177a4&startorder=1,3,0,2&race_choices=%5B%5B%5D,%5B%5B353,%22SPRINT%22,%22FOLLOW%22,%22%20Rider%202%22%5D%5D,%5B%5B354,%22SPRINT%22,%22FOLLOW%22,%22Rider%203%22%5D%5D,%5B%5B349,%22SPRINT%22,%22FOLLOW%22,%22Nemesis%204%22%5D%5D%5D&final_best_race_rider_updates_genotype=%5B%5B0,4229.387,%22breakaway_cooperation_time=2.086%22%5D,%5B0,2989.927,%22breakaway_cooperation_effort_level=5.422%22%5D,%5B0,2500,%22breakaway_attack_effort_level_increase=0.264%22%5D,%5B0,2000,%22breakaway_attack_duration=18.937%22%5D,%5B0,1700,%22breakaway_cooperation_time=6.838%22%5D,%5B0,50,%22breakaway_attack_duration=2.18%22%5D%5D
+
+nemesis 2 at timestep 200-202 is told to drop back to position 3 instead of 2, BEHIND a rider that is wayyyy back.
+
+why does it get put here?
+- maybe contiguous_group_drop_distance is just o high?? that rider is almost 30m back! 5 or 6m makes more sense?
+-huh, it is set to 10m, so what is going on here??
+
+- fook, there's a bug in the drop code- if you are working out the undropped riders IN A ROW, and there is ANY gap, you need to quit- 
+- i.e. A-B--------C-D if A is dropping, they check B, ok, then C, nope, then do NOT check or count D, and stop counting!
+-  "drop_rules_contiguous_group_quit_if_gap":1,
+
+- port change to main code and re-run case 5 test 
+
+- use THIS image and rerun the response test with this NEW strategy for the nemesis 
+[[3,4845.766,"breakaway_cooperation_time=5.187"],[3,3216.601,"breakaway_cooperation_effort_level=5.522"],[3,2500,"breakaway_sprint_eagerness=0.905"],[3,938.687,"breakaway_attacking_probability=0.609"]]
+
+- ran another cas5 overnight with this outcome: 
+[[0,4984.073,"breakaway_cooperation_time=2.717"],[0,4450,"breakaway_cooperation_time=5.96"],[0,4200,"breakaway_sprint_eagerness=6.034"],[0,3824.585,"breakaway_cooperation_effort_level=5.591"]]
+
+run this again as a nemesis strategy 
+[[3,4984.073,"breakaway_cooperation_time=2.717"],[3,4450,"breakaway_cooperation_time=5.96"],[3,4200,"breakaway_sprint_eagerness=6.034"],[3,3824.585,"breakaway_cooperation_effort_level=5.591"]]
+
+used result 69599a6b5c82a26f304177a8  to create image nemesisCase5V3jan4.png 
+used result 6959a5a25c82a26f304177a9  to create image nemesiscase5ResponseV3jan4.png 
+
+in the case5 resposne best-in-gen, nemesis 4 ATTACKs! but it has an attack prob. of 0?? soooooooo how can it attack??
+
+- add two nemesis riders into the mix, the case5 and case5Response 'winners'
+
+- also run one anothe rn emesis with the case5response winner.
+
+[[3,5000,"breakaway_cooperation_time=1.258"],[3,4150,"breakaway_sprint_eagerness=8.257"],[3,4000,"breakaway_sprint_eagerness=8.462"]]
+
+problem- the win ratios are different now, bu a long ways, when i run them separate from the GA search. warum are they so?
+
+- test the starting order shuffle in the win ratio tests??
+
+- aha, seems like a fixed start order of 1,0,2,3 is loaded from the race object, not the input and not shuffled. warum?
+- need to add this?
+  //dkDec25_shuffle_start_order ******* START
+        let shuffle_race_start_order_every_race = 0;
+        if(typeof(settings_r.shuffle_race_start_order_every_race) != "undefined"){
+          shuffle_race_start_order_every_race = settings_r.shuffle_race_start_order_every_race;
+        }
+        let original_start_order = [...load_race_properties.start_order];
+        let shuffled_start_order = [];
+        if(shuffle_race_start_order_every_race == 1){
+          shuffleArray(load_race_properties.start_order);
+          shuffled_start_order = [...load_race_properties.start_order];
+          //console.log("*** shuffle start order:  " + load_race_properties.start_order + " ****");
+        }
+		
+		race_r.start_order = [...load_race_properties.start_order];
+        //dkDec25_shuffle_start_order ******* END
+
+- ok, good, the win ratios now look about the same as those from the GA.
+
+- use example from experiment 695a71c95c82a26f304177ac 
+[[0,4800,"breakaway_cooperation_effort_level=8.135"],[0,4800,"breakaway_cooperation_time=2.906"],[0,3600,"breakaway_sprint_eagerness=6.896"],[0,252.607,"breakaway_cooperation_time=57.668"]]
+
+- use lucky win from experiment 695a71c95c82a26f304177ac and then manually run it to get a low fitness example. 
+
+- added an example of a loss.. but do I know what makes the lucky case actually win- is it perfectly times sprints?
+
+- need to create a basic chase test. evolver has fixed genes for chasing and sprint, other rider sprint.
+
+- used results 695d6e12efcd7e08546c8839  for chasing example, images chaseRaceExampleJan6.png and chaseRaceExamplePowerOutput_Jan6.png
+
+- shoot, it wind less than HALF of the time. warum? positioning?
+
+- analyse what happens runnign this race standalone 
+
+[[0,5000,"breakaway_chase_eagerness=8.612"],[0,5000,"breakaway_sprint_eagerness=4.423"]]
+
+- seems to be winnign  a lot? manually test the win ratio?
+- maybe the stort order???
+
+- yup, the sort order. added a new table talking about it.
+
+- used 695dcdfbefcd7e08546c8849  as an example "has a sprint eagerness value of $1.81$  and a chase eagerness of $6.96$"
+
+- run another 2-nemesis setup. [[2,5000,"breakaway_chase_eagerness=6.96"],[2,5000,"breakaway_sprint_eagerness=1.81"]]
+
+- use 695dc6eeefcd7e08546c8847  as an example 
+[[0,5000,"breakaway_cooperation_effort_level=7.121"],[0,4982.962,"breakaway_cooperation_time=2.108"],[0,3000,"breakaway_attack_duration=30.572"],[0,700,"breakaway_attack_effort_level_increase=1.466"],[0,550,"breakaway_attack_effort_level_increase=3.738"],[0,366.993,"breakaway_cooperation_time=43.499"]]
+
+and also 
+[[0,5000,"breakaway_cooperation_effort_level=7.105"],[0,3600,"breakaway_cooperation_time=5.574"],[0,3200,"breakaway_sprint_eagerness=4.211"],[0,2240.812,"breakaway_sprint_eagerness=4.084"],[0,1500,"breakaway_attack_duration=26.558"],[0,600,"breakaway_sprint_eagerness=8.079"],[0,550,"breakaway_attack_effort_level_increase=1.731"]]
+
+- now start runnign nemesis versions 
+- 
+[[3,5000,"breakaway_cooperation_effort_level=7.121"],[3,4982.962,"breakaway_cooperation_time=2.108"],[3,3000,"breakaway_attack_duration=30.572"],[3,700,"breakaway_attack_effort_level_increase=1.466"],[3,550,"breakaway_attack_effort_level_increase=3.738"],[3,366.993,"breakaway_cooperation_time=43.499"]]
+
+- not that clear how to organise these results,what to say.
+
+- added an example of a genotype property 
+
+- gets cut by an image, can i prevent this?
+try
+\begin{minipage}{\linewidth}
+\begin{lstlisting}[language=json,firstnumber=1]
+	....
+	....
+\end{lstlisting}
+\end{minipage}
+
+- runnign a test with a strong sprinter. but the way i've set it up with 2 props and effort instead of power instructs makes it awkward. 5 doesn't map to the same power now. don't remember why I added that layer of effort levels.
+
+need to lower the output of the sprinter. it's level 6 is much higher than the others. everybody fails....
+
+- more weird chase behaviour- the new sprinter ends up chasing a rider in the bunch...and then its power goes to 0 and it starts to fall back. why?
+
+so it's chasing a rider but that rider is dropping back so it chases the closest rider but that involves slowing down. but why is it so far behind in the first place? fukme i'm tired of this
+
+maybe it's because it tries to chase back into the group becasue they are now ahead, but it chases the leader, who has a follower behind.
+if it chases it should only chase the back rider, or be sent to the back of the group?
+what happens if 2 riders are following another? i.e., a chaser and a follower?
+
+- how about don't let it chase a rider that has a follower in tow? like, you chase onto the BACK of a group, not after the leader?
+
+- added these to settings 
+   "do_not_chase_rider_with_follower":1,
+    "do_not_chase_rider_with_follower_distance":3,
+	
+-- ooh, i think the problem is the ordering... the sprinter is BEHIND the target BUT is in FRONT of them in the ordering, therefore it moves first, and bases its move on the last move of the target.
+
+- also, it is following a rider in a different group! if a rider is chasing another, and the target changes group, any chaser needs to also change their group.
+
+- need to update the group if the target has changed groups 
+
+- incoude another setting 
+  "update_group_to_chase_target_if_they_change":1,
+  
+  
+  // dkJan26B START *** also, check if a rider is chasing a target: if that target has changed group, also change to that group
+    if(display_rider.current_aim == "CHASE"){
+        let my_group = race.breakaway_riders_groups[ri];
+        if(display_rider.breakaway_chase_target_rider >= 0){
+            let chase_target_group = race.breakaway_riders_groups[display_rider.breakaway_chase_target_rider];
+            if(chase_target_group !== my_group){
+              race.breakaway_riders_groups[ri] = chase_target_group;
+            }
+        }
+    }
+      // dkJan26B END *** 
+	  
+	  
+	  - ah crap, attacks not evolving now :-( 
+	  
+	  
+	  
+	  {"iterations":5,"active":1,"variations":[{"iterations":[5,4,3,2,1],"type":"rider",,"rider_no":0,"property":"threshold_power","values":[375,400,425,450,500]}],"experiments":[]}
+	  
+	  
+	  - i should include an example of gen-by-gen search progress, e.g., for a basic coop/sprint search? 
+	  
+	  - need to include something for the increasing threshold power tests- maybe a basic Python graph?
+	  
+	  - need to finish the conclusion
