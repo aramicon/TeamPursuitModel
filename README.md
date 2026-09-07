@@ -22,8 +22,8 @@ Once the data has been imported, the simulator application can be connected to i
 ```javascript
 const MongoClient = require('mongodb').MongoClient;
 const ObjectID = require('mongodb').ObjectID;
-const dbname = "crud_mongodb";
-const url = "mongodb://localhost:27017";
+const dbname = "crud_mongodb"; //Put your data collection name here (this is the original name).
+const url = "mongodb://localhost:27017"; //Put your own server IP and port here.
 const mongoOptions = {useNewUrlParser: true};
 ```
 
