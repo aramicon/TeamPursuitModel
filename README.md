@@ -27,12 +27,16 @@ const url = "mongodb://localhost:27017"; //Put your own server IP and port here.
 const mongoOptions = {useNewUrlParser: true};
 ```
 
-
 **Setting up and running an experiment.**
 
 **Complete set of starting parameters for a particular Experiment**
 
 There are three sets of parameters for an experiment, which is essentially an execution of the genetic algorithm for a given team and race setting. Despite the large number, many of these are not varied for testing, and many are linked such that they only have an effect in certain combinations. For example, some settings are specific to the track cycling simulations, and others to the breakaway simulations.
+
+The following settings are designed to run an experiment that evolves a 'simple sprinter' for the breakaway scenario.
+
+- The "race_type" property is set to "BREAKAWAY"
+- The "ga_properties_to_evolve" contains details for a single "breakaway_sprint_eagerness" setting. This is the only component of the genotype, and the only thing that will evolve for the evolving rider.
 
 Settings 1: Global parameters controlling main simulator behaviour
 ```javascript
@@ -255,7 +259,7 @@ Settings 2: Race parameters controlling some race properties such as distance
 }
 ```
 
-Settings 3: Riders: this sets up the team of riders; each has its own set of properties.
+Settings 3: Riders: this sets up the team of riders; each has its own set of properties. The first rider here is the evolving rider. A team/group size of 4 has been used for most of the research experimentation, though it may be varied.
 ```javascript
 [{
         "name": "EVOLVE 1",
