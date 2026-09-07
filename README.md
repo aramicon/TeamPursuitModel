@@ -27,3 +27,20 @@ const url = "mongodb://localhost:27017"; //Put your own server IP and port here.
 const mongoOptions = {useNewUrlParser: true};
 ```
 
+
+** Setting up and running an experiment. **
+
+
+** Saving, viewing, and searching results **
+
+
+** Run an instance of a race from results **
+
+
+** Setting up and running a sequence of experiments **
+
+
+
+
+- 
+
