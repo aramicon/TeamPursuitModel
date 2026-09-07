@@ -15,7 +15,7 @@ The basic architecture is as follows:
 + A MongoDB data storage layer that stores both experiment configurations (every starting parameter) and results, for experiments that are run.
 
 **Importing the MongoDB file**
-The MongoDb collection is available on the open Zenodo repository, operated by CERN (). 
+The MongoDb collection is available on the open Zenodo repository, operated by CERN (The European Organization for Nuclear Research, based in Geneva). 
 
 **Connecting the Node.JS application to the MongoDB data collection**
 Once the data has been imported, the simulator application can be connected to it in order to load both experiment settings (for running them) and previous experiment results. The data connection properties must be set in the DB.js file directly inside the experiment_server folder.
