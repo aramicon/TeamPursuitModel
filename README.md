@@ -32,9 +32,8 @@ const mongoOptions = {useNewUrlParser: true};
 
 **Setting up and running an experiment.**
 If the Node/js application is running as expected, the following interface should be presented at the base URL/port (I have used 3003, and thus http://127.0.0.1:3003/ga to avoid a conflict with another service).
+![Starting page from which a GA experiment may be run](docs/images/ga_page.png)
 
-Inline-style: 
-![alt text](https://github.com/adam-p/markdown-here/raw/master/src/common/images/icon48.png "Logo Title Text 1")
 
 
 **Complete set of starting parameters for a particular Experiment**
