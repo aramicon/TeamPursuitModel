@@ -34,7 +34,7 @@ const mongoOptions = {useNewUrlParser: true};
 If the Node/js application is running as expected, the following interface should be presented at the base URL/port (I have used 3003, and thus http://127.0.0.1:3003/ga to avoid a conflict with another service).
 ![Starting page from which a GA experiment may be run](docs/images/ga_page.png)
 
-To run an experiment, an instance of settings is loaded from the drop-down menu (note here that 154 different instances have been loaded from the database), and the "Run GA" button is pressed. This will begin the GA. While some feedback is shown in the main UI, further console logging and progress may be viewed by showing the JavaScript console of the browser (e.g., by hitting F12 in Windows for Chrome).
+To run an experiment, load an instance of settings from the drop-down menu in the top-right (note here that 154 different instances have been loaded from the database), and press the "Run GA" button a the bottom. This will begin the GA, where a population of randomised solutions is created, and generations of simulations, fitness-biased selection, and variance-affected replication/reproduction start to run. Depending on the settings, this may take some time: while some feedback is shown in the main UI, further console logging and overall progress may be viewed by showing the JavaScript console of the browser (e.g., by hitting F12 in Windows for Chrome).
 
 From this screen, new settings may be created and saved, or existing ones updated. Results from a run may also be saved.
 
