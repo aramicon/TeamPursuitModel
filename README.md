@@ -34,7 +34,11 @@ const mongoOptions = {useNewUrlParser: true};
 If the Node/js application is running as expected, the following interface should be presented at the base URL/port (I have used 3003, and thus http://127.0.0.1:3003/ga to avoid a conflict with another service).
 ![Starting page from which a GA experiment may be run](docs/images/ga_page.png)
 
+To run an experiment, an instance of settings is loaded from the drop-down menu (note here that 154 different instances have been loaded from the database), and the "Run GA" button is pressed. This will begin the GA. While some feedback is shown in the main UI, further console logging and progress may be viewed by showing the JavaScript console of the browser (e.g., by hitting F12 in Windows for Chrome).
 
+From this screen, new settings may be created and saved, or existing ones updated. Results from a run may also be saved.
+
+There are a large number of settings that may be enabled/changed when running an experiment; these set everything from the team rider properties to the size of the population and the number of generations that will run. The following section includes an example of settings for a specific experiment.
 
 **Complete set of starting parameters for a particular Experiment**
 
