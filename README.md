@@ -32,7 +32,9 @@ const mongoOptions = {useNewUrlParser: true};
 
 **Setting up and running an experiment.**
 If the Node/js application is running as expected, the following interface should be presented at the base URL/port (I have used 3003, and thus http://127.0.0.1:3003/ga to avoid a conflict with another service).
-![Starting page from which a GA experiment may be run](docs/images/ga_page.png)
+
+Starting page from which a GA experiment may be run
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/ga_page.png" width="500">
 
 To run an experiment, load an instance of settings from the drop-down menu in the top-right (note here that 154 different instances have been loaded from the database), and press the "Run GA" button a the bottom. This will begin the GA, where a population of randomised solutions is created, and generations of simulations, fitness-biased selection, and variance-affected replication/reproduction start to run. Depending on the settings, this may take some time: while some feedback is shown in the main UI, further console logging and overall progress may be viewed by showing the JavaScript console of the browser (e.g., by hitting F12 in Windows for Chrome).
 
@@ -485,23 +487,30 @@ Settings 3: Riders: this sets up the team of riders; each has its own set of pro
 ```
 
 
-
 **Saving, viewing, and searching results**
 
-When a GA has run, results may be saved easily to the database by pressing the "Save" button that is shown below the GA, after the experiment has finished. fields for "Notes and "Tags" may be filled to record meta-data: these fields are searchable.
+When a GA has run from the "GA" page, results may be saved easily to the database by pressing the "Save" button that is shown below the GA, after the experiment has finished. fields for "Notes and "Tags" may be filled to record meta-data: these fields are searchable. A brief list of generation-by-generation results is shown on this GA page; a more comprehensive list is shown in the "Results" page, accessible from the top menu. 
 
-
+Main results page:
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_results_screen.png" width="500">
 
+Each experiment stored is shown here as a single line in the table, including its unique identifier. The name of the settings configuration used, the "notes" and "tags", and the date and time the experiment was run, are also included. Notes and Tags may be used to search for specific results. If the ID of any result is clicked, those results are loaded. Tags and Notes, and a Short Title - used for some graphs - may be updated. 
 
+Crucially, here, when an experiment has been selected, the "Show Loaded Results" button may be pressed to display a second table, this one containing generation by generation details of the experiment. An example is the following:
 
-docs/images/screenshot_show_loaded_results.png
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_show_loaded_results.png" width="500">
+
+These results contain many details for each generation of an experiment, such as details about the best-in-generation solution (it's time, genotype, etc), and population-level statistics. Depending on the type of simulation, a track race or a breakaway, a slightly different list is shown.
 
 **Run an instance of a race from results**
 
-docs/images/screenshot_run_specific_race.png
+For any generation of any experiment, the best-in-generation solution may be run to examine its turn-by-turn behaviour. This is done via a separate UI, and uses a matched but distinct code file from the non-visual version that is used by the core simulations. Precise behaviour and finish times between the two may be compared if necessary using logging that may be enabled.
 
-docs/images/screenshot_example_race_running.png
+To run a specific solution as a visual race, press the "Run" button in the "Visualise" column, as shown circled in red here:
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_run_specific_race.png" width="500">
+
+This will open a new tab, a race UI that uses information from the URI provided to load the correct experiment and prepare it for running. If the black "Play" triangle is pressed, the race begins. In an example here, a breakaway race has been played, and the evolving rider has just launched its finish sprint and is about to cross the finish line in the leading position at 5000 m.
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_example_race_running.png" width="500">
 
 **Generating Graphs and Obtaining Data**
 
