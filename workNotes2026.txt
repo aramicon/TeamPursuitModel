@@ -1,0 +1,70 @@
+-- May 7
+
+ - totally forgot where I created the breakaway state flowchart.
+ - found it eventually, https://app.diagrams.net/#G1Gks6neRtL301xMOOi58TzF9Eiw7cnfKL#%7B%22pageId%22%3A%22g5g6f5y6o28ydcdYyU8z%22%7D
+ 
+ 
+ 
+ REPRODUCIBILITY. Sep 4th 2026.
+ 
+ 1: export MongoDB database
+ 2: upload to Zenodo
+ 3: link this to GitHub, and improve ReadMe
+ 4: add Python scripts to GitHub
+ 5: clean up RedMe
+ 
+ 6: publish core details paper on Zenodo
+ 
+ - should i rename the db?
+ 
+ - no, just focus on getting this done.
+ 
+ - use the mongodump tool to export, e.g. mongodump --db=your_database_name --out /path/to/backup/directory
+
+mongodump --db=crud_mongodb --out C:/Users/donak/Documents/RESEARCH/data_backup
+
+- used 7zip to create a zip archive file 
+- use Powershell to create a SHA256 checksum 
+
+Get-FileHash .\cycling_sim_ec_results-dataset_v1.0.zip -Algorithm SHA256
+
+SHA256          FDA971A4654D8B542F48AE27A567B3A355CDDE5BF7C9B11B07179A5CBF9C9371
+
+- uploading it to Zenodo, need a good title 
+Team Pursuit/Breakaway Scenario Cycling Simulator with Evolutionary Computation (GA) Strategy Discovery Dataset: BSON-format export of MongoDB data collection.
+Your ORCID iD: 0009-0002-1640-5726
+Your ORCID record is https://orcid.org/0009-0002-1640-5726
+
+
+This dataset contains the experimental settings and results for a research project exploring the use of applying an evolutionary algorithm search to two scenarios from the sport of competitive cycling:
+
+ A team pursuit track cycling race where the finish time can be used as a measure of 'fitness'.
+A 'breakaway' scenario occuring at the end of a (road) race where fitness is tied to staying away from the chasing peloton and (ideally) winning.
+
+Above and beyond demonstrating the core use of the genetic algorithm search for team-specific solutions, further research was conducted into investigating the robustness of these solutions, and to the effects of domain-specific noise within the simulation behaviour on the discovery of strategies and their properties.
+
+The data is exported from a MongoDB database, and is contained in that database's compact BSON format (though it may be mapped to the more human-readable JSON format if needed).
+
+This dataset is designed to support the reproducibility of research that has been published in peer-reviewed environments, and therefore to support further efforts in this area. The application that runs the experiments, which includes the ability to show and search results and provide a step-by-step visualisation of solutions discovered from generation to generation, is available in its entirity as a GitHub-hosted project. Its URL is: https://github.com/aramicon/TeamPursuitModel
+
+This research was conducted by Donal Kelly, under the supervision and support of Dr. Colm O'Riordan, both of the University of Galway, Ireland.
+
+
+
+
+- save this in a txt file 
+- definitely need to remove things from the gitHib repository, such as the worknotes files.
+
+- data folder goes
+- images folder goes etc
+
+- how does it connect to the Mongo db? settings in a Node foler?
+- it is configured in DB.js in the experiment_server folder 
+- 
+
+- need to  mention:
+
+- how to run an experiment (with sreenshot(s)).
+- how to set up and run sequences. 
+- how to view and search results.
+- how to run an instance of a race.

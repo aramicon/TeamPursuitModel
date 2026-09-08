@@ -3564,3 +3564,119 @@ try
 - runnign a test with a strong sprinter. but the way i've set it up with 2 props and effort instead of power instructs makes it awkward. 5 doesn't map to the same power now. don't remember why I added that layer of effort levels.
 
 need to lower the output of the sprinter. it's level 6 is much higher than the others. everybody fails....
+
+- more weird chase behaviour- the new sprinter ends up chasing a rider in the bunch...and then its power goes to 0 and it starts to fall back. why?
+
+so it's chasing a rider but that rider is dropping back so it chases the closest rider but that involves slowing down. but why is it so far behind in the first place? fukme i'm tired of this
+
+maybe it's because it tries to chase back into the group becasue they are now ahead, but it chases the leader, who has a follower behind.
+if it chases it should only chase the back rider, or be sent to the back of the group?
+what happens if 2 riders are following another? i.e., a chaser and a follower?
+
+- how about don't let it chase a rider that has a follower in tow? like, you chase onto the BACK of a group, not after the leader?
+
+- added these to settings 
+   "do_not_chase_rider_with_follower":1,
+    "do_not_chase_rider_with_follower_distance":3,
+	
+-- ooh, i think the problem is the ordering... the sprinter is BEHIND the target BUT is in FRONT of them in the ordering, therefore it moves first, and bases its move on the last move of the target.
+
+- also, it is following a rider in a different group! if a rider is chasing another, and the target changes group, any chaser needs to also change their group.
+
+- need to update the group if the target has changed groups 
+
+- incoude another setting 
+  "update_group_to_chase_target_if_they_change":1,
+  
+  
+  // dkJan26B START *** also, check if a rider is chasing a target: if that target has changed group, also change to that group
+    if(display_rider.current_aim == "CHASE"){
+        let my_group = race.breakaway_riders_groups[ri];
+        if(display_rider.breakaway_chase_target_rider >= 0){
+            let chase_target_group = race.breakaway_riders_groups[display_rider.breakaway_chase_target_rider];
+            if(chase_target_group !== my_group){
+              race.breakaway_riders_groups[ri] = chase_target_group;
+            }
+        }
+    }
+      // dkJan26B END *** 
+	  
+	  
+	  - ah crap, attacks not evolving now :-( 
+	  
+	  
+	  
+	  {"iterations":5,"active":1,"variations":[{"iterations":[5,4,3,2,1],"type":"rider",,"rider_no":0,"property":"threshold_power","values":[375,400,425,450,500]}],"experiments":[]}
+	  
+	  
+	  - i should include an example of gen-by-gen search progress, e.g., for a basic coop/sprint search? 
+	  
+	  - need to include something for the increasing threshold power tests- maybe a basic Python graph?
+	  
+	  - need to finish the conclusion
+	  
+	  - use Python to create a graph,  win ratios to ER threshold power 
+	  
+	  power 	325, 350, 375, 400, 425, 450, 475, 500
+	  win ratio	0.222, 0.242, 0.278, 0.494, 0.521, 0.961, 1, 0.995
+	  av. fit.	0.7875, 0.8691, 0.8772, 0.8964, 0.8937, 0.9495, 0.97, 0.9648
+	  
+	  
+	  
+	  
+	- add ref to Moral AI book 2024 borg2024moral
+	rack mgmt 
+	
+	- my paper https://link.springer.com/chapter/10.1007/978-3-032-15635-8_21#citeas
+	
+	-- wednesday april 1, fools day. 
+	
+	- using chatgpt to try and fix latex issues with figures in the ieee access format.
+	- may need to apply a 'one figure one caption' approach? 
+	- let's look at some more actual articles to see. 
+	- https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=6287639
+	
+	- Foud a popular paper with lots of images. on page 6 of https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10990278, there is a figure with 2 images, above and below, (a) and (b). One page 24 there are 2 side-by-side Figures where both have 3 parts, labelled (a), (b), (c).
+	
+	
+	-- update all of the existing images to the \Figure format
+	
+	\Figure[t!](topskip=0pt, botskip=0pt, midskip=0pt)[width=0.45\textwidth]{images_noise/FILE.png}{\textbf{CAPTION.}\label{fig:LABEL}}
+	
+	fix for subfloat issue 
+	
+	% ********** subfloat issue START ***************
+\begin{figure*}[t]
+\centering
+\begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images_noise/performance_failure_example_A_fixed_amount.png}
+    \small (a) Performance failure: fixed amount (0.2) for every rider and timestep. 257.817 seconds.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images_noise/performance_failure_example_B_accumulated_fatigue.png}
+    \small (b) Performance failure: accumulated fatigue only. 264.691 seconds.
+\end{minipage}
+\vspace{0.8em} % space between rows
+\begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images_noise/performance_failure_example_C_all_factors.png}
+    \small (c) Performance failure: accumulated fatigue only. 264.691 seconds.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images_noise/performance_failure_example_D_one_rider_random_effort.png}
+    \small (d) Performance failure: accumulated fatigue only. 264.691 seconds.
+\end{minipage}
+
+\caption{Final best-in-gen strategy power outputs after one hundred generations of a GA search using different configurations of performance noise failure on a team of equal riders. Each setup has its distinct influence on how the search progresses and the strategies that emerge.}
+\label{fig:myfigure}
+\end{figure*}
+
+% ********** subfloat issue END ***************
+
+	
+	

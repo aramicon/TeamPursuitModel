@@ -3614,3 +3614,75 @@ what happens if 2 riders are following another? i.e., a chaser and a follower?
 	  - need to include something for the increasing threshold power tests- maybe a basic Python graph?
 	  
 	  - need to finish the conclusion
+	  
+	  - use Python to create a graph,  win ratios to ER threshold power 
+	  
+	  power 	325, 350, 375, 400, 425, 450, 475, 500
+	  win ratio	0.222, 0.242, 0.278, 0.494, 0.521, 0.961, 1, 0.995
+	  av. fit.	0.7875, 0.8691, 0.8772, 0.8964, 0.8937, 0.9495, 0.97, 0.9648
+	  
+	  
+	  
+	  
+	- add ref to Moral AI book 2024 borg2024moral
+	rack mgmt 
+	
+	- my paper https://link.springer.com/chapter/10.1007/978-3-032-15635-8_21#citeas
+	
+	-- wednesday april 1, fools day. 
+	
+	- using chatgpt to try and fix latex issues with figures in the ieee access format.
+	- may need to apply a 'one figure one caption' approach? 
+	- let's look at some more actual articles to see. 
+	- https://ieeexplore.ieee.org/xpl/RecentIssue.jsp?punumber=6287639
+	
+	- Foud a popular paper with lots of images. on page 6 of https://ieeexplore.ieee.org/stamp/stamp.jsp?tp=&arnumber=10990278, there is a figure with 2 images, above and below, (a) and (b). One page 24 there are 2 side-by-side Figures where both have 3 parts, labelled (a), (b), (c).
+	
+	
+	-- update all of the existing images to the \Figure format
+	
+	\Figure[t!](topskip=0pt, botskip=0pt, midskip=0pt)[width=0.45\textwidth]{images_noise/FILE.png}{\textbf{CAPTION.}\label{fig:LABEL}}
+	
+	
+	\Figure[t!](topskip=0pt, botskip=0pt, midskip=0pt)[width=0.9\textwidth]{images_noise/noise_mishearing_7_levels_2025-7-11_16-42.png}
+{\textbf{Best-in-generation race finish times for seven different levels of instruction delivery \squotes{mishearing} noise.} Creating a gap between the original instruction sets that act as the genetic material for the GA, and the actual instructions executed by the rider, the noise has a significant impact on the ability of the search to converge on better strategies, and also undermines any \textit{elitism} present, which would normally clone the best performer(s) directly from one generation to the next.\label{fig:noise_mishearing_7_levels_2025711}}
+
+
+	
+	fix for subfloat issue 
+	
+% ********** subfloat fix START ***************
+\begin{figure*}[t]
+\centering
+\begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images_noise/performance_failure_example_A_fixed_amount.png}
+    \small (a) Performance failure: fixed amount (0.2) for every rider and timestep. 257.817 seconds.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images_noise/performance_failure_example_B_accumulated_fatigue.png}
+    \small (b) Performance failure: accumulated fatigue only. 264.691 seconds.
+\end{minipage}
+\vspace{0.8em} % space between rows
+\begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images_noise/performance_failure_example_C_all_factors.png}
+    \small (c) Performance failure: accumulated fatigue only. 264.691 seconds.
+\end{minipage}
+\hfill
+\begin{minipage}[t]{0.45\linewidth}
+    \centering
+    \includegraphics[width=\linewidth]{images_noise/performance_failure_example_D_one_rider_random_effort.png}
+    \small (d) Performance failure: accumulated fatigue only. 264.691 seconds.
+\end{minipage}
+\caption{Final best-in-gen strategy power outputs after one hundred generations of a GA search using different configurations of performance noise failure on a team of equal riders. Each setup has its distinct influence on how the search progresses and the strategies that emerge.}
+\label{fig:myfigure}
+\end{figure*}
+% ********** subfloat fix END ***************
+
+	
+	- finished updating all the images, there are so many.
+	- next is to get the references working. 
+	

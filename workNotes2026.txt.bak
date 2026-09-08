@@ -1,0 +1,26 @@
+-- May 7
+
+ - totally forgot where I created the breakaway state flowchart.
+ - found it eventually, https://app.diagrams.net/#G1Gks6neRtL301xMOOi58TzF9Eiw7cnfKL#%7B%22pageId%22%3A%22g5g6f5y6o28ydcdYyU8z%22%7D
+ 
+ 
+ 
+ REPRODUCIBILITY. Sep 4th 2026.
+ 
+ 1: export MongoDB database
+ 2: upload to Zenodo
+ 3: link this to GitHub, and improve ReadMe
+ 4: add Python scripts to GitHub
+ 5: clean up RedMe
+ 
+ 6: publish core details paper on Zenodo
+ 
+ - should i rename the db?
+ 
+ - no, just focus on getting this done.
+ 
+ - use the mongodump tool to export, e.g. mongodump --db=your_database_name --out /path/to/backup/directory
+
+mongodump --db=crud_mongodb --out C:/Users/donak/Documents/RESEARCH/data_backup
+
+- definitely need to remove things from the gitHib repository, such as the worknotes files.
