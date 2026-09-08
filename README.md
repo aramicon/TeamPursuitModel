@@ -488,8 +488,22 @@ Settings 3: Riders: this sets up the team of riders; each has its own set of pro
 
 **Saving, viewing, and searching results**
 
+When a GA has run, results may be saved easily to the database by pressing the "Save" button that is shown below the GA, after the experiment has finished. fields for "Notes and "Tags" may be filled to record meta-data: these fields are searchable.
+
+
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_results_screen.png" width="500">
+
+
+
+docs/images/screenshot_show_loaded_results.png
 
 **Run an instance of a race from results**
+
+docs/images/screenshot_run_specific_race.png
+
+docs/images/screenshot_example_race_running.png
+
+**Generating Graphs and Obtaining Data**
 
 
 ** Setting up and running a sequence of experiments **
