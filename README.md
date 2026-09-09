@@ -15,6 +15,7 @@ The basic architecture is as follows:
 + A MongoDB data storage layer that stores both experiment configurations (every starting parameter) and results, for experiments that are run.
 
 **Project File Structure**
+
 The following is a tree view of key files, including notes on their purpose. Files such as Node modules have been removed.
 
 ```text
