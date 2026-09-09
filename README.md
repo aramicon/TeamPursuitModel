@@ -14,6 +14,47 @@ The basic architecture is as follows:
 + A visual JavaScript/CSS/HTML front-end to allow easy running and saving of configurations and experiments. This front-end UI is served up by a Node.JS server.
 + A MongoDB data storage layer that stores both experiment configurations (every starting parameter) and results, for experiments that are run.
 
+**Project File Structure**
+The following is a tree view of key files, including notes on their purpose. Files such as Node modules have been removed.
+
+```javascript
++---experiment_server
+|   |   app.js [main file handling requests from the browser, returning pages and data ]
+|   |   db.js [connects to MongoDB database; config goes here]
+|   +---node_modules
+|   +---... (not shown)
+|   |---...           
+|   \---public
+|       |   about.html [some info about the project]
+|       |   ga.html [main page for setting up congifurations and running (once-off) experiments
+|       |   index.html [basic homepage explaining some of the project]
+|       |   results.html [main results page for searching results, showing graphs, obtaining raw data]
+|       |   sequence.html [page for setting up sequences of experiments to automatically run]
+|       |   tests.html [page built for some algorithm tests]
+|       |   test_suite.html [further page built for some algorithm tests]
+|       |   tpgame.html [game visualiser to replay (or play) a team pursuit race]
+|       |   tpgamebreakaway.html [game visualiser to replay (or play) a breakawayt race]
+|       |   
+|       +---css
+|       |       model3.css [contains some CSS for the (bootstrap-based) pages]
+|       |       
+|       +---images [contians a small number of images used on the pages]
+|       |       cycling-track-markings.png
+|       |      ...
+|       |      ... 
+|       \---js [this is where the 'real' work is done]
+|               ga.js [code to manage the GA page interface, ]
+|               jquery.min.js [some jquery is used for the front-end]
+|               model3.js [team pursuit race visualiser code]
+|               model3breakaway.js [breakaway race visualiser code]
+|               race_function_no_vis.js [main simulator code that runs the GA and the simulations via web workers. BIGGEST CODE FILE! ]
+|               results.js [code to search for, display, and return results, including some d3.js graphing and data]
+|               Sequence.js [code for sequences page; to show, create, search for, delete, etc. the sequences are run in race_function_no_vis]
+|               test_functions.js [some test algorithm implementations]
+|               test_suite.js [manages the testing page requests and UI]
+|               
+```
+
 **Importing the MongoDB file**
 The MongoDb collection is available on the open Zenodo repository, operated by CERN (The European Organization for Nuclear Research, based in Geneva).
 
