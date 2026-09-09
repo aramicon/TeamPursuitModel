@@ -100,6 +100,7 @@ The following settings are designed to run an experiment that evolves a 'simple 
 
 <details>
   <summary>Settings 1: Global parameters controlling main simulator behaviour</summary>
+  
 ```javascript
 {
     "update_group_to_chase_target_if_they_change": 1,
@@ -291,7 +292,8 @@ The following settings are designed to run an experiment that evolves a 'simple 
     "log_generation_instructions_info": [0, 4, 19, 99],
     "number_of_races_to_average": 1
 }
-``` 
+```
+
 </details>
 
 
