@@ -296,8 +296,9 @@ The following settings are designed to run an experiment that evolves a 'simple 
 
 </details>
 
+<details>
+  <summary>Settings 2: Race parameters controlling some race properties such as distance</summary>
 
-Settings 2: Race parameters controlling some race properties such as distance
 ```javascript
 {
   "rider_updates_genotype":[],
@@ -324,7 +325,13 @@ Settings 2: Race parameters controlling some race properties such as distance
 }
 ```
 
-Settings 3: Riders: this sets up the team of riders; each has its own set of properties. The first rider here is the evolving rider. A team/group size of 4 has been used for most of the research experimentation, though it may be varied.
+</details>
+
+
+<details>
+  <summary>Settings 3: Riders: this sets up the team of riders; each has its own set of properties. The first rider here is the evolving rider. A team/group size of 4 has been used for most of the research experimentation, though it may be varied.
+</summary>
+
 ```javascript
 [{
         "name": "EVOLVE 1",
@@ -537,6 +544,8 @@ Settings 3: Riders: this sets up the team of riders; each has its own set of pro
     }
 ]
 ```
+
+</details>
 
 
 **Saving, viewing, and searching results**
