@@ -96,7 +96,10 @@ The following settings are designed to run an experiment that evolves a 'simple 
 - The "race_type" property is set to "BREAKAWAY"
 - The "ga_properties_to_evolve" contains details for a single "breakaway_sprint_eagerness" setting. This is the only component of the genotype, and the only thing that will evolve for the evolving rider.
 
-Settings 1: Global parameters controlling main simulator behaviour
+
+
+<details>
+  <summary>Settings 1: Global parameters controlling main simulator behaviour</summary>
 ```javascript
 {
     "update_group_to_chase_target_if_they_change": 1,
@@ -288,7 +291,9 @@ Settings 1: Global parameters controlling main simulator behaviour
     "log_generation_instructions_info": [0, 4, 19, 99],
     "number_of_races_to_average": 1
 }
-```
+``` 
+</details>
+
 
 Settings 2: Race parameters controlling some race properties such as distance
 ```javascript
