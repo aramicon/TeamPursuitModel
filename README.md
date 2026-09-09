@@ -19,7 +19,7 @@ The following is a tree view of key files, including notes on their purpose. Fil
 
 ```text
 +---experiment_server
-|   |   app.js [main file handling requests from the browser, returning pages and data ]
+|   |   **app.js** [main file handling requests from the browser, returning pages and data ]
 |   |   db.js [connects to MongoDB database; config goes here]
 |   +---node_modules
 |   +---... (not shown)
