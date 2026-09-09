@@ -17,7 +17,7 @@ The basic architecture is as follows:
 **Project File Structure**
 The following is a tree view of key files, including notes on their purpose. Files such as Node modules have been removed.
 
-```javascript
+```text
 +---experiment_server
 |   |   app.js [main file handling requests from the browser, returning pages and data ]
 |   |   db.js [connects to MongoDB database; config goes here]
