@@ -57,12 +57,14 @@ The following is a tree view of key files, including notes on their purpose. Fil
 ```
 
 **Importing the MongoDB file**
+
 The MongoDb collection is available on the open Zenodo repository, operated by CERN (The European Organization for Nuclear Research, based in Geneva).
 
 - **Link to settings/results dataset (Zenodo)**: [https://zenodo.org/records/22649724](https://zenodo.org/records/22649724)
 - **DOI**: 10.5281/zenodo.22649724 (version 1.0, containing experiments up to Sep 7th, 2026)
 
 **Connecting the Node.JS application to the MongoDB data collection**
+
 Once the data has been imported, the simulator application can be connected to it in order to load both experiment settings (for running them) and previous experiment results. The data connection properties must be set in the DB.js file directly inside the experiment_server folder.
 ```javascript
 const MongoClient = require('mongodb').MongoClient;
@@ -73,6 +75,7 @@ const mongoOptions = {useNewUrlParser: true};
 ```
 
 **Setting up and running an experiment.**
+
 If the Node/js application is running as expected, the following interface should be presented at the base URL/port (I have used 3003, and thus http://127.0.0.1:3003/ga to avoid a conflict with another service).
 
 Starting page from which a GA experiment may be run
