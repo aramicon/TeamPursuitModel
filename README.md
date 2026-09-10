@@ -22,8 +22,8 @@ The following is a tree view of key files, including notes on their purpose. Fil
 +---experiment_server
 |   |   app.js [main file handling requests from the browser, returning pages and data ]
 |   |   db.js [connects to MongoDB database; config goes here]
-|   +---node_modules
-|   +---... (not shown)
+|   +---node_modules (not shown)
+|   +---... 
 |   |---...           
 |   \---public
 |       |   about.html [some info about the project]
@@ -39,7 +39,7 @@ The following is a tree view of key files, including notes on their purpose. Fil
 |       +---css
 |       |       model3.css [contains some CSS for the (bootstrap-based) pages]
 |       |       
-|       +---images [contians a small number of images used on the pages]
+|       +---images [contains a small number of images used on the pages]
 |       |       cycling-track-markings.png
 |       |      ...
 |       |      ... 
@@ -53,7 +53,12 @@ The following is a tree view of key files, including notes on their purpose. Fil
 |               Sequence.js [code for sequences page; to show, create, search for, delete, etc. the sequences are run in race_function_no_vis]
 |               test_functions.js [some test algorithm implementations]
 |               test_suite.js [manages the testing page requests and UI]
-|               
+|
+\---python_graphing (contains a number of python files that create graphs for data returned from the results page and/or saved into files).
+        breakaway_cooperation_instruction_histogram.py
+        ...
+        ...
+                  
 ```
 
 **Importing the MongoDB file**
