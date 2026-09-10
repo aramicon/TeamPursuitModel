@@ -14,13 +14,57 @@ The basic architecture is as follows:
 + A visual JavaScript/CSS/HTML front-end to allow easy running and saving of configurations and experiments. This front-end UI is served up by a Node.JS server.
 + A MongoDB data storage layer that stores both experiment configurations (every starting parameter) and results, for experiments that are run.
 
+**Project File Structure**
+
+The following is a tree view of key files, including notes on their purpose. Files such as Node modules have been removed.
+
+```text
++---experiment_server
+|   |   app.js [main file handling requests from the browser, returning pages and data ]
+|   |   db.js [connects to MongoDB database; config goes here]
+|   +---node_modules
+|   +---... (not shown)
+|   |---...           
+|   \---public
+|       |   about.html [some info about the project]
+|       |   ga.html [main page for setting up congifurations and running (once-off) experiments
+|       |   index.html [basic homepage explaining some of the project]
+|       |   results.html [main results page for searching results, showing graphs, obtaining raw data]
+|       |   sequence.html [page for setting up sequences of experiments to automatically run]
+|       |   tests.html [page built for some algorithm tests]
+|       |   test_suite.html [further page built for some algorithm tests]
+|       |   tpgame.html [game visualiser to replay (or play) a team pursuit race]
+|       |   tpgamebreakaway.html [game visualiser to replay (or play) a breakawayt race]
+|       |   
+|       +---css
+|       |       model3.css [contains some CSS for the (bootstrap-based) pages]
+|       |       
+|       +---images [contians a small number of images used on the pages]
+|       |       cycling-track-markings.png
+|       |      ...
+|       |      ... 
+|       \---js [this is where the 'real' work is done]
+|               ga.js [code to manage the GA page interface, ]
+|               jquery.min.js [some jquery is used for the front-end]
+|               model3.js [team pursuit race visualiser code]
+|               model3breakaway.js [breakaway race visualiser code]
+|               race_function_no_vis.js [main simulator code that runs the GA and the simulations via web workers. BIGGEST CODE FILE! ]
+|               results.js [code to search for, display, and return results, including some d3.js graphing and data]
+|               Sequence.js [code for sequences page; to show, create, search for, delete, etc. the sequences are run in race_function_no_vis]
+|               test_functions.js [some test algorithm implementations]
+|               test_suite.js [manages the testing page requests and UI]
+|               
+```
+
 **Importing the MongoDB file**
+
 The MongoDb collection is available on the open Zenodo repository, operated by CERN (The European Organization for Nuclear Research, based in Geneva).
 
 - **Link to settings/results dataset (Zenodo)**: [https://zenodo.org/records/22649724](https://zenodo.org/records/22649724)
 - **DOI**: 10.5281/zenodo.22649724 (version 1.0, containing experiments up to Sep 7th, 2026)
 
 **Connecting the Node.JS application to the MongoDB data collection**
+
 Once the data has been imported, the simulator application can be connected to it in order to load both experiment settings (for running them) and previous experiment results. The data connection properties must be set in the DB.js file directly inside the experiment_server folder.
 ```javascript
 const MongoClient = require('mongodb').MongoClient;
@@ -31,8 +75,11 @@ const mongoOptions = {useNewUrlParser: true};
 ```
 
 **Setting up and running an experiment.**
+
 If the Node/js application is running as expected, the following interface should be presented at the base URL/port (I have used 3003, and thus http://127.0.0.1:3003/ga to avoid a conflict with another service).
-![Starting page from which a GA experiment may be run](docs/images/ga_page.png)
+
+Starting page from which a GA experiment may be run
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/ga_page.png" width="500">
 
 To run an experiment, load an instance of settings from the drop-down menu in the top-right (note here that 154 different instances have been loaded from the database), and press the "Run GA" button a the bottom. This will begin the GA, where a population of randomised solutions is created, and generations of simulations, fitness-biased selection, and variance-affected replication/reproduction start to run. Depending on the settings, this may take some time: while some feedback is shown in the main UI, further console logging and overall progress may be viewed by showing the JavaScript console of the browser (e.g., by hitting F12 in Windows for Chrome).
 
@@ -49,7 +96,11 @@ The following settings are designed to run an experiment that evolves a 'simple 
 - The "race_type" property is set to "BREAKAWAY"
 - The "ga_properties_to_evolve" contains details for a single "breakaway_sprint_eagerness" setting. This is the only component of the genotype, and the only thing that will evolve for the evolving rider.
 
-Settings 1: Global parameters controlling main simulator behaviour
+Click on each section of settings to view the entire JSON for each.
+
+<details>
+  <summary>Settings 1: **Global parameters** Controls most of the simulator behaviour, and all of the GA parameters</summary>
+  
 ```javascript
 {
     "update_group_to_chase_target_if_they_change": 1,
@@ -243,7 +294,11 @@ Settings 1: Global parameters controlling main simulator behaviour
 }
 ```
 
-Settings 2: Race parameters controlling some race properties such as distance
+</details>
+
+<details>
+  <summary>Settings 2: **Race parameters** Sets some race-specific properties such as its distance</summary>
+
 ```javascript
 {
   "rider_updates_genotype":[],
@@ -270,7 +325,13 @@ Settings 2: Race parameters controlling some race properties such as distance
 }
 ```
 
-Settings 3: Riders: this sets up the team of riders; each has its own set of properties. The first rider here is the evolving rider. A team/group size of 4 has been used for most of the research experimentation, though it may be varied.
+</details>
+
+
+<details>
+  <summary>Settings 3: **Riders** This sets up the team of riders; each has its own set of properties. The first rider here is the evolving rider. A team/group size of 4 has been used for most of the research experimentation, though it may be varied.
+</summary>
+
 ```javascript
 [{
         "name": "EVOLVE 1",
@@ -484,15 +545,42 @@ Settings 3: Riders: this sets up the team of riders; each has its own set of pro
 ]
 ```
 
+</details>
 
 
 **Saving, viewing, and searching results**
 
+When a GA has run from the "GA" page, results may be saved easily to the database by pressing the "Save" button that is shown below the GA, after the experiment has finished. fields for "Notes and "Tags" may be filled to record meta-data: these fields are searchable. A brief list of generation-by-generation results is shown on this GA page; a more comprehensive list is shown in the "Results" page, accessible from the top menu. 
+
+Main results page:
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_results_screen.png" width="500">
+
+Each experiment stored is shown here as a single line in the table, including its unique identifier. The name of the settings configuration used, the "notes" and "tags", and the date and time the experiment was run, are also included. Notes and Tags may be used to search for specific results. If the ID of any result is clicked, those results are loaded. Tags and Notes, and a Short Title - used for some graphs - may be updated. 
+
+Crucially, here, when an experiment has been selected, the "Show Loaded Results" button may be pressed to display a second table, this one containing generation by generation details of the experiment. An example is the following:
+
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_show_loaded_results.png" width="500">
+
+These results contain many details for each generation of an experiment, such as details about the best-in-generation solution (it's time, genotype, etc), and population-level statistics. Depending on the type of simulation, a track race or a breakaway, a slightly different list is shown.
 
 **Run an instance of a race from results**
 
+For any generation of any experiment, the best-in-generation solution may be run to examine its turn-by-turn behaviour. This is done via a separate UI, and uses a matched but distinct code file from the non-visual version that is used by the core simulations. Precise behaviour and finish times between the two may be compared if necessary using logging that may be enabled.
+
+To run a specific solution as a visual race, press the "Run" button in the "Visualise" column, as shown circled in red here:
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_run_specific_race.png" width="500">
+
+This will open a new tab, a race UI that uses information from the URI provided to load the correct experiment and prepare it for running. If the black "Play" triangle is pressed, the race begins. In an example here, a breakaway race has been played, and the evolving rider has just launched its finish sprint and is about to cross the finish line in the leading position at 5000 m.
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_example_race_running.png" width="500">
+
+**Generating Graphs and Obtaining Data**
+The UI provides two pathways to some useful grpahs and data:
+- 1) directly from the UI using the D3.js library.
+  2) by providing raw data that may then be used with another language, e.g., Python and libraries like  matplotlib.
 
 ** Setting up and running a sequence of experiments **
+
+One experiment does not an insight make: it often takes many instances of an experiment and an examination of their results as an aggregate to really understand underlying effects and behaviour. To enable this, a higher level concept of a 'sequence' was introduced, which allows a series of experiments to be set up, which will then automatically run and have their results stored, with minimal user intervention. This might be as simple as repeating an identically-configured experiment a number of times, or have some setting(s) vary along the way. For example, we might run a test where one rider's power is gradually increased, and for each value run a number of GA searches.
 
 
 
