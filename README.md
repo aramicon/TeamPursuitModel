@@ -580,8 +580,23 @@ This will open a new tab, a race UI that uses information from the URI provided 
 
 **Generating Graphs and Obtaining Data**
 The UI provides two pathways to some useful grpahs and data:
-- 1) directly from the UI using the D3.js library.
+
+  1) directly from the UI using the D3.js library.
   2) by providing raw data that may then be used with another language, e.g., Python and libraries like  matplotlib.
+
+An easy example of visualisation that can be found within the UI is that of the power graph for races shown in the results, e.g., the best-in-generation solution for every generation of a GA search. This can be be drawn, using the D3 JavaScript visualisation library, by pressing the "Draw" button for any result, under the "POWER GRAPH" column, as shown:
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_button_to_draw_power_graph.png" width="500">
+
+The power graph is then drawn in a canvas section below the list of results, and in the case of the example result above, looks like the following:
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_example_of_a_power_graph.png" width="500">
+
+Separately from this button-based graph drawing, there is a list of graphs to choose from a drop-down list shown under the main results list. An example of one being run is the following, where the best finish times (along with other useful details) for each generation of a GA is shown:
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_generating_graphd3.png" width="500">
+
+Other options here are graphs that allow for multiple results to be selected, for a multi-line graph comparing their properties, and options that export the raw data into a textarea. For example, the following graph involves selecting seven different results and running the "Best Fitness Per Generation" Multi-Results graph:
+
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_generating_graphd3_multi_results.png" width="500">
+
 
 **Setting up and running a sequence of experiments**
 
