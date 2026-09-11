@@ -604,6 +604,8 @@ Other options here are graphs that allow for multiple results to be selected, fo
 
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_generating_graphd3_multi_results.png" width="500">
 
+The data in the Data Display textarea in this case contains raw data: this may be copied to save in a file for further analysis (or pasted directly into a script such as a Python script).
+
 
 **Setting up and running a sequence of experiments**
 
