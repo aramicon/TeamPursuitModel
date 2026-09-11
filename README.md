@@ -84,6 +84,7 @@ const mongoOptions = {useNewUrlParser: true};
 If the Node/js application is running as expected, the following interface should be presented at the base URL/port (I have used 3003, and thus http://127.0.0.1:3003/ga to avoid a conflict with another service).
 
 Starting page from which a GA experiment may be run
+
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/ga_page.png" width="500">
 
 To run an experiment, load an instance of settings from the drop-down menu in the top-right (note here that 154 different instances have been loaded from the database), and press the "Run GA" button a the bottom. This will begin the GA, where a population of randomised solutions is created, and generations of simulations, fitness-biased selection, and variance-affected replication/reproduction start to run. Depending on the settings, this may take some time: while some feedback is shown in the main UI, further console logging and overall progress may be viewed by showing the JavaScript console of the browser (e.g., by hitting F12 in Windows for Chrome).
@@ -574,6 +575,7 @@ These results contain many details for each generation of an experiment, such as
 For any generation of any experiment, the best-in-generation solution may be run to examine its turn-by-turn behaviour. This is done via a separate UI, and uses a matched but distinct code file from the non-visual version that is used by the core simulations. Precise behaviour and finish times between the two may be compared if necessary using logging that may be enabled.
 
 To run a specific solution as a visual race, press the "Run" button in the "Visualise" column, as shown circled in red here:
+
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_run_specific_race.png" width="500">
 
 This will open a new tab, a race UI that uses information from the URI provided to load the correct experiment and prepare it for running. If the black "Play" triangle is pressed, the race begins. In an example here, a breakaway race has been played, and the evolving rider has just launched its finish sprint and is about to cross the finish line in the leading position at 5000 m.
@@ -595,6 +597,7 @@ The power graph is then drawn in a canvas section below the list of results, and
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_example_of_a_power_graph.png" width="500">
 
 Separately from this button-based graph drawing, there is a list of graphs to choose from a drop-down list shown under the main results list. An example of one being run is the following, where the best finish times (along with other useful details) for each generation of a GA is shown:
+
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_generating_graphd3.png" width="500">
 
 Other options here are graphs that allow for multiple results to be selected, for a multi-line graph comparing their properties, and options that export the raw data into a textarea. For example, the following graph involves selecting seven different results and running the "Best Fitness Per Generation" Multi-Results graph:
