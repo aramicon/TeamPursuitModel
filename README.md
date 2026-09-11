@@ -22,8 +22,8 @@ The following is a tree view of key files, including notes on their purpose. Fil
 +---experiment_server
 |   |   app.js [main file handling requests from the browser, returning pages and data ]
 |   |   db.js [connects to MongoDB database; config goes here]
-|   +---node_modules
-|   +---... (not shown)
+|   +---node_modules (not shown)
+|   +---... 
 |   |---...           
 |   \---public
 |       |   about.html [some info about the project]
@@ -39,7 +39,7 @@ The following is a tree view of key files, including notes on their purpose. Fil
 |       +---css
 |       |       model3.css [contains some CSS for the (bootstrap-based) pages]
 |       |       
-|       +---images [contians a small number of images used on the pages]
+|       +---images [contains a small number of images used on the pages]
 |       |       cycling-track-markings.png
 |       |      ...
 |       |      ... 
@@ -53,7 +53,12 @@ The following is a tree view of key files, including notes on their purpose. Fil
 |               Sequence.js [code for sequences page; to show, create, search for, delete, etc. the sequences are run in race_function_no_vis]
 |               test_functions.js [some test algorithm implementations]
 |               test_suite.js [manages the testing page requests and UI]
-|               
+|
+\---python_graphing (contains a number of python files that create graphs for data returned from the results page and/or saved into files).
+        breakaway_cooperation_instruction_histogram.py
+        ...
+        ...
+                  
 ```
 
 **Importing the MongoDB file**
@@ -578,10 +583,11 @@ The UI provides two pathways to some useful grpahs and data:
 - 1) directly from the UI using the D3.js library.
   2) by providing raw data that may then be used with another language, e.g., Python and libraries like  matplotlib.
 
-** Setting up and running a sequence of experiments **
+**Setting up and running a sequence of experiments**
 
 One experiment does not an insight make: it often takes many instances of an experiment and an examination of their results as an aggregate to really understand underlying effects and behaviour. To enable this, a higher level concept of a 'sequence' was introduced, which allows a series of experiments to be set up, which will then automatically run and have their results stored, with minimal user intervention. This might be as simple as repeating an identically-configured experiment a number of times, or have some setting(s) vary along the way. For example, we might run a test where one rider's power is gradually increased, and for each value run a number of GA searches.
 
+The following image shows the main list of sequences:
 
 
 
