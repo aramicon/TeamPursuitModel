@@ -558,6 +558,7 @@ Click on each section of settings to view the entire JSON for each.
 When a GA has run from the "GA" page, results may be saved easily to the database by pressing the "Save" button that is shown below the GA, after the experiment has finished. fields for "Notes and "Tags" may be filled to record meta-data: these fields are searchable. A brief list of generation-by-generation results is shown on this GA page; a more comprehensive list is shown in the "Results" page, accessible from the top menu. 
 
 Main results page:
+
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_results_screen.png" width="500">
 
 Each experiment stored is shown here as a single line in the table, including its unique identifier. The name of the settings configuration used, the "notes" and "tags", and the date and time the experiment was run, are also included. Notes and Tags may be used to search for specific results. If the ID of any result is clicked, those results are loaded. Tags and Notes, and a Short Title - used for some graphs - may be updated. 
@@ -566,7 +567,7 @@ Crucially, here, when an experiment has been selected, the "Show Loaded Results"
 
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_show_loaded_results.png" width="500">
 
-These results contain many details for each generation of an experiment, such as details about the best-in-generation solution (it's time, genotype, etc), and population-level statistics. Depending on the type of simulation, a track race or a breakaway, a slightly different list is shown.
+These results contain many details for each generation of an experiment, such as details about the best-in-generation solution (its time, genotype, etc), and population-level statistics. Depending on the type of simulation, a track race or a breakaway, a slightly different list is shown.
 
 **Run an instance of a race from results**
 
@@ -576,6 +577,7 @@ To run a specific solution as a visual race, press the "Run" button in the "Visu
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_run_specific_race.png" width="500">
 
 This will open a new tab, a race UI that uses information from the URI provided to load the correct experiment and prepare it for running. If the black "Play" triangle is pressed, the race begins. In an example here, a breakaway race has been played, and the evolving rider has just launched its finish sprint and is about to cross the finish line in the leading position at 5000 m.
+
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_example_race_running.png" width="500">
 
 **Generating Graphs and Obtaining Data**
@@ -585,9 +587,11 @@ The UI provides two pathways to some useful grpahs and data:
   2) by providing raw data that may then be used with another language, e.g., Python and libraries like  matplotlib.
 
 An easy example of visualisation that can be found within the UI is that of the power graph for races shown in the results, e.g., the best-in-generation solution for every generation of a GA search. This can be be drawn, using the D3 JavaScript visualisation library, by pressing the "Draw" button for any result, under the "POWER GRAPH" column, as shown:
+
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_button_to_draw_power_graph.png" width="500">
 
 The power graph is then drawn in a canvas section below the list of results, and in the case of the example result above, looks like the following:
+
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_example_of_a_power_graph.png" width="500">
 
 Separately from this button-based graph drawing, there is a list of graphs to choose from a drop-down list shown under the main results list. An example of one being run is the following, where the best finish times (along with other useful details) for each generation of a GA is shown:
@@ -603,9 +607,11 @@ Other options here are graphs that allow for multiple results to be selected, fo
 One experiment does not an insight make: it often takes many instances of an experiment and an examination of their results as an aggregate to really understand underlying effects and behaviour. To enable this, a higher level concept of a 'sequence' was introduced, which allows a series of experiments to be set up, which will then automatically run and have their results stored, with minimal user intervention. This might be as simple as repeating an identically-configured experiment a number of times, or have some setting(s) vary along the way. For example, we might run a test where one rider's power is gradually increased, and for each value run a number of GA searches.
 
 The following image shows the main list of sequences:
+
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_sequences_list.png" width="500">
 
 A sequence may be deleted, added, or edited by clicking on instances and/or using the form below the main list. An example of the details of one sequences is as follows:
+
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_sequences_example_details.png" width="500">
 
 The key structure that determines what the execution of the sequence involves is the "Sequence Options (JSON) field. This field must be carefully set, and can describe the number of iterations and any properties that can vary.
@@ -668,8 +674,10 @@ While repeating an experiment is very useful, a more powerful feature is the abi
 }
 ```
 
+When there are active sequences, enabling the Sequence Mode on the main GA page will cause them to begin to run, with details of progress provided in the textareas on that page (these Notes and Tags will be saved with the results when the GA search finishes). An example is shown below:
+
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_running_sequences_mode.png" width="500">
 
 
 
-- 
 
