@@ -588,6 +588,71 @@ The UI provides two pathways to some useful grpahs and data:
 One experiment does not an insight make: it often takes many instances of an experiment and an examination of their results as an aggregate to really understand underlying effects and behaviour. To enable this, a higher level concept of a 'sequence' was introduced, which allows a series of experiments to be set up, which will then automatically run and have their results stored, with minimal user intervention. This might be as simple as repeating an identically-configured experiment a number of times, or have some setting(s) vary along the way. For example, we might run a test where one rider's power is gradually increased, and for each value run a number of GA searches.
 
 The following image shows the main list of sequences:
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_sequences_list.png" width="500">
+
+A sequence may be deleted, added, or edited by clicking on instances and/or using the form below the main list. An example of the details of one sequences is as follows:
+<img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_sequences_example_details.png" width="500">
+
+The key structure that determines what the execution of the sequence involves is the "Sequence Options (JSON) field. This field must be carefully set, and can describe the number of iterations and any properties that can vary.
+
+The following sequence example will, when sequences mode is active, cause a selected experiment configuration to be repeated 10 times.
+
+```javascript
+{
+    "iterations": 4,
+    "active": 1,
+    "variations": [],
+    "experiments": []
+}
+```
+
+After each experiment is run, its results are saved, and this sequence record is updated to include an experiment: the sequence running module will briefly pause then look for the next experiment to run, until there is nothing left to do. In this case, if all 4 iterations have run, the JSON may look like the following (note that the _active_ field has been set to _0_:
+
+```javascript
+
+{
+    "iterations": 4,
+    "active": 0,
+    "variations": [],
+    "experiments": [{
+            "client_id": "86.45.238.255_2025_11_5_13_12_31",
+            "iteration": 4,
+            "status": "complete"
+        }, {
+            "client_id": "86.45.238.255_2025_11_5_13_12_31",
+            "iteration": 3,
+            "status": "complete"
+        }, {
+            "client_id": "86.45.238.255_2025_11_5_13_12_31",
+            "iteration": 2,
+            "status": "complete"
+        }, {
+            "client_id": "86.45.238.255_2025_11_5_13_12_31",
+            "iteration": 1,
+            "status": "complete"
+        }
+    ]
+}
+
+```
+
+While repeating an experiment is very useful, a more powerful feature is the ability to vary some configuration property for instances as they run. For example, here is the same sequence where the chasing peloton speed is varied each time (the notes field of the saved results indicates what properties were varied for a specific sequence experiment iteration:
+
+```javascript
+{
+    "iterations": 4,
+    "active": 1,
+    "variations": [{
+            "iterations": [4, 3, 2, 1],
+            "type": "race",
+            "property": "chasing_bunch_speed",
+            "values": [15.2, 15.4, 15.05, 15.1]
+        }
+    ],
+    "experiments": []
+}
+```
+
 
 
 
