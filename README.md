@@ -690,7 +690,7 @@ When there are active sequences, enabling the Sequence Mode on the main GA page 
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_running_sequences_mode.png" width="500">
 
 
-After sequences have run, the corresponding results may be found by searching the results. Here's an example using a sequence whose configuration is described above:
+After sequences have run, the corresponding results may be found by scrolling or searching the results. Here's an example using a sequence whose configuration is described above:
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_sequence_results_notes.png" width="500">
 
 
