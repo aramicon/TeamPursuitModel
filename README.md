@@ -67,7 +67,7 @@ The following is a tree view of key files, including notes on their purpose. Fil
 
 ## Importing the MongoDB file
 
-The MongoDb collection is available on the open Zenodo repository, operated by CERN (The European Organization for Nuclear Research, based in Geneva).
+The MongoDb collection that stores the starting configurations and results for a large number of genetic algorithm searches using both forms of the simulator, is available on the open Zenodo repository, operated by CERN (The European Organization for Nuclear Research, based in Geneva).
 
 - **Link to settings/results dataset (Zenodo)**: [https://zenodo.org/records/22649724](https://zenodo.org/records/22649724)
 - **DOI**: 10.5281/zenodo.22649724 (version 1.0, containing experiments up to Sep 7th, 2026)
