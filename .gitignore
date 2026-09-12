@@ -86,3 +86,24 @@ typings/
 
 # DynamoDB Local files
 .dynamodb/
+
+#work notes files and other old files 
+START_TPURSUIT_APP.bat
+basic_plot.py
+bootstrap.min.css
+journals.txt
+oldD3Code.tct
+snags_and_bugs.txt
+workNotes2023.txt
+workNotes2023.txt.bak
+workNotes2024.txt
+workNotes2024.txt.bak
+workNotes2025.txt
+workNotes2025.txt.bak
+workNotes2026.txt
+workNotes2026.txt.bak
+work_notes.txt
+work_notes.txt.bak
+work_notes_22.txt
+work_notes_22.txt.bak
+.gitignore.bak
