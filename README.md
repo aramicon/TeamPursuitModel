@@ -1,3 +1,7 @@
+
+
+## Introduction
+
 This project provides a JavaScript-based simulation of two interesting scenarios found in the sport of competitive cycling:
 
 **1:** a team pursuit track cycling race.
