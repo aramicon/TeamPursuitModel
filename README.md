@@ -2,11 +2,11 @@
 
 ## Introduction
 
-This project provides a JavaScript-based simulation of two interesting scenarios found in the sport of competitive cycling:
+This project provides a JavaScript-based implementation of simulations of two scenarios found in the sport of competitive cycling:
 
-**1:** a team pursuit track cycling race.
+**1:** A team pursuit track cycling race, where riders must coordinate their efforts to finish as quickly as possible.
 
-**2:** an end-of-race breakaway/chase scenario.
+**2:** An end-of-race breakaway/chase scenario, where a group must both cooperate to stay away from a chasing bunch, while competing with each other for a victory.
 
 This readme explains the architecture of this project, how it may be run, and some of the details of its model's mechanisms.
 
