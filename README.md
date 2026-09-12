@@ -18,7 +18,7 @@ The basic architecture is as follows:
 + A visual JavaScript/CSS/HTML front-end to allow easy running and saving of configurations and experiments. This front-end UI is served up by a Node.JS server.
 + A MongoDB data storage layer that stores both experiment configurations (every starting parameter) and results, for experiments that are run.
 
-**Project File Structure**
+## Project File Structure
 
 The following is a tree view of key files, including notes on their purpose. Files such as Node modules have been removed.
 
@@ -65,7 +65,7 @@ The following is a tree view of key files, including notes on their purpose. Fil
                   
 ```
 
-**Importing the MongoDB file**
+## Importing the MongoDB file
 
 The MongoDb collection is available on the open Zenodo repository, operated by CERN (The European Organization for Nuclear Research, based in Geneva).
 
@@ -82,6 +82,8 @@ const dbname = "crud_mongodb"; //Put your data collection name here (this is the
 const url = "mongodb://localhost:27017"; //Put your own server IP and port here.
 const mongoOptions = {useNewUrlParser: true};
 ```
+
+## Running Experiments, Setting up Configurations, Viewing results
 
 **Setting up and running an experiment.**
 
@@ -106,7 +108,7 @@ The following settings are designed to run an experiment that evolves a 'simple 
 - The "race_type" property is set to "BREAKAWAY"
 - The "ga_properties_to_evolve" contains details for a single "breakaway_sprint_eagerness" setting. This is the only component of the genotype, and the only thing that will evolve for the evolving rider.
 
-Click on each section of settings to view the entire JSON for each.
+Click on each (collapsed) section of settings to view the entire JSON for each.
 
 <details>
   <summary>Settings 1: **Global parameters** Controls most of the simulator behaviour, and all of the GA parameters</summary>
@@ -574,7 +576,7 @@ Crucially, here, when an experiment has been selected, the "Show Loaded Results"
 
 These results contain many details for each generation of an experiment, such as details about the best-in-generation solution (its time, genotype, etc), and population-level statistics. Depending on the type of simulation, a track race or a breakaway, a slightly different list is shown.
 
-**Run an instance of a race from results**
+**Running an instance of a race from a set of results**
 
 For any generation of any experiment, the best-in-generation solution may be run to examine its turn-by-turn behaviour. This is done via a separate UI, and uses a matched but distinct code file from the non-visual version that is used by the core simulations. Precise behaviour and finish times between the two may be compared if necessary using logging that may be enabled.
 
@@ -586,7 +588,7 @@ This will open a new tab, a race UI that uses information from the URI provided 
 
 <img src="https://github.com/aramicon/TeamPursuitModel/blob/main/docs/images/screenshot_example_race_running.png" width="500">
 
-**Generating Graphs and Obtaining Data**
+## Generating Graphs and Obtaining Data
 The UI provides two pathways to some useful grpahs and data:
 
   1) directly from the UI using the D3.js library.
@@ -611,7 +613,7 @@ Other options here are graphs that allow for multiple results to be selected, fo
 The data in the Data Display textarea in this case contains raw data: this may be copied to save in a file for further analysis (or pasted directly into a script such as a Python script).
 
 
-**Setting up and running a sequence of experiments**
+## Setting Up and Running a Sequence of Experiments 
 
 One experiment does not an insight make: it often takes many instances of an experiment and an examination of their results as an aggregate to really understand underlying effects and behaviour. To enable this, a higher level concept of a 'sequence' was introduced, which allows a series of experiments to be set up, which will then automatically run and have their results stored, with minimal user intervention. This might be as simple as repeating an identically-configured experiment a number of times, or have some setting(s) vary along the way. For example, we might run a test where one rider's power is gradually increased, and for each value run a number of GA searches.
 
