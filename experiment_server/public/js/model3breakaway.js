@@ -9,10 +9,10 @@ import {race_template} from './race_settings_template.js';
 import {riders_template} from './riders_template.js';
 
 //dk23Aug allow for targeted debugging of a rider and a timestep
-let targeted_debugging = 1;
-let targeted_debugging_rider_no = 3;
-let targeted_debugging_timestep_range_start = 87;
-let targeted_debugging_timestep_range_end = 88;
+let targeted_debugging = 0;
+let targeted_debugging_rider_no = 0;
+let targeted_debugging_timestep_range_start = 0;
+let targeted_debugging_timestep_range_end = 2;
 
 let RACE_RUN_TYPE = "STANDALONE";
 
@@ -664,7 +664,7 @@ function switchLead(positions_to_drop_back, rider_no){
           //if new leader has a cooperation effort level, set its effort to this
           if(typeof(new_leader.breakaway_cooperation_effort_level) != "undefined"){
             new_leader.output_level = new_leader.breakaway_cooperation_effort_level;
-          }
+            }
           else{
 
             //donLK25: get the target_power using the old leader output level
@@ -924,9 +924,10 @@ for(let ix = 0; ix < SEGMENT_DISTANCE_MARKERS_TO_DRAW; ix++){
     //work out basic drag from current volocity = CdA*p*((velocity**2)/2)
 
     // **** START make sure that in the first timestep, the rider gets their breakaway_cooperation_effort_level DK_Dec4_25
+    //DK_Oct26 this needs to be RESET at the beginning of the race!
     if(race.race_clock == 0){
       if(typeof(race_rider.breakaway_cooperation_effort_level) != "undefined"){
-        race_rider.output_level=race_rider.breakaway_cooperation_effort_level;
+        race_rider.output_level = race_rider.breakaway_cooperation_effort_level;
       }
     }
     // **** END make sure that in the first timestep, the rider gets their breakaway_cooperation_effort_level DK_Dec4_25
@@ -3039,6 +3040,7 @@ function load_race(){
 
   //load race_choices from textarea
   let race_choices_all_riders =[];
+  
 
   let new_race_choices= $('#instructions_textarea').val();
   if(new_race_choices.length > 5){
@@ -3053,6 +3055,9 @@ function load_race(){
     rider_updates_genotype = JSON.parse(new_rider_updates_genotype);
     console.log("loaded rider_updates_genotype " + new_rider_updates_genotype);
   }
+
+  //dkOctober26- reload the riders from the textarea (otherwise it can fail to reset props that were updated during the race!)
+  riders = JSON.parse($("#rider_settings").val());
 
   //Reset rider properties that change during the race
   for(let i = 0;i<race.start_order.length;i++){
@@ -3090,7 +3095,7 @@ function load_race(){
     load_rider.endurance_fatigue_level = 0;
     load_rider.burst_fatigue_level = 0;
     load_rider.accumulated_fatigue = 0;
-    load_rider.output_level=settings.threshold_power_effort_level;
+    load_rider.output_level = settings.threshold_power_effort_level;
 
     //donalK25: set the failure ceiling, May 25
     load_rider.rider_fatigue_failure_level = settings.fatigue_failure_level;
@@ -3102,8 +3107,21 @@ function load_race(){
       load_rider.output_level = settings.default_starting_effort_level;
     }
     //dk, set the output level to breakaway_cooperation_effort_level if the rider has that value/prop
+    //dk26 october- this may cause a problem when RESETTING a race after running!
+    //save an ORIGINAL value and reset to this if it exists
+    if(typeof(load_rider.original_breakaway_cooperation_effort_level) == "undefined"){
+      if(typeof(load_rider.breakaway_cooperation_effort_level) != "undefined"){
+        load_rider.original_breakaway_cooperation_effort_level = load_rider.breakaway_cooperation_effort_level;
+      }
+    }
+    else{
+      if(typeof(load_rider.breakaway_cooperation_effort_level) != "undefined"){
+        load_rider.breakaway_cooperation_effort_level = load_rider.original_breakaway_cooperation_effort_level;
+      }
+    }
+
     if(typeof(load_rider.breakaway_cooperation_effort_level) != "undefined"){
-      load_rider.output_level=load_rider.breakaway_cooperation_effort_level;
+      load_rider.output_level = load_rider.breakaway_cooperation_effort_level;
     }
 
     load_rider.recovery_mode = 0;
@@ -3130,6 +3148,7 @@ function load_race(){
     load_rider.race_choices = [];
 
     //load race choices, if we are running a game from the results
+
     if(race_choices_all_riders.length > 0 && race_choices_all_riders[race.start_order[i]].length > 0){
       load_rider.race_choices = race_choices_all_riders[race.start_order[i]];
     }

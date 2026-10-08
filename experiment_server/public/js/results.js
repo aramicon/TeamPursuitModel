@@ -491,7 +491,7 @@ const draw_line_graph = (graph_name_opt) =>{
         for (i=0;i<selected_ga_results.generations[specified_generation].best_race_rider_power[0].length;i++){
           graph_data_1.data.push({x:i, y:selected_ga_results.generations[specified_generation].best_race_rider_power[0][i]});
         }
-
+        
         graph_data_2 = {};
         graph_data_2.title = "Rider 2";
         //dk23aug try to get the name from the data

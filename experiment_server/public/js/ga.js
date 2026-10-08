@@ -121,9 +121,9 @@ function run_win_ratio_test(){
     }
   }
 
-  let team_order_input = $('#starting_order').val();
-  if(team_order_input > 0){
-    let input_teamOrder = $('#starting_order').val().split(",").map(a=>+a);
+  let team_order_input = $('#starting_order').val().replace("[","").replace("]","");
+  if(team_order_input.length > 0){
+    let input_teamOrder = team_order_input.split(",").map(a=>+a);
     if(input_teamOrder.length > 0){
       chosen_race_settings.start_order = input_teamOrder;
       //console.log("updated race.start_order " + race.start_order )

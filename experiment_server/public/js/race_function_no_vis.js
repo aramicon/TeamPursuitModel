@@ -728,11 +728,17 @@ function randn_bm() {
 
           //run the race
 
-          race_results = run_breakaway_race(settings_r,race_r,riders_r);
+
+          //dkOct26: need to deep copy these objects before sending them as the race will modify them?
+          let settings_r_to_send = JSON.parse(JSON.stringify(settings_r));
+          let race_r_to_send = JSON.parse(JSON.stringify(race_r));
+          let riders_r_to_send = JSON.parse(JSON.stringify(riders_r));
+
+          race_results = run_breakaway_race(settings_r_to_send,race_r_to_send,riders_r_to_send);
 
           total_fitness += race_results.evolving_rider_fitness;
 
-          //need to find the evolvign rider finish position...
+          //need to find the evolving rider finish position...
           if(race_results.evolving_rider_finish_position && race_results.evolving_rider_finish_position == 1){
             win_count += 1;
           }
@@ -2411,7 +2417,7 @@ function randn_bm() {
 
       let new_race = create_new_team_pursuit_race(settings_r, p);
       population.push(new_race);
-      debugger;
+      //debugger;
 
     }
 

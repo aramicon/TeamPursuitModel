@@ -1990,6 +1990,10 @@ function draw_line_graph(graph_name_opt){
 
         graph_data_1.title = "Rider 1";
 
+        //dk26 sep, put data into textarea
+        //$('#data_display').val(JSON.stringify(rider_power_data));
+
+
         //dk23aug get the rider title from data
         if(race.riders){
           if(race.riders[0]){
